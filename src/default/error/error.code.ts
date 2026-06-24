@@ -1,0 +1,65 @@
+import {
+  ADMIN_ERRORS,
+  AUTH_ERRORS,
+  CART_ERRORS,
+  CATEGORY_ERRORS,
+  COMMON_ERRORS,
+  COUPON_ERRORS,
+  DATABASE_ERRORS,
+  INVENTORY_ERRORS,
+  NOTIFICATION_ERRORS,
+  ORDER_ITEM_ERRORS,
+  ORDER_ERRORS,
+  PAYMENT_ERRORS,
+  PRODUCT_ERRORS,
+  REPOSITORY_ERRORS,
+  ROLE_ERRORS,
+  SHIPPING_ERRORS,
+  USER_ERRORS,
+  VALIDATION_ERRORS,
+  KYC_ERRORS
+} from "./errors";
+
+export type ErrorCodeValue = {
+  code: string;
+  message: string;
+  statusCode: number;
+};
+
+export const ERROR_CODES = {
+  ADMIN: ADMIN_ERRORS,
+  AUTH: AUTH_ERRORS,
+  CART: CART_ERRORS,
+  CATEGORY: CATEGORY_ERRORS,
+  COMMON: COMMON_ERRORS,
+  COUPON: COUPON_ERRORS,
+  DATABASE: DATABASE_ERRORS,
+  INVENTORY: INVENTORY_ERRORS,
+  NOTIFICATION: NOTIFICATION_ERRORS,
+  ORDER_ITEM: ORDER_ITEM_ERRORS,
+  ORDER: ORDER_ERRORS,
+  PAYMENT: PAYMENT_ERRORS,
+  PRODUCT: PRODUCT_ERRORS,
+  REPOSITORY: REPOSITORY_ERRORS,
+  ROLE: ROLE_ERRORS,
+  SHIPPING: SHIPPING_ERRORS,
+  USER: USER_ERRORS,
+  VALIDATION: VALIDATION_ERRORS,
+  KYC:KYC_ERRORS
+} as const;
+
+export type ErrorCodeGroups = typeof ERROR_CODES;
+
+export function getErrorCodeByCode(code: string): ErrorCodeValue | null {
+  for (const group of Object.values(ERROR_CODES)) {
+    for (const error of Object.values(group)) {
+      if (error.code === code) {
+        return error;
+      }
+    }
+  }
+
+  return null;
+}
+
+export * from "./errors";
