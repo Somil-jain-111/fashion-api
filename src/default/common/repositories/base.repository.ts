@@ -5,7 +5,7 @@ import {
   FindOptionsWhere,
   Repository,
   SelectQueryBuilder,
-} from "typeorm";
+} from 'typeorm';
 
 export class BaseRepository<T extends object> {
   constructor(protected readonly repository: Repository<T>) {}
@@ -28,8 +28,15 @@ export class BaseRepository<T extends object> {
     return await this.repository.save(entities);
   }
 
-  async findOne(options: FindOneOptions<T>): Promise<T | null> {
-    return await this.repository.findOne(options);
+  // async findOne(options: FindOneOptions<T>): Promise<T | null> {
+  //   return await this.repository.findOne(options);
+  // }
+
+  async findOne(where: FindOptionsWhere<T>, relations?: string[]): Promise<T | null> {
+    return this.repository.findOne({
+      where,
+      relations,
+    });
   }
 
   async findMany(options?: FindManyOptions<T>): Promise<T[]> {
@@ -48,27 +55,21 @@ export class BaseRepository<T extends object> {
       where: {
         id,
       } as unknown as FindOptionsWhere<T>,
-      relations: ["role"],
+      relations: ['role'],
     });
   }
-  async updateById(
-    id: string | number | bigint,
-    data: Partial<T>,
-  ): Promise<boolean> {
+  async updateById(id: string | number | bigint, data: Partial<T>): Promise<boolean> {
     const result = await this.repository.update(
       {
         id,
       } as unknown as FindOptionsWhere<T>,
-      data as any,
+      data as any
     );
 
     return Number(result.affected) > 0;
   }
 
-  async updateByCondition(
-    where: FindOptionsWhere<T>,
-    data: Partial<T>,
-  ): Promise<boolean> {
+  async updateByCondition(where: FindOptionsWhere<T>, data: Partial<T>): Promise<boolean> {
     const result = await this.repository.update(where, data as any);
     return Number(result.affected) > 0;
   }

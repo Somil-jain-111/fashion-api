@@ -83,8 +83,8 @@ export class Address extends BaseEntity {
   status!: number; // 1 = Active, 2 = Deleted
 
   @CreateDateColumn({ type: 'datetime' })
-  createdAt!: Date;
+  created_at!: Date;
 
   @UpdateDateColumn({ type: 'datetime' })
-  updatedAt!: Date;
+  updated_at!: Date;
 }

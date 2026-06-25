@@ -18,7 +18,8 @@ import {
   USER_ERRORS,
   VALIDATION_ERRORS,
   KYC_ERRORS,
-  REWARDS_ERRORS
+  REWARDS_ERRORS,
+  ADDRESS_ERRORS
 } from "./errors";
 
 export type ErrorCodeValue = {
@@ -47,7 +48,8 @@ export const ERROR_CODES = {
   USER: USER_ERRORS,
   VALIDATION: VALIDATION_ERRORS,
   KYC:KYC_ERRORS,
-  REWARDS:REWARDS_ERRORS
+  REWARDS:REWARDS_ERRORS,
+  ADDRESS:ADDRESS_ERRORS
 } as const;
 
 export type ErrorCodeGroups = typeof ERROR_CODES;

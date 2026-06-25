@@ -1,8 +1,8 @@
-import { Injectable } from "@nestjs/common";
-import { DataSource, FindOptionsWhere } from "typeorm";
+import { Injectable } from '@nestjs/common';
+import { DataSource, FindOptionsWhere } from 'typeorm';
 
-import { BaseRepository } from "./base.repository";
-import { Address } from "src/modules/addresses/entities/address.entity";
+import { BaseRepository } from './base.repository';
+import { Address } from 'src/modules/addresses/entities/address.entity';
 
 @Injectable()
 export class AddressRepository extends BaseRepository<Address> {
@@ -19,7 +19,7 @@ export class AddressRepository extends BaseRepository<Address> {
         status: 1,
       } as FindOptionsWhere<Address>,
       order: {
-        createdAt: "DESC",
+        created_at: 'DESC',
       },
     });
   }
@@ -36,10 +36,7 @@ export class AddressRepository extends BaseRepository<Address> {
     });
   }
 
-  async findActiveAddressById(
-    addressId: bigint,
-    userId: bigint,
-  ): Promise<Address | null> {
+  async findActiveAddressById(addressId: bigint, userId: bigint): Promise<Address | null> {
     return await this.repository.findOne({
       where: {
         id: addressId,
@@ -62,7 +59,7 @@ export class AddressRepository extends BaseRepository<Address> {
       {
         status: 2,
         isDefault: false,
-      },
+      }
     );
   }
 
@@ -77,7 +74,7 @@ export class AddressRepository extends BaseRepository<Address> {
       } as FindOptionsWhere<Address>,
       {
         isDefault: false,
-      },
+      }
     );
   }
 
@@ -94,7 +91,23 @@ export class AddressRepository extends BaseRepository<Address> {
       } as FindOptionsWhere<Address>,
       {
         isDefault: true,
-      },
+      }
     );
+  }
+
+  async findByUserIdPaginated(userId: bigint, page = 1, limit = 10): Promise<[Address[], number]> {
+    return await this.repository.findAndCount({
+      where: {
+        user: {
+          id: userId,
+        },
+        status: 1,
+      } as FindOptionsWhere<Address>,
+      order: {
+        created_at: 'DESC',
+      },
+      skip: (page - 1) * limit,
+      take: limit,
+    });
   }
 }

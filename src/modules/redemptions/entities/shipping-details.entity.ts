@@ -11,12 +11,11 @@ import {
 } from 'typeorm';
 
 import { Order } from '../../auth/entities';
-import { OrderStatus } from '../enum/order-status.enum';
+import { ShippingStatus } from '../enum/order-status.enum';
 
 @Entity({ name: 'shipping_details' })
 @Index('idx_shipping_order', ['order'])
 @Index('idx_shipping_delivery_status', ['delivery_status'])
-@Index('idx_shipping_tracking_number', ['tracking_number'])
 export class ShippingDetail extends BaseEntity {
   @PrimaryGeneratedColumn('increment', { type: 'bigint' })
   id!: bigint;
@@ -69,10 +68,10 @@ export class ShippingDetail extends BaseEntity {
 
   @Column({
     type: 'enum',
-    enum: OrderStatus,
-    default: OrderStatus.PENDING,
+    enum: ShippingStatus,
+    default: ShippingStatus.PENDING,
   })
-  delivery_status!: OrderStatus;
+  delivery_status!: ShippingStatus;
 
   @Column({ type: 'bigint', nullable: true })
   created_by?: bigint;

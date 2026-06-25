@@ -3,35 +3,32 @@ import {
   Injectable,
   NotFoundException,
   UnauthorizedException,
-} from "@nestjs/common";
-import { JwtService } from "@nestjs/jwt";
-import * as bcrypt from "bcrypt";
+} from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
+import * as bcrypt from 'bcrypt';
 
-import { SendOtpDto } from "./dto/send-otp.dto";
-import { VerifyOtpDto } from "./dto/verify-otp.dto";
-import { LoginDto } from "./dto/login.dto";
-import { RefreshTokenDto } from "./dto/refresh-token.dto";
-import { ForgotPasswordDto } from "./dto/forgot-password.dto";
-import { ResetPasswordDto } from "./dto/reset-password.dto";
-import {
-  LoginHistoriesRepository,
-  UserRepository,
-} from "src/default/common/repositories";
-import { OtpHelper } from "src/default/common/helper/otp.helper";
-import { DateHelper } from "src/default/common/helper/date.helper";
-import { UserAuthValidator } from "./validators/user-auth.validator";
-import { CommonUtils } from "src/default/common/utils/common.utils";
-import { BusinessException } from "src/default/error/business.exception";
-import { ERROR_CODES } from "src/default/error/error.code";
-import { PasswordHelper } from "src/default/common/helper/password.helper";
-import { AuthTokenHelper } from "src/default/common/helper/auth-token.helper";
-import { UserResponseMapper } from "./mapper/user-response.mapper";
-import { ResetTokenHelper } from "src/default/common/helper/reset-token.helper";
-import { RESET_TOKEN_EXPIRY_MINUTES } from "./constants/auth.constants";
-import { RevokedTokenRepository } from "src/default/common/repositories/revoked_token.repository";
-import { TokenType } from "src/default/common/enums/token-type.enum";
-import { TokenHashHelper } from "src/default/common/helper/token-hash.helper";
-import { UserValidator } from "src/default/common/validators";
+import { SendOtpDto } from './dto/send-otp.dto';
+import { VerifyOtpDto } from './dto/verify-otp.dto';
+import { LoginDto } from './dto/login.dto';
+import { RefreshTokenDto } from './dto/refresh-token.dto';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
+import { LoginHistoriesRepository, UserRepository } from 'src/default/common/repositories';
+import { OtpHelper } from 'src/default/common/helper/otp.helper';
+import { DateHelper } from 'src/default/common/helper/date.helper';
+import { UserAuthValidator } from './validators/user-auth.validator';
+import { CommonUtils } from 'src/default/common/utils/common.utils';
+import { BusinessException } from 'src/default/error/business.exception';
+import { ERROR_CODES } from 'src/default/error/error.code';
+import { PasswordHelper } from 'src/default/common/helper/password.helper';
+import { AuthTokenHelper } from 'src/default/common/helper/auth-token.helper';
+import { UserResponseMapper } from './mapper/user-response.mapper';
+import { ResetTokenHelper } from 'src/default/common/helper/reset-token.helper';
+import { RESET_TOKEN_EXPIRY_MINUTES } from './constants/auth.constants';
+import { RevokedTokenRepository } from 'src/default/common/repositories/revoked_token.repository';
+import { TokenType } from 'src/default/common/enums/token-type.enum';
+import { TokenHashHelper } from 'src/default/common/helper/token-hash.helper';
+import { UserValidator } from 'src/default/common/validators';
 
 @Injectable()
 export class AuthService {
@@ -43,7 +40,7 @@ export class AuthService {
 
     private readonly jwtService: JwtService,
     private readonly userAuthValidator: UserAuthValidator,
-    private readonly userValidator: UserValidator,
+    private readonly userValidator: UserValidator
     // private readonly AuthTokenHelper,
   ) {}
   // async onModuleInit() {
@@ -51,15 +48,11 @@ export class AuthService {
   //   // this.loginHistoryRepository = RepositoryFactory.get("loginhistories");
   // }
 
-  async sendOtp(
-    dto: SendOtpDto,
-  ): Promise<{ mobile: string; otp_expiry_in_minutes: Number }> {
-    const user = await this.userValidator.findOrCreateActiveUserByMobile(
-      dto.mobile,
-    );
+  async sendOtp(dto: SendOtpDto): Promise<{ mobile: string; otp_expiry_in_minutes: Number }> {
+    const user = await this.userValidator.findOrCreateActiveUserByMobile(dto.mobile);
 
     const otpPlain = await OtpHelper.generateOtp();
-    console.log(otpPlain)
+    console.log(otpPlain);
     const otpExpiry = await DateHelper.getOtpExpiryDate();
     const otp = CommonUtils.encrypt(otpPlain);
 
@@ -77,9 +70,7 @@ export class AuthService {
   }
 
   async verifyOtp(dto: VerifyOtpDto, req: any) {
-    const user = await this.userAuthValidator.validateActiveUserByMobile(
-      dto.mobile,
-    );
+    const user = await this.userAuthValidator.validateActiveUserByMobile(dto.mobile);
 
     if (!user.otp || user.otp !== CommonUtils.encrypt(dto.otp)) {
       throw new BusinessException(ERROR_CODES.AUTH.INVALID_OTP);
@@ -126,10 +117,7 @@ export class AuthService {
       throw new BusinessException(ERROR_CODES.AUTH.PASSWORD_LOGIN_DISABLED);
     }
 
-    const isPasswordValid = await PasswordHelper.comparePassword(
-      dto.password,
-      user.password,
-    );
+    const isPasswordValid = await PasswordHelper.comparePassword(dto.password, user.password);
 
     if (!isPasswordValid) {
       await this.createLoginHistory(user, req, 0);
@@ -139,11 +127,7 @@ export class AuthService {
     const tokens = await AuthTokenHelper.generateTokens(this.jwtService, user);
     const refreshTokenExpiry = await DateHelper.getRefreshTokenExpiryDate();
 
-    await this.userRepository.updateRefreshToken(
-      user.id,
-      tokens.refreshToken,
-      refreshTokenExpiry,
-    );
+    await this.userRepository.updateRefreshToken(user.id, tokens.refreshToken, refreshTokenExpiry);
 
     await this.createLoginHistory(user, req, 1);
 
@@ -155,14 +139,9 @@ export class AuthService {
   }
 
   async refreshToken(dto: RefreshTokenDto) {
-    const user = await this.userAuthValidator.validateActiveUserByRefreshToken(
-      dto.refreshToken,
-    );
+    const user = await this.userAuthValidator.validateActiveUserByRefreshToken(dto.refreshToken);
 
-    if (
-      !user.refreshTokenExpiry ||
-      new Date(user.refreshTokenExpiry) < new Date()
-    ) {
+    if (!user.refreshTokenExpiry || new Date(user.refreshTokenExpiry) < new Date()) {
       throw new BusinessException(ERROR_CODES.AUTH.REFRESH_TOKEN_EXPIRED);
     }
 
@@ -170,11 +149,7 @@ export class AuthService {
 
     const refreshTokenExpiry = DateHelper.getRefreshTokenExpiryDate();
 
-    await this.userRepository.updateRefreshToken(
-      user.id,
-      tokens.refreshToken,
-      refreshTokenExpiry,
-    );
+    await this.userRepository.updateRefreshToken(user.id, tokens.refreshToken, refreshTokenExpiry);
 
     return {
       accessToken: tokens.accessToken,
@@ -183,9 +158,7 @@ export class AuthService {
   }
 
   async forgotPassword(dto: ForgotPasswordDto) {
-    const user = await this.userAuthValidator.validateActiveUserByMobile(
-      dto.mobile,
-    );
+    const user = await this.userAuthValidator.validateActiveUserByMobile(dto.mobile);
 
     const resetToken = await ResetTokenHelper.generateResetToken();
     const resetTokenExpiry = await DateHelper.getResetTokenExpiryDate();
@@ -193,13 +166,11 @@ export class AuthService {
     const isUpdated = await this.userRepository.updateResetPasswordToken(
       user.id,
       resetToken,
-      resetTokenExpiry,
+      resetTokenExpiry
     );
 
     if (!isUpdated) {
-      throw new BusinessException(
-        ERROR_CODES.AUTH.RESET_TOKEN_GENERATION_FAILED,
-      );
+      throw new BusinessException(ERROR_CODES.AUTH.RESET_TOKEN_GENERATION_FAILED);
     }
 
     /**
@@ -223,13 +194,11 @@ export class AuthService {
 
   async resetPassword(dto: ResetPasswordDto) {
     const user = await this.userRepository.findOne({
-      where: {
-        otp: dto.token,
-      },
+      otp: dto.token,
     });
 
     if (!user) {
-      throw new BadRequestException("Invalid or expired reset token");
+      throw new BadRequestException('Invalid or expired reset token');
     }
 
     const hashedPassword = await bcrypt.hash(dto.password, 10);
@@ -246,7 +215,7 @@ export class AuthService {
     await this.userRepository.save(user);
 
     return {
-      message: "Password reset successfully",
+      message: 'Password reset successfully',
     };
   }
 
@@ -281,19 +250,18 @@ export class AuthService {
     return true;
   }
   async profile(userId: bigint) {
-    const user = await this.userRepository.findOne({
-      where: {
+    const user = await this.userRepository.findOne(
+      {
         id: userId,
-      },
-      relations: ["role"],
-    });
+      }['role']
+    );
 
     if (!user) {
-      throw new NotFoundException("User not found");
+      throw new NotFoundException('User not found');
     }
 
     return {
-      message: "Profile fetched successfully",
+      message: 'Profile fetched successfully',
       data: UserResponseMapper.toAuthUser(user),
     };
   }
@@ -304,20 +272,13 @@ export class AuthService {
     }
   }
 
-  private async createLoginHistory(
-    user: any,
-    req: any,
-    status: number,
-  ): Promise<void> {
+  private async createLoginHistory(user: any, req: any, status: number): Promise<void> {
     await this.loginHistoryRepository.createLoginHistory({
       user,
       number: user.mobile,
       latitude: req?.body?.latitude ?? null,
       longitude: req?.body?.longitude ?? null,
-      ipAddress:
-        req?.headers?.["x-forwarded-for"]?.toString()?.split(",")[0] ||
-        req?.ip ||
-        null,
+      ipAddress: req?.headers?.['x-forwarded-for']?.toString()?.split(',')[0] || req?.ip || null,
       status,
     });
   }
