@@ -5,3 +5,4 @@ export * from "./roles.repository";
 export * from "./revoked_token.repository"
 export * from "./kyc-verification.repository";
 export * from "./kyc-verification-log.repository";
+export * from "./addresses.repository";

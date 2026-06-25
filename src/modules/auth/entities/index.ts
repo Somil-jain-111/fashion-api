@@ -1,7 +1,18 @@
 export * from "./roles.entity";
 export * from "./users.entity";
 export * from "./login_history.entity";
-export * from "./revoked_tokens.entity"
-export * from "../../kyc/entities/kyc-verification.entity"
-export * from "../../kyc/entities/kyc-verification-logs.entity"
+export * from "./revoked_tokens.entity";
+export * from "../../kyc/entities/kyc-verification.entity";
+export * from "../../kyc/entities/kyc-verification-logs.entity";
+export * from "../../addresses/entities/address.entity";
+export * from "../../addresses/entities/city.entity";
+export * from "../../addresses/entities/pincode.entity";
+export * from "../../addresses/entities/region.entity";
+export * from "../../addresses/entities/state.entity";
+export * from "../../redemptions/entities/point-history.entity";
+export * from "../../redemptions/entities/order-status-history.entity";
+export * from "../../redemptions/entities/order.entity";
+export * from "../../redemptions/entities/shipping-details.entity";
+export * from "../../redemptions/entities/voucher.entity";
+
 

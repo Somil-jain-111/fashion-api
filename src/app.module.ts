@@ -37,6 +37,7 @@ import { PaymentModule } from './modules/payment/payment.module';
 import { RoutesModule } from './modules/routes/routes.module';
 import { VisitsModule } from './modules/visits/visits.module';
 import { ApprovalsModule } from './modules/approvals/approvals.module';
+import { AddressesModule } from './modules/addresses/addresses.module';
 
 @Module({
   imports: [
@@ -75,6 +76,7 @@ import { ApprovalsModule } from './modules/approvals/approvals.module';
     RoutesModule,
     VisitsModule,
     ApprovalsModule,
+    AddressesModule,
   ],
   providers: [
     {
