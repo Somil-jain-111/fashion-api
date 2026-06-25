@@ -17,7 +17,8 @@ import {
   SHIPPING_ERRORS,
   USER_ERRORS,
   VALIDATION_ERRORS,
-  KYC_ERRORS
+  KYC_ERRORS,
+  REWARDS_ERRORS
 } from "./errors";
 
 export type ErrorCodeValue = {
@@ -45,7 +46,8 @@ export const ERROR_CODES = {
   SHIPPING: SHIPPING_ERRORS,
   USER: USER_ERRORS,
   VALIDATION: VALIDATION_ERRORS,
-  KYC:KYC_ERRORS
+  KYC:KYC_ERRORS,
+  REWARDS:REWARDS_ERRORS
 } as const;
 
 export type ErrorCodeGroups = typeof ERROR_CODES;
