@@ -16,7 +16,7 @@ import { RedisService } from "src/default/databases/redis/redis.service";
       imports: [RedisModule],
       inject: [RedisService],
       useFactory: (redisService: RedisService) => ({
-        connection: redisService.getBullMqConnection(),
+        connection: redisService.getBullMqConnection() as any,
       }),
     }),
 
