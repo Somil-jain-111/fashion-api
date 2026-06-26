@@ -29,7 +29,7 @@ import { OrderStatus } from '../enum/order-status.enum';
 @Index('idx_order_number', ['order_number'], { unique: true })
 export class Order extends BaseEntity {
   @PrimaryGeneratedColumn('increment', { type: 'bigint' })
-  id!: bigint;
+  id!: string;
 
   @Column({ type: 'varchar', length: 100, nullable: false })
   order_number!: string;
@@ -103,9 +103,6 @@ export class Order extends BaseEntity {
   @Column({ type: 'varchar', length: 100, nullable: true })
   transaction_id?: string | null;
 
-  @Column({ type: 'varchar', length: 20, nullable: true })
-  otp?: string | null;
-
   @Column({
     type: 'enum',
     enum: OrderStatus,
@@ -117,7 +114,7 @@ export class Order extends BaseEntity {
   errorMessage?: string | null;
 
   @Column({ type: 'bigint' })
-  user_id!: bigint;
+  user_id!: string;
   @ManyToOne(() => User, (user) => user.orders, {
     nullable: false,
   })
@@ -151,4 +148,38 @@ export class Order extends BaseEntity {
 
   @UpdateDateColumn({ type: 'datetime' })
   updated_at!: Date;
+
+  @Column({ name: 'redemption_otp', type: 'varchar', length: 10, nullable: true })
+  redemption_otp: string;
+
+  @Column({
+    name: 'redemption_otp_ref_id',
+    type: 'varchar',
+    length: 100,
+    nullable: true,
+  })
+  redemption_otp_ref_id: string;
+
+  @Column({
+    name: 'redemption_otp_expired_at',
+    type: 'timestamp',
+    nullable: true,
+  })
+  redemption_otp_expired_at: Date;
+
+  @Column({
+    name: 'redemption_otp_mobile',
+    type: 'varchar',
+    length: 15,
+    nullable: true,
+  })
+  redemption_otp_mobile: string;
+
+  @Column({
+    name: 'redemption_otp_receiver_type',
+    type: 'varchar',
+    length: 20,
+    nullable: true,
+  })
+  redemption_otp_receiver_type: string;
 }

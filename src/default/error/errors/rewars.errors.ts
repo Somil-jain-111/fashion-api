@@ -59,4 +59,9 @@ export const REWARDS_ERRORS = {
     message: 'Insufficient points',
     statusCode: 400,
   },
+  CATALOGUE_ID_NOT_FOUND: {
+    code: 'REWARDS_020',
+    message: 'Rewards catalogue id not found',
+    statusCode: 500,
+  },
 } as const;

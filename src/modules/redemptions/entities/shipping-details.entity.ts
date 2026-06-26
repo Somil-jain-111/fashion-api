@@ -21,7 +21,7 @@ export class ShippingDetail extends BaseEntity {
   id!: bigint;
 
   @Column({ type: 'bigint' })
-  order_id!: bigint;
+  order_id!: string;
 
   @OneToOne(() => Order, (order) => order.shippingDetail)
   @JoinColumn({ name: 'order_id' })
@@ -72,11 +72,14 @@ export class ShippingDetail extends BaseEntity {
     default: ShippingStatus.PENDING,
   })
   delivery_status!: ShippingStatus;
-;
-
+  @Column({ type: 'varchar', length: 15, nullable: false })
+  mobile!: string;
   @CreateDateColumn({ type: 'datetime', name: 'created_at' })
   created_at!: Date;
 
   @UpdateDateColumn({ type: 'datetime', name: 'updated_at' })
   updated_at!: Date;
+
+  @Column({ type: 'varchar', name: 'error_message', nullable: true })
+  errorMessage?: string | null;
 }

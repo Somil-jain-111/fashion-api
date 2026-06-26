@@ -32,7 +32,7 @@ import { UserStatus } from '../constants/auth.constants';
 @Index(['status'])
 export class User extends BaseEntity {
   @PrimaryGeneratedColumn('increment', { type: 'bigint' })
-  id!: bigint;
+  id!: string;
 
   @Column({
     type: 'enum',
@@ -89,7 +89,7 @@ export class User extends BaseEntity {
   loginHistory!: LoginHistories[];
 
   @Column({ type: 'bigint', nullable: true })
-  role_id?: bigint | null;
+  role_id?: string | null;
 
   @ManyToOne(() => Roles, (role) => role.users)
   @JoinColumn({ name: 'role_id' })

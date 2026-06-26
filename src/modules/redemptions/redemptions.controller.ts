@@ -17,8 +17,10 @@ import { JwtAuthGuard } from 'src/default/common/guards/jwt-auth.guard';
 import { RolesGuard } from 'src/default/common/guards/roles.guard';
 import { Roles } from 'src/default/common/decorators/roles.decorator';
 import { UserRole } from 'src/default/common/enums/user-type.enum';
-import { CreateOrderSummaryDto } from './enum/create-order-summary.dto';
+import { CreateOrderSummaryDto } from './dto/create-order-summary.dto';
 import { NoCache } from 'src/default/cache/cache.decorator';
+import { ResponseMessage } from 'src/default/common/decorators/response-message.decorator';
+import { SendRedemptionOtpDto } from './dto/send-redemption-otp.dto';
 
 @NoCache()
 @UseInterceptors(IdempotencyInterceptor)
@@ -36,6 +38,12 @@ export class RedemptionsController {
       UserRole.RETAILER
     );
 
+    return DataSanitizer.sanitizeData(response);
+  }
+  @Post('otp/send')
+  @ResponseMessage('Redemption OTP sent successfully')
+  async sendRedemptionOtp(@Req() req: any, @Body() dto: SendRedemptionOtpDto) {
+    const response = await this.redemptionsService.sendRedemptionOtp(req.user.id, dto);
     return DataSanitizer.sanitizeData(response);
   }
 }

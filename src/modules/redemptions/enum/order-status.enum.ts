@@ -23,6 +23,7 @@ export enum ShippingStatus {
 }
 
 export enum OrderStatus {
+  PLACED = 'placed',
   ORDER_REVIEW = 'order_review',
   OTP_TRIGGERED = 'otp_triggered',
   OTP_VERIFIED = 'otp_verified',

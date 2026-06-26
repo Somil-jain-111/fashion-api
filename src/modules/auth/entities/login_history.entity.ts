@@ -15,10 +15,10 @@ import { User } from ".";
 @Index("IDX_LOGIN_HISTORY_CREATED_AT", ["created_at"])
 export class LoginHistories extends BaseEntity {
   @PrimaryGeneratedColumn("increment", { type: "bigint" })
-  id!: bigint;
+  id!: string;
 
   @Column({ type: "bigint" })
-  user_id!: bigint;
+  user_id!: string;
 
   @ManyToOne(() => User, (user) => user.loginHistory, {
     nullable: false,

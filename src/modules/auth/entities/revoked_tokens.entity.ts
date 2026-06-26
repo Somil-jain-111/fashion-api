@@ -19,7 +19,7 @@ import { TokenType } from "../../../default/common/enums/token-type.enum";
 @Index("IDX_REVOKED_TOKEN_EXPIRES_AT", ["expires_at"])
 export class RevokedToken extends BaseEntity {
   @PrimaryGeneratedColumn("increment", { type: "bigint" })
-  id!: bigint;
+  id!: string;
 
   /**
    * Store token hash, not plain token.
@@ -28,7 +28,7 @@ export class RevokedToken extends BaseEntity {
   token_hash!: string;
 
   @Column({ type: "bigint", nullable: true })
-  user_id?: bigint | null;
+  user_id?: string | null;
 
   @ManyToOne(() => User, (user) => user.revokedTokens, {
     nullable: true,

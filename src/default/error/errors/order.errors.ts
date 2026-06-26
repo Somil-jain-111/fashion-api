@@ -24,4 +24,9 @@ export const ORDER_ERRORS ={
     code: "ORD_005",
     message: "Order creation failed",
     statusCode: 400,
-}} as const;
+},
+ORDER_ALREADY_PLACED: {
+  code: 'ORDER_021',
+  message: 'Order already placed',
+  statusCode: 400,
+},} as const;

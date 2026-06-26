@@ -1,7 +1,7 @@
 import { UserStatus } from "../constants/auth.constants";
 
 export class AuthUserResponseDto {
-  id: bigint;
+  id: string;
   uuid: string;
   username: string;
   mobile: string;
@@ -10,7 +10,7 @@ export class AuthUserResponseDto {
   image_url: string;
   status: UserStatus;
   role: {
-    id: bigint;
+    id: string;
     name: string;
   };
   created_at: string;

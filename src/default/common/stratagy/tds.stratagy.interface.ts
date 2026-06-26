@@ -6,7 +6,7 @@ export class PointHistoryCalculationStrategy {
   private taxLimit = 59400;
 
   constructor(
-    private userId: bigint,
+    private userId: string,
     private points: bigint,
     private panKyc: number
   ) {}

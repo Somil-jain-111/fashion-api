@@ -24,5 +24,6 @@ export const ORDER_ITEM_ERRORS = {
     code: "ORI_005",
     message: "Order item update failed",
     statusCode: 400,
+},
 
-}} as const;
+} as const;

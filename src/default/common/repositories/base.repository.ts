@@ -86,4 +86,8 @@ export class BaseRepository<T extends object> {
   createQueryBuilder(alias: string): SelectQueryBuilder<T> {
     return this.repository.createQueryBuilder(alias);
   }
+
+  async update(where: any, data: any) {
+    return this.repository.update(where, data);
+  }
 }

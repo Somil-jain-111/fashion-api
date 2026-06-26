@@ -16,7 +16,7 @@ import {
 @Entity("roles")
 export class Roles extends BaseEntity {
   @PrimaryGeneratedColumn("increment", { type: "bigint" })
-  id!: bigint;
+  id!: string;
 
   @Column({
     type: "enum",

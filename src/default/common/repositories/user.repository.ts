@@ -83,7 +83,7 @@ export class UserRepository extends BaseRepository<User> {
   }
 
   async updateOtp(
-    userId: bigint,
+    userId: string,
     otp: string,
     otpExpiry?: Date | null,
     queryRunner?: QueryRunner,
@@ -104,7 +104,7 @@ export class UserRepository extends BaseRepository<User> {
     return Number(result.affected) > 0;
   }
 
-  async clearOtp(userId: bigint, queryRunner?: QueryRunner): Promise<boolean> {
+  async clearOtp(userId: string, queryRunner?: QueryRunner): Promise<boolean> {
     const repo = queryRunner
       ? queryRunner.manager.getRepository(User)
       : this.repository;
@@ -122,7 +122,7 @@ export class UserRepository extends BaseRepository<User> {
   }
 
   async updateRefreshToken(
-    userId: bigint,
+    userId: string,
     refreshToken: string | null,
     refreshTokenExpiry: Date | null,
     queryRunner?: QueryRunner,
@@ -184,7 +184,7 @@ export class UserRepository extends BaseRepository<User> {
   }
 
   async updateResetPasswordToken(
-    userId: bigint,
+    userId: string,
     resetPasswordToken: string | null,
     resetPasswordTokenExpiry: Date | null,
     queryRunner?: QueryRunner,
@@ -205,7 +205,7 @@ export class UserRepository extends BaseRepository<User> {
   }
 
   async updateAuthTokens(
-    userId: bigint,
+    userId: string,
     data: {
       accessToken?: string | null;
       accessTokenExpiry?: Date | null;

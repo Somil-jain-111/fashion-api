@@ -10,7 +10,7 @@ export class AddressRepository extends BaseRepository<Address> {
     super(dataSource.getRepository(Address));
   }
 
-  async findByUserId(userId: bigint): Promise<Address[]> {
+  async findByUserId(userId: string): Promise<Address[]> {
     return await this.repository.find({
       where: {
         user: {
@@ -24,7 +24,7 @@ export class AddressRepository extends BaseRepository<Address> {
     });
   }
 
-  async findDefaultAddress(userId: bigint): Promise<Address | null> {
+  async findDefaultAddress(userId: string): Promise<Address | null> {
     return await this.repository.findOne({
       where: {
         user: {

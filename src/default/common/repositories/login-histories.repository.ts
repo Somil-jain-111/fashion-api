@@ -25,7 +25,7 @@ export class LoginHistoriesRepository extends BaseRepository<LoginHistories> {
       : this.repository;
 
     const loginHistory = repo.create({
-      user_id: BigInt(data.user.id),
+      user_id: (data.user.id),
       latitude: data.latitude ?? null,
       longitude: data.longitude ?? null,
       ipAddress: data.ipAddress ?? null,

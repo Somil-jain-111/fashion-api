@@ -69,7 +69,11 @@ export class PointHistory extends BaseEntity {
   transaction_id?: string | null;
 
   @Column({ type: 'bigint' })
-  user_id!: bigint;
+  user_id!: string;
+
+  @Column({ type: 'bigint' })
+  order_id!: string;
+  
   @ManyToOne(() => User, (user) => user.pointHistories, {
     nullable: false,
   })

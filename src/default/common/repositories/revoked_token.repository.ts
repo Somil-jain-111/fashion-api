@@ -13,7 +13,7 @@ export class RevokedTokenRepository extends BaseRepository<RevokedToken> {
   async revokeToken(
     data: {
       token_hash: string;
-      user_id?: bigint | null;
+      user_id?: string | null;
       token_type: TokenType;
       expires_at: Date;
     },
@@ -83,7 +83,7 @@ export class RevokedTokenRepository extends BaseRepository<RevokedToken> {
   async revokeManyTokens(
     data: Array<{
       token_hash: string;
-      user_id?: bigint | null;
+      user_id?: string | null;
       token_type: TokenType;
       expires_at: Date;
     }>,
