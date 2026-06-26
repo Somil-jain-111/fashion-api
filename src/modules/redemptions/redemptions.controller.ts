@@ -21,6 +21,7 @@ import { CreateOrderSummaryDto } from './dto/create-order-summary.dto';
 import { NoCache } from 'src/default/cache/cache.decorator';
 import { ResponseMessage } from 'src/default/common/decorators/response-message.decorator';
 import { SendRedemptionOtpDto } from './dto/send-redemption-otp.dto';
+import { ConfirmOrderDto } from './dto/confirm-order.dto';
 
 @NoCache()
 @UseInterceptors(IdempotencyInterceptor)
@@ -44,6 +45,13 @@ export class RedemptionsController {
   @ResponseMessage('Redemption OTP sent successfully')
   async sendRedemptionOtp(@Req() req: any, @Body() dto: SendRedemptionOtpDto) {
     const response = await this.redemptionsService.sendRedemptionOtp(req.user.id, dto);
+    return DataSanitizer.sanitizeData(response);
+  }
+
+  @Post('otp/verify')
+  @ResponseMessage('Redemption OTP verified successfully')
+  async confirmOrder(@Req() req: any, @Body() dto: ConfirmOrderDto) {
+    const response = await this.redemptionsService.confirmOrder(req.user.id, dto);
     return DataSanitizer.sanitizeData(response);
   }
 }
