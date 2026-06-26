@@ -22,6 +22,7 @@ import { GetPincodeDto } from './dto/get-pincode.dto';
 import { PaginationQueryDto } from 'src/default/common/dto/pagination-query.dto';
 import { CreateAddressDto } from './dto/create-address.dto';
 import { UpdateAddressDto } from './dto/update-address.dto';
+import { ResponseMessage } from 'src/default/common/decorators/response-message.decorator';
 
 @NoCache()
 @SkipThrottle()
@@ -65,6 +66,14 @@ export class AddressesController {
       BigInt(id),
       body
     );
+
+    return DataSanitizer.sanitizeData(response);
+  }
+
+  @ResponseMessage('Address deleted successfully')
+  @Post(':id/delete')
+  async deleteAddress(@Req() req: any, @Param('id') id: string) {
+    const response = await this.addressesService.deleteAddress(BigInt(req.user.id), BigInt(id));
 
     return DataSanitizer.sanitizeData(response);
   }

@@ -7,12 +7,12 @@ import {
   BaseEntity,
   ManyToOne,
   JoinColumn,
-  OneToMany,
   Index,
 } from 'typeorm';
 
 import { User } from '../../auth/entities';
 import { addressType } from 'src/default/common/enums/address.enum';
+import { AddressStatus } from '../enum/address-status.enum';
 
 @Entity({ name: 'addresses' })
 @Index('idx_addresses_user_id', ['user'])
@@ -38,14 +38,14 @@ export class Address extends BaseEntity {
   @Column({ type: 'varchar', length: 15, nullable: false })
   mobile!: string;
 
-//   @OneToMany(() => ShippingDetail, (sd) => sd.userAddress)
-//   shippingDetail?: ShippingDetail[];
+  //   @OneToMany(() => ShippingDetail, (sd) => sd.userAddress)
+  //   shippingDetail?: ShippingDetail[];
 
   @Column({ type: 'varchar', length: 255, nullable: false })
-  addressLine1!: string;
+  address_line_1!: string;
 
   @Column({ type: 'varchar', length: 255, nullable: true })
-  addressLine2?: string;
+  address_line_2?: string;
 
   @Column({ type: 'varchar', length: 100, nullable: true })
   landmark?: string;
@@ -54,13 +54,13 @@ export class Address extends BaseEntity {
   pincode!: string;
 
   @Column({ type: 'varchar', length: 100, nullable: true })
-  cityName?: string;
+  city_name?: string;
 
   @Column({ type: 'varchar', length: 100, nullable: true })
-  stateName?: string;
+  state_name?: string;
 
   @Column({ type: 'varchar', length: 100, nullable: true })
-  zoneName?: string;
+  zone_name?: string;
 
   @Column({ type: 'decimal', precision: 10, scale: 7, nullable: true })
   latitude?: number;
@@ -79,8 +79,11 @@ export class Address extends BaseEntity {
   @Column({ type: 'boolean', default: false })
   isDefault!: boolean;
 
-  @Column({ type: 'tinyint', default: 1 })
-  status!: number; // 1 = Active, 2 = Deleted
+  @Column({
+    type: 'tinyint',
+    default: AddressStatus.ACTIVE,
+  })
+  status!: AddressStatus;
 
   @CreateDateColumn({ type: 'datetime' })
   created_at!: Date;

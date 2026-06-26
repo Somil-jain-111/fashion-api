@@ -115,7 +115,7 @@ export class Order extends BaseEntity {
   @Column({
     type: 'enum',
     enum: OrderStatus,
-    default: OrderStatus.PENDING,
+    default: OrderStatus.ORDER_REVIEW,
   })
   status!: OrderStatus;
 

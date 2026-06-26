@@ -5,6 +5,7 @@ export enum ShippingStatus {
   DISPATCH = 'dispatch',
   RETURN = 'return',
   CANCELLED = 'cancelled',
+  NO_SERVICE = 'no_service',
   RETURN_ACCEPTED = 'return_accepted',
   RETURN_REJECTED = 'return_rejected',
   RETURN_INITIATED = 'return_initiated',
@@ -22,8 +23,9 @@ export enum ShippingStatus {
 }
 
 export enum OrderStatus {
-  PENDING = 'pending',
-  APPROVED = 'approved',
-  REJECTED = 'rejected',
-  NO_SERVICE = 'no_service',
+  ORDER_REVIEW = 'order_review',
+  OTP_TRIGGERED = 'otp_triggered',
+  OTP_VERIFIED = 'otp_verified',
+  OTP_EXPIRED = 'otp_expired',
+  CANCELLED = 'cancelled',
 }

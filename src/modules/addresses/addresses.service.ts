@@ -147,13 +147,13 @@ export class AddressesService {
       user: { id: userId } as any,
       name: dto.fullName,
       mobile: dto.mobile,
-      addressLine1: dto.addressLine1,
-      addressLine2: dto.addressLine2,
+      address_line_1: dto.addressLine1,
+      address_line_2: dto.addressLine2,
       landmark: dto.landmark,
       pincode: dto.pincode,
-      cityName: pincodeDetails.city.name,
-      stateName: pincodeDetails.state.name,
-      zoneName: pincodeDetails.region?.name || null,
+      city_name: pincodeDetails.city.name,
+      state_name: pincodeDetails.state.name,
+      zone_name: pincodeDetails.region?.name || null,
       addressType: isDefault ? addressType.Primary : addressType.Secondary,
       isDefault,
       status: 1,
@@ -204,11 +204,11 @@ export class AddressesService {
     }
 
     if (dto.addressLine1 !== undefined) {
-      address.addressLine1 = dto.addressLine1;
+      address.address_line_1 = dto.addressLine1;
     }
 
     if (dto.addressLine2 !== undefined) {
-      address.addressLine2 = dto.addressLine2;
+      address.address_line_2 = dto.addressLine2;
     }
 
     if (dto.landmark !== undefined) {
@@ -217,9 +217,9 @@ export class AddressesService {
 
     if (dto.pincode !== undefined && pincodeDetails) {
       address.pincode = dto.pincode;
-      address.cityName = pincodeDetails.city.name;
-      address.stateName = pincodeDetails.city.state.name;
-      address.zoneName = pincodeDetails.city.state.region?.name || null;
+      address.city_name = pincodeDetails.city.name;
+      address.state_name = pincodeDetails.city.state.name;
+      address.zone_name = pincodeDetails.city.state.region?.name || null;
     }
 
     const updatedAddress = await this.addressRepository.save(address);
@@ -230,5 +230,31 @@ export class AddressesService {
     });
 
     return new AddressResponseDTO(updatedAddress);
+  }
+
+  async deleteAddress(userId: bigint, addressId: bigint) {
+    const tag = 'AddressesService.deleteAddress';
+
+    ConsoleLogger.log('DELETE_ADDRESS_START', {
+      tag,
+      data: { userId, addressId },
+    });
+
+    const address = await this.addressRepository.findActiveAddressById(addressId, userId);
+
+    if (!address) {
+      throw new BusinessException(ERROR_CODES.ADDRESS.ADDRESS_NOT_FOUND);
+    }
+
+    await this.addressRepository.softDeleteAddress(addressId, userId);
+
+    ConsoleLogger.log('DELETE_ADDRESS_SUCCESS', {
+      tag,
+      data: { userId, addressId },
+    });
+
+    return {
+      addressId: addressId.toString(),
+    };
   }
 }
