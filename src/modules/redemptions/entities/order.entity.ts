@@ -83,12 +83,6 @@ export class Order extends BaseEntity {
   mrp!: number;
 
   @Column({ type: 'bigint', nullable: true })
-  created_by?: bigint | null;
-
-  @Column({ type: 'bigint', nullable: true })
-  updated_by?: bigint | null;
-
-  @Column({ type: 'bigint', nullable: true })
   parent_id?: bigint | null;
 
   @Column({ type: 'float', default: 0 })

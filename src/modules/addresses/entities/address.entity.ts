@@ -21,10 +21,10 @@ import { AddressStatus } from '../enum/address-status.enum';
 @Index('idx_addresses_status', ['status'])
 export class Address extends BaseEntity {
   @PrimaryGeneratedColumn('increment', { type: 'bigint' })
-  id!: bigint;
+  id!: string;
 
   @Column({ type: 'bigint' })
-  user_id!: bigint;
+  user_id!: string;
   @ManyToOne(() => User, (user) => user.addresses, {
     nullable: false,
     onDelete: 'CASCADE',

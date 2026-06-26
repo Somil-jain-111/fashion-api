@@ -12,3 +12,4 @@ export * from "./order.repository";
 export * from "./shipping-details.repository";
 export * from "./voucher.repository";
 export * from "./point-history.repository";
+export * from "./redemption-config.repository"

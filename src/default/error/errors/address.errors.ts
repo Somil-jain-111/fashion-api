@@ -14,4 +14,9 @@ export const ADDRESS_ERRORS = {
     message: 'You can only add up to 5 delivery addresses.',
     statusCode: 400,
   },
+  ADDRESS_REQUIRED: {
+    code: 'ADDRESS_004',
+    message: 'Address is required for physical product.',
+    statusCode: 400,
+  },
 } as const;

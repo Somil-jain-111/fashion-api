@@ -12,6 +12,7 @@ import { OrderRepository } from './order.repository';
 import { ShippingDetailRepository } from './shipping-details.repository';
 import { VoucherRepository } from './voucher.repository';
 import { PointHistoryRepository } from './point-history.repository';
+import { RedemptionConfigRepository } from './redemption-config.repository';
 
 export class RepositoryFactory {
   private static repositories = new Map<string, any>();
@@ -28,6 +29,8 @@ export class RepositoryFactory {
     this.repositories.set('shipping_detail', new ShippingDetailRepository(dataSource));
     this.repositories.set('voucher', new VoucherRepository(dataSource));
     this.repositories.set('point_history', new PointHistoryRepository(dataSource));
+    this.repositories.set('redemption_config', new RedemptionConfigRepository(dataSource));
+
   }
 
   static get(name: string) {

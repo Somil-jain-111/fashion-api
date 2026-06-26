@@ -71,7 +71,7 @@ export class AddressesService {
     return response;
   }
 
-  async getMyAddresses(userId: bigint, query: PaginationQueryDto): Promise<AddressListResponseDTO> {
+  async getMyAddresses(userId: string, query: PaginationQueryDto): Promise<AddressListResponseDTO> {
     const tag = 'AddressesService.getMyAddresses';
 
     const page = query.page || 1;
@@ -96,7 +96,7 @@ export class AddressesService {
     return new AddressListResponseDTO(addresses, totalItems, page, limit);
   }
 
-  async getAddressById(userId: bigint, addressId: bigint): Promise<AddressResponseDTO> {
+  async getAddressById(userId: string, addressId: string): Promise<AddressResponseDTO> {
     const tag = 'AddressesService.getAddressById';
 
     ConsoleLogger.log('GET_ADDRESS_BY_ID_START', {
@@ -123,7 +123,7 @@ export class AddressesService {
     return new AddressResponseDTO(address);
   }
 
-  async createAddress(userId: bigint, dto: CreateAddressDto): Promise<AddressResponseDTO> {
+  async createAddress(userId: string, dto: CreateAddressDto): Promise<AddressResponseDTO> {
     const tag = 'AddressesService.createAddress';
 
     ConsoleLogger.log('CREATE_ADDRESS_START', {
@@ -131,7 +131,7 @@ export class AddressesService {
       data: { userId },
     });
 
-    await this.userAuthValidator.validateActiveUserById(BigInt(userId));
+    await this.userAuthValidator.validateActiveUserById(userId);
 
     const [addresses] = await this.addressRepository.findByUserIdPaginated(userId, 1, 5);
 
@@ -170,8 +170,8 @@ export class AddressesService {
   }
 
   async updateAddress(
-    userId: bigint,
-    addressId: bigint,
+    userId: string,
+    addressId: string,
     dto: UpdateAddressDto
   ): Promise<AddressResponseDTO> {
     const tag = 'AddressesService.updateAddress';
@@ -181,7 +181,7 @@ export class AddressesService {
       data: { userId, addressId },
     });
 
-    await this.userAuthValidator.validateActiveUserById(BigInt(userId));
+    await this.userAuthValidator.validateActiveUserById(userId);
 
     const address = await this.addressRepository.findActiveAddressById(addressId, userId);
 
@@ -232,7 +232,7 @@ export class AddressesService {
     return new AddressResponseDTO(updatedAddress);
   }
 
-  async deleteAddress(userId: bigint, addressId: bigint) {
+  async deleteAddress(userId: string, addressId: string) {
     const tag = 'AddressesService.deleteAddress';
 
     ConsoleLogger.log('DELETE_ADDRESS_START', {

@@ -41,31 +41,27 @@ export class AddressesController {
 
   @Get()
   async getMyAddresses(@Req() req: any, @Query() query: PaginationQueryDto) {
-    const response = await this.addressesService.getMyAddresses(BigInt(req.user.id), query);
+    const response = await this.addressesService.getMyAddresses(req.user.id, query);
 
     return DataSanitizer.sanitizeData(response);
   }
 
   @Get(':id')
   async getAddressById(@Req() req: any, @Param('id') id: string) {
-    const response = await this.addressesService.getAddressById(BigInt(req.user.id), BigInt(id));
+    const response = await this.addressesService.getAddressById(req.user.id, id);
 
     return DataSanitizer.sanitizeData(response);
   }
 
   @Post()
   async createAddress(@Req() req: any, @Body() body: CreateAddressDto) {
-    const response = await this.addressesService.createAddress(BigInt(req.user.id), body);
+    const response = await this.addressesService.createAddress(req.user.id, body);
 
     return DataSanitizer.sanitizeData(response);
   }
   @Post(':id')
   async updateAddress(@Req() req: any, @Param('id') id: string, @Body() body: UpdateAddressDto) {
-    const response = await this.addressesService.updateAddress(
-      BigInt(req.user.id),
-      BigInt(id),
-      body
-    );
+    const response = await this.addressesService.updateAddress(req.user.id, id, body);
 
     return DataSanitizer.sanitizeData(response);
   }
@@ -73,7 +69,7 @@ export class AddressesController {
   @ResponseMessage('Address deleted successfully')
   @Post(':id/delete')
   async deleteAddress(@Req() req: any, @Param('id') id: string) {
-    const response = await this.addressesService.deleteAddress(BigInt(req.user.id), BigInt(id));
+    const response = await this.addressesService.deleteAddress(req.user.id, id);
 
     return DataSanitizer.sanitizeData(response);
   }

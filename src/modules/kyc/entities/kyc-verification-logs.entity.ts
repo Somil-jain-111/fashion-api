@@ -20,8 +20,9 @@ import {
 @Index(["referenceId"])
 @Index(["status"])
 export class KycVerificationLogEntity {
-  @PrimaryGeneratedColumn("increment", { type: "bigint" })
-  id: string;
+@PrimaryGeneratedColumn("increment", { type: "bigint" })
+
+id!: string;
 
   @Column({ name: "user_id", type: "bigint" })
   user_id: string;

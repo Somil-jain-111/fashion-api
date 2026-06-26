@@ -21,7 +21,7 @@ export class UserAuthValidator {
     return user;
   }
 
-  async validateActiveUserById(userId: bigint): Promise<User> {
+  async validateActiveUserById(userId: string): Promise<User> {
     const user = await this.userRepository.findById(userId);
 
     if (!user) {

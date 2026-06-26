@@ -1,29 +1,25 @@
-import { Injectable } from "@nestjs/common";
-import { VerifyPanDto } from "./dto/verify-pan.dto";
-import { ConsoleLogger } from "src/default/logger/console/console.service";
+import { Injectable } from '@nestjs/common';
+import { VerifyPanDto } from './dto/verify-pan.dto';
+import { ConsoleLogger } from 'src/default/logger/console/console.service';
 import {
   KycVerificationLogRepository,
   KycVerificationRepository,
   UserRepository,
-} from "src/default/common/repositories";
-import { BusinessException } from "src/default/error/business.exception";
-import { ERROR_CODES } from "src/default/error/error.code";
-import { UserAuthValidator } from "../auth/validators/user-auth.validator";
-import { AppConfigService } from "src/default/config/config.service";
-import { KycEncryptionHelper } from "src/default/common/helper/kyc-encryption.helper";
-import { ReferenceIdUtil } from "src/default/common/utils/reference-id.util";
-import {
-  KycLogStatus,
-  KycStatus,
-  KycType,
-} from "src/default/common/enums/kyc.enum";
-import { PanProvider } from "./provider/pan.provider";
-import { NameMatchProvider } from "./provider/name-matching.provider";
-import { GenerateAadharOtpDto } from "./dto/generate-aadhar.dto";
-import { AadhaarProvider } from "./provider/aadhaar.provider";
-import { VerifyAadhaarOtpDto } from "./dto/verify-aadhar-otp.dto";
-import { LocalStorageContextUtil } from "src/default/common/utils/local-storage.util";
-import { ContextType } from "src/default/common/constants/context.option";
+} from 'src/default/common/repositories';
+import { BusinessException } from 'src/default/error/business.exception';
+import { ERROR_CODES } from 'src/default/error/error.code';
+import { UserAuthValidator } from '../auth/validators/user-auth.validator';
+import { AppConfigService } from 'src/default/config/config.service';
+import { KycEncryptionHelper } from 'src/default/common/helper/kyc-encryption.helper';
+import { ReferenceIdUtil } from 'src/default/common/utils/reference-id.util';
+import { KycLogStatus, KycStatus, KycType } from 'src/default/common/enums/kyc.enum';
+import { PanProvider } from './provider/pan.provider';
+import { NameMatchProvider } from './provider/name-matching.provider';
+import { GenerateAadharOtpDto } from './dto/generate-aadhar.dto';
+import { AadhaarProvider } from './provider/aadhaar.provider';
+import { VerifyAadhaarOtpDto } from './dto/verify-aadhar-otp.dto';
+import { LocalStorageContextUtil } from 'src/default/common/utils/local-storage.util';
+import { ContextType } from 'src/default/common/constants/context.option';
 
 @Injectable()
 export class KycService {
@@ -35,101 +31,88 @@ export class KycService {
     private nameMatchProvider: NameMatchProvider,
     private panProvider: PanProvider,
     private aadhaarProvider: AadhaarProvider,
-    private readonly configService: AppConfigService,
+    private readonly configService: AppConfigService
 
     // private readonly AuthTokenHelper,
   ) {}
   // src/modules/kyc/service/kyc.service.ts
 
   private encryptKycData(value: any): any {
-    const secretKey = this.configService.get("KYC_ENCRYPTION_SECRET_KEY");
-    const fixedIv = this.configService.get("KYC_ENCRYPTION_FIXED_IV");
+    const secretKey = this.configService.get('KYC_ENCRYPTION_SECRET_KEY');
+    const fixedIv = this.configService.get('KYC_ENCRYPTION_FIXED_IV');
 
     return KycEncryptionHelper.encrypt(value, secretKey, fixedIv);
   }
 
   private decryptKycData(value: any): any {
-    const secretKey = this.configService.get("KYC_ENCRYPTION_SECRET_KEY");
-    const fixedIv = this.configService.get("KYC_ENCRYPTION_FIXED_IV");
+    const secretKey = this.configService.get('KYC_ENCRYPTION_SECRET_KEY');
+    const fixedIv = this.configService.get('KYC_ENCRYPTION_FIXED_IV');
 
     return KycEncryptionHelper.decrypt(value, secretKey, fixedIv);
   }
 
   private getPanFailureMessage(statusCode: number, responseData: any): string {
     const statusMap: Record<number, string> = {
-      201: "Invalid PAN number, please try again",
-      2007: "Invalid PAN number, please try again",
-      401: "PAN verification failed, please try again",
+      201: 'Invalid PAN number, please try again',
+      2007: 'Invalid PAN number, please try again',
+      401: 'PAN verification failed, please try again',
     };
 
     return (
       statusMap[statusCode] ||
       responseData?.data?.message ||
       responseData?.message ||
-      "PAN verification failed"
+      'PAN verification failed'
     );
   }
 
-  private getAadhaarOtpFailureMessage(
-    statusCode: number,
-    responseData: any,
-  ): string {
+  private getAadhaarOtpFailureMessage(statusCode: number, responseData: any): string {
     const statusMap: Record<number, string> = {
-      500: "Internal Server Error, Please try again.",
-      401: "Signature verification failed.",
-      4015: "Signature verification failed.",
-      201: responseData?.data?.message || "Something went wrong.",
+      500: 'Internal Server Error, Please try again.',
+      401: 'Signature verification failed.',
+      4015: 'Signature verification failed.',
+      201: responseData?.data?.message || 'Something went wrong.',
     };
 
     return (
       statusMap[statusCode] ||
       responseData?.data?.message ||
       responseData?.message ||
-      "Aadhaar OTP generation failed"
+      'Aadhaar OTP generation failed'
     );
   }
 
-  private getAadhaarVerifyFailureMessage(
-    statusCode: number,
-    responseData: any,
-  ): string {
+  private getAadhaarVerifyFailureMessage(statusCode: number, responseData: any): string {
     const statusMap: Record<number, string> = {
-      4015: "Internal Server Error",
-      2203: "Invalid OTP",
-      201: responseData?.data?.message || "Something went wrong.",
+      4015: 'Internal Server Error',
+      2203: 'Invalid OTP',
+      201: responseData?.data?.message || 'Something went wrong.',
     };
 
     return (
       statusMap[statusCode] ||
       responseData?.data?.message ||
       responseData?.message ||
-      "Aadhaar verification failed"
+      'Aadhaar verification failed'
     );
   }
 
-  async generateAadhaarOtp(
-    userId: string,
-    body: GenerateAadharOtpDto,
-  ): Promise<any> {
-    const tag = "KycService.generateAadhaarOtp";
+  async generateAadhaarOtp(userId: string, body: GenerateAadharOtpDto): Promise<any> {
+    const tag = 'KycService.generateAadhaarOtp';
 
     const { aadharNumber, aadharFrontImage, aadharBackImage } = body;
 
-    const userIdString = userId.toString();
-
-    ConsoleLogger.log("AADHAAR_OTP_GENERATE_START", {
+    ConsoleLogger.log('AADHAAR_OTP_GENERATE_START', {
       tag,
       data: {
-        userId: userIdString,
+        userId: userId,
       },
     });
 
     /**
      * 1. Validate user
      */
-    const user = await this.userAuthValidator.validateActiveUserById(
-      BigInt(userIdString),
-    );
+    const user = await this.userAuthValidator.validateActiveUserById(userId);
 
     if (!user.username) {
       throw new BusinessException(ERROR_CODES.KYC.USER_PROFILE_NAME_REQUIRED);
@@ -145,21 +128,17 @@ export class KycService {
     const existingVerifiedAadhaar =
       await this.kycVerificationRepository.findByDocumentNumberAndType(
         encryptedAadhaarNumber,
-        KycType.AADHAAR,
+        KycType.AADHAAR
       );
 
-    if (
-      existingVerifiedAadhaar &&
-      existingVerifiedAadhaar.user_id !== userIdString
-    ) {
+    if (existingVerifiedAadhaar && existingVerifiedAadhaar.user_id !== userId) {
       throw new BusinessException(ERROR_CODES.KYC.AADHAAR_ALREADY_IN_USE);
     }
 
-    const userVerifiedAadhaar =
-      await this.kycVerificationRepository.findVerifiedByUserIdAndType(
-        userIdString,
-        KycType.AADHAAR,
-      );
+    const userVerifiedAadhaar = await this.kycVerificationRepository.findVerifiedByUserIdAndType(
+      userId,
+      KycType.AADHAAR
+    );
 
     if (userVerifiedAadhaar) {
       throw new BusinessException(ERROR_CODES.KYC.AADHAAR_ALREADY_VERIFIED);
@@ -168,16 +147,12 @@ export class KycService {
     /**
      * 5. Expire previous pending OTP logs
      */
-    await this.kycVerificationLogRepository.expireAllPendingOtpLogs(
-      userIdString,
-      KycType.AADHAAR,
-    );
+    await this.kycVerificationLogRepository.expireAllPendingOtpLogs(userId, KycType.AADHAAR);
 
     /**
      * 6. Call provider
      */
-    const transactionId =
-      await ReferenceIdUtil.generateKycReferenceId("AADHAAR");
+    const transactionId = await ReferenceIdUtil.generateKycReferenceId('AADHAAR');
 
     const providerResult = await this.aadhaarProvider.generateOtp({
       aadhaarNumber: aadharNumber,
@@ -192,14 +167,12 @@ export class KycService {
      * Do not store raw Aadhaar number in logs.
      */
     await this.kycVerificationLogRepository.createLog({
-      user_id: userIdString,
+      user_id: userId,
       type: KycType.AADHAAR,
-      status: providerResult.success
-        ? KycLogStatus.OTP_SENT
-        : KycLogStatus.FAILED,
+      status: providerResult.success ? KycLogStatus.OTP_SENT : KycLogStatus.FAILED,
       referenceId: transactionId,
       documentNumber: encryptedAadhaarNumber,
-      provider: "REWARDS_API",
+      provider: 'REWARDS_API',
       requestPayload: {
         ...providerResult.requestPayload,
         id_number: maskedAadhaar,
@@ -212,21 +185,18 @@ export class KycService {
     if (!providerResult.success) {
       const message = this.getAadhaarOtpFailureMessage(
         providerResult.statusCode,
-        providerResult.responseData,
+        providerResult.responseData
       );
 
-      throw new BusinessException(
-        ERROR_CODES.KYC.AADHAAR_OTP_GENERATION_FAILED,
-        {
-          reason: message,
-        },
-      );
+      throw new BusinessException(ERROR_CODES.KYC.AADHAAR_OTP_GENERATION_FAILED, {
+        reason: message,
+      });
     }
 
-    ConsoleLogger.log("AADHAAR_OTP_GENERATE_SUCCESS", {
+    ConsoleLogger.log('AADHAAR_OTP_GENERATE_SUCCESS', {
       tag,
       data: {
-        userId: userIdString,
+        userId: userId,
         referenceId: transactionId,
       },
     });
@@ -246,19 +216,14 @@ export class KycService {
     };
   }
 
-  async verifyAadhaarOtp(
-    userId: string,
-    body: VerifyAadhaarOtpDto,
-  ): Promise<any> {
-    const tag = "KycService.verifyAadhaarOtp";
-    const userIdString = userId.toString();
-
+  async verifyAadhaarOtp(userId: string, body: VerifyAadhaarOtpDto): Promise<any> {
+    const tag = 'KycService.verifyAadhaarOtp';
     const { referenceId, referenceIdOtp, otp } = body;
 
-    ConsoleLogger.log("AADHAAR_OTP_VERIFY_START", {
+    ConsoleLogger.log('AADHAAR_OTP_VERIFY_START', {
       tag,
       data: {
-        userId: userIdString,
+        userId: userId,
         referenceId,
       },
     });
@@ -266,9 +231,7 @@ export class KycService {
     /**
      * 1. Validate user
      */
-    const user = await this.userAuthValidator.validateActiveUserById(
-      BigInt(userIdString),
-    );
+    const user = await this.userAuthValidator.validateActiveUserById(userId);
 
     if (!user.username) {
       throw new BusinessException(ERROR_CODES.KYC.USER_PROFILE_NAME_REQUIRED);
@@ -284,16 +247,15 @@ export class KycService {
     /**
      * 3. Check valid OTP request from logs
      */
-    const otpLog =
-      await this.kycVerificationLogRepository.findLatestValidOtpLog(
-        userIdString,
-        KycType.AADHAAR,
-        referenceId,
-        10,
-      );
+    const otpLog = await this.kycVerificationLogRepository.findLatestValidOtpLog(
+      userId,
+      KycType.AADHAAR,
+      referenceId,
+      10
+    );
 
     if (!otpLog) {
-      console.log("ssssssssssss")
+      console.log('ssssssssssss');
       throw new BusinessException(ERROR_CODES.KYC.AADHAAR_OTP_EXPIRED);
     }
 
@@ -307,17 +269,15 @@ export class KycService {
     });
 
     await this.kycVerificationLogRepository.createLog({
-      user_id: userIdString,
+      user_id: userId,
       type: KycType.AADHAAR,
-      status: providerResult.success
-        ? KycLogStatus.VERIFIED
-        : KycLogStatus.FAILED,
+      status: providerResult.success ? KycLogStatus.VERIFIED : KycLogStatus.FAILED,
       referenceId,
       documentNumber: otpLog.documentNumber,
-      provider: "REWARDS_API",
+      provider: 'REWARDS_API',
       requestPayload: {
         ...providerResult.requestPayload,
-        otp: "******",
+        otp: '******',
       },
       responsePayload: providerResult.responseData,
       failureReason: providerResult.success ? null : providerResult.message,
@@ -327,7 +287,7 @@ export class KycService {
     if (!providerResult.success) {
       const message = this.getAadhaarVerifyFailureMessage(
         providerResult.statusCode,
-        providerResult.responseData,
+        providerResult.responseData
       );
 
       throw new BusinessException(ERROR_CODES.KYC.AADHAAR_VERIFICATION_FAILED, {
@@ -353,55 +313,43 @@ export class KycService {
     /**
      * 6. Save verified Aadhaar only in kyc_verifications
      */
-    const encryptedProviderResponse = this.encryptKycData(
-      providerResult.responseData,
-    );
-    const encryptedProfileImage = this.encryptKycData(
-      uploadedAadhaarImage || "",
-    );
+    const encryptedProviderResponse = this.encryptKycData(providerResult.responseData);
+    const encryptedProfileImage = this.encryptKycData(uploadedAadhaarImage || '');
     const encryptedVerifiedName = this.encryptKycData(
-      aadhaarData.full_name || aadhaarData.name || user.username,
+      aadhaarData.full_name || aadhaarData.name || user.username
     );
 
     await this.kycVerificationRepository.upsertVerifiedKyc({
-      userId: userIdString,
+      userId: userId,
       type: KycType.AADHAAR,
       referenceId,
       documentNumber: otpLog.documentNumber,
-      maskedDocumentNumber:
-        aadhaarData.masked_aadhaar || aadhaarData.maskedAadhaar || null,
+      maskedDocumentNumber: aadhaarData.masked_aadhaar || aadhaarData.maskedAadhaar || null,
       verifiedName: encryptedVerifiedName,
-      provider: "REWARDS_API",
+      provider: 'REWARDS_API',
       providerRequest: {
         referenceId,
         referenceIdOtp,
-        otp: "******",
+        otp: '******',
       },
       providerResponse: encryptedProviderResponse,
       metadata: {
         profileImage: encryptedProfileImage,
         dob: aadhaarData.dob ? this.encryptKycData(aadhaarData.dob) : null,
-        gender: aadhaarData.gender
-          ? this.encryptKycData(aadhaarData.gender)
-          : null,
-        address: aadhaarData.address
-          ? this.encryptKycData(aadhaarData.address)
-          : null,
+        gender: aadhaarData.gender ? this.encryptKycData(aadhaarData.gender) : null,
+        address: aadhaarData.address ? this.encryptKycData(aadhaarData.address) : null,
       },
     });
 
     /**
      * 7. Expire previous OTP_SENT log after verification
      */
-    await this.kycVerificationLogRepository.expireAllPendingOtpLogs(
-      userIdString,
-      KycType.AADHAAR,
-    );
+    await this.kycVerificationLogRepository.expireAllPendingOtpLogs(userId, KycType.AADHAAR);
 
-    ConsoleLogger.log("AADHAAR_OTP_VERIFY_SUCCESS", {
+    ConsoleLogger.log('AADHAAR_OTP_VERIFY_SUCCESS', {
       tag,
       data: {
-        userId: userIdString,
+        userId: userId,
         referenceId,
       },
     });
@@ -409,17 +357,17 @@ export class KycService {
     return {
       verified: true,
       referenceId,
-      message: "Aadhaar verified successfully",
+      message: 'Aadhaar verified successfully',
     };
   }
-  async verifyPan(userId: bigint, body: VerifyPanDto): Promise<any> {
-    const tag = "KycService.verifyPan";
+  async verifyPan(userId: string, body: VerifyPanDto): Promise<any> {
+    const tag = 'KycService.verifyPan';
 
     const { panCard, panImage } = body;
     const pan = panCard.toUpperCase();
     const userIdString = userId.toString();
 
-    ConsoleLogger.log("VERIFY_PAN_START", {
+    ConsoleLogger.log('VERIFY_PAN_START', {
       tag,
       data: {
         userId: userIdString,
@@ -435,27 +383,25 @@ export class KycService {
 
     const encryptedPan = await this.encryptKycData(pan);
 
-    const existingUserPan =
-      await this.kycVerificationRepository.findByUserIdAndType(
-        userIdString,
-        KycType.PAN,
-      );
+    const existingUserPan = await this.kycVerificationRepository.findByUserIdAndType(
+      userIdString,
+      KycType.PAN
+    );
 
     if (existingUserPan?.status === KycStatus.VERIFIED) {
       throw new BusinessException(ERROR_CODES.KYC.PAN_ALREADY_SUBMITTED);
     }
 
-    const existingPan =
-      await this.kycVerificationRepository.findByDocumentNumberAndType(
-        encryptedPan,
-        KycType.PAN,
-      );
+    const existingPan = await this.kycVerificationRepository.findByDocumentNumberAndType(
+      encryptedPan,
+      KycType.PAN
+    );
 
     if (existingPan && existingPan.user_id !== userIdString) {
       throw new BusinessException(ERROR_CODES.KYC.PAN_ALREADY_IN_USE);
     }
 
-    const transactionId = await ReferenceIdUtil.generateKycReferenceId("PAN");
+    const transactionId = await ReferenceIdUtil.generateKycReferenceId('PAN');
 
     const panProviderResult = await this.panProvider.verifyPan({
       panCard: pan,
@@ -465,23 +411,19 @@ export class KycService {
     await this.kycVerificationLogRepository.createLog({
       user_id: userIdString,
       type: KycType.PAN,
-      status: panProviderResult.success
-        ? KycLogStatus.VERIFIED
-        : KycLogStatus.FAILED,
+      status: panProviderResult.success ? KycLogStatus.VERIFIED : KycLogStatus.FAILED,
       referenceId: transactionId,
       documentNumber: encryptedPan,
-      provider: "REWARDS_API",
+      provider: 'REWARDS_API',
       requestPayload: panProviderResult.requestPayload,
       responsePayload: panProviderResult.responseData,
-      failureReason: panProviderResult.success
-        ? null
-        : panProviderResult.message,
+      failureReason: panProviderResult.success ? null : panProviderResult.message,
     });
 
     if (!panProviderResult.success) {
       const message = this.getPanFailureMessage(
         panProviderResult.statusCode,
-        panProviderResult.responseData,
+        panProviderResult.responseData
       );
 
       throw new BusinessException(ERROR_CODES.KYC.PAN_VERIFICATION_FAILED, {
@@ -491,29 +433,25 @@ export class KycService {
 
     const panApiData = panProviderResult.responseData?.data || {};
 
-    if (panApiData?.aadhaar_linked?.toLowerCase() !== "successful") {
+    if (panApiData?.aadhaar_linked?.toLowerCase() !== 'successful') {
       throw new BusinessException(ERROR_CODES.KYC.PAN_NOT_LINKED_WITH_AADHAAR);
     }
 
     const nameMatchResult = await this.nameMatchProvider.matchName({
       userName: panApiData?.full_name,
       apiUserName: user.username,
-      transactionId: await ReferenceIdUtil.generateKycReferenceId("NAME_MATCH"),
+      transactionId: await ReferenceIdUtil.generateKycReferenceId('NAME_MATCH'),
     });
 
-    const matchScore = Number(
-      nameMatchResult?.responseData?.data?.match_score || 0,
-    );
+    const matchScore = Number(nameMatchResult?.responseData?.data?.match_score || 0);
     const isNameMatched = matchScore >= 85;
 
     await this.kycVerificationLogRepository.createLog({
       user_id: userIdString,
       type: KycType.NAME_MATCH,
-      status: nameMatchResult.success
-        ? KycLogStatus.VERIFIED
-        : KycLogStatus.FAILED,
+      status: nameMatchResult.success ? KycLogStatus.VERIFIED : KycLogStatus.FAILED,
       referenceId: nameMatchResult.requestPayload?.transaction_id,
-      provider: "REWARDS_API",
+      provider: 'REWARDS_API',
       requestPayload: nameMatchResult.requestPayload,
       responsePayload: nameMatchResult.responseData,
       failureReason: nameMatchResult.success ? null : nameMatchResult.message,
@@ -521,16 +459,15 @@ export class KycService {
 
     if (!isNameMatched) {
       throw new BusinessException(ERROR_CODES.KYC.NAME_MATCH_FAILED, {
-        reason: "PAN name does not match with profile name",
+        reason: 'PAN name does not match with profile name',
       });
     }
 
-    const [encryptedUserName, encryptedPanImage, encryptedApiData] =
-      await Promise.all([
-        this.encryptKycData(user.username),
-        this.encryptKycData(panImage || ""),
-        this.encryptKycData(panProviderResult.responseData),
-      ]);
+    const [encryptedUserName, encryptedPanImage, encryptedApiData] = await Promise.all([
+      this.encryptKycData(user.username),
+      this.encryptKycData(panImage || ''),
+      this.encryptKycData(panProviderResult.responseData),
+    ]);
 
     await this.kycVerificationRepository.upsertVerifiedKyc({
       userId: userIdString,
@@ -538,7 +475,7 @@ export class KycService {
       referenceId: transactionId,
       documentNumber: encryptedPan,
       verifiedName: encryptedUserName,
-      provider: "REWARDS_API",
+      provider: 'REWARDS_API',
       providerRequest: panProviderResult.requestPayload,
       providerResponse: encryptedApiData,
       metadata: {
@@ -548,7 +485,7 @@ export class KycService {
       },
     });
 
-    ConsoleLogger.log("VERIFY_PAN_SUCCESS", {
+    ConsoleLogger.log('VERIFY_PAN_SUCCESS', {
       tag,
       data: {
         userId: userIdString,

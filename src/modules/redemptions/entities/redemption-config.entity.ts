@@ -1,4 +1,4 @@
-import { UserType } from 'src/default/common/enums/user-type.enum';
+import { UserRole, UserType } from 'src/default/common/enums/user-type.enum';
 import {
   Entity,
   Column,
@@ -10,17 +10,17 @@ import {
 } from 'typeorm';
 
 @Entity('redemption_config')
-@Index('idx_redemption_config_user_type', ['user_type'], { unique: true })
+@Index('idx_redemption_config_user_role', ['user_role'], { unique: true })
 export class RedemptionConfig extends BaseEntity {
   @PrimaryGeneratedColumn('increment', { type: 'bigint' })
   id!: bigint;
 
   @Column({
     type: 'enum',
-    enum: UserType,
-    name: 'user_type',
+    enum: UserRole,
+    name: 'user_role',
   })
-  user_type!: UserType;
+  user_role!: UserRole;
 
   @Column({
     type: 'boolean',

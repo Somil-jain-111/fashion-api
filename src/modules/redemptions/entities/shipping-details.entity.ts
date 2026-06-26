@@ -72,12 +72,7 @@ export class ShippingDetail extends BaseEntity {
     default: ShippingStatus.PENDING,
   })
   delivery_status!: ShippingStatus;
-
-  @Column({ type: 'bigint', nullable: true })
-  created_by?: bigint;
-
-  @Column({ type: 'bigint', nullable: true })
-  updated_by?: bigint;
+;
 
   @CreateDateColumn({ type: 'datetime', name: 'created_at' })
   created_at!: Date;

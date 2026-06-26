@@ -24,4 +24,39 @@ export const REWARDS_ERRORS = {
     message: 'Catalogue categories fetch failed',
     statusCode: 400,
   },
+  REDEMPTION_DISABLED: {
+    code: 'REWARDS_006',
+    message: 'Redemptions are currently disabled for your user type.',
+    statusCode: 400,
+  },
+
+  PHYSICAL_REDEMPTION_DISABLED: {
+    code: 'REWARDS_007',
+    message: 'Physical redemptions are currently disabled for your user type.',
+    statusCode: 400,
+  },
+
+  DIGITAL_REDEMPTION_DISABLED: {
+    code: 'REWARDS_008',
+    message: 'Digital redemptions are currently disabled for your user type.',
+    statusCode: 400,
+  },
+
+  PRODUCT_NOT_FOUND: {
+    code: 'REWARDS_009',
+    message: 'Product not found',
+    statusCode: 404,
+  },
+
+  INVALID_REWARD_POINTS: {
+    code: 'REWARDS_010',
+    message: 'Invalid reward points',
+    statusCode: 400,
+  },
+
+  INSUFFICIENT_POINTS: {
+    code: 'REWARDS_011',
+    message: 'Insufficient points',
+    statusCode: 400,
+  },
 } as const;

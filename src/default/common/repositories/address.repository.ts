@@ -36,25 +36,21 @@ export class AddressRepository extends BaseRepository<Address> {
     });
   }
 
-  async findActiveAddressById(addressId: bigint, userId: bigint): Promise<Address | null> {
+  async findActiveAddressById(addressId: string, userId: string): Promise<Address | null> {
     return await this.repository.findOne({
       where: {
         id: addressId,
-        user: {
-          id: userId,
-        },
+        user_id: userId,
         status: 1,
       } as FindOptionsWhere<Address>,
     });
   }
 
-  async softDeleteAddress(addressId: bigint, userId: bigint): Promise<void> {
+  async softDeleteAddress(addressId: string, userId: string): Promise<void> {
     await await this.repository.update(
       {
         id: addressId,
-        user: {
-          id: userId,
-        },
+        user_id: userId,
       } as FindOptionsWhere<Address>,
       {
         status: 2,
@@ -63,12 +59,10 @@ export class AddressRepository extends BaseRepository<Address> {
     );
   }
 
-  async removeDefaultAddress(userId: bigint): Promise<void> {
+  async removeDefaultAddress(userId: string): Promise<void> {
     await this.repository.update(
       {
-        user: {
-          id: userId,
-        },
+        user_id: userId,
         isDefault: true,
         status: 1,
       } as FindOptionsWhere<Address>,
@@ -78,15 +72,13 @@ export class AddressRepository extends BaseRepository<Address> {
     );
   }
 
-  async setDefaultAddress(addressId: bigint, userId: bigint): Promise<void> {
+  async setDefaultAddress(addressId: string, userId: string): Promise<void> {
     await this.removeDefaultAddress(userId);
 
     await this.repository.update(
       {
         id: addressId,
-        user: {
-          id: userId,
-        },
+        user_id: userId,
         status: 1,
       } as FindOptionsWhere<Address>,
       {
@@ -95,12 +87,10 @@ export class AddressRepository extends BaseRepository<Address> {
     );
   }
 
-  async findByUserIdPaginated(userId: bigint, page = 1, limit = 10): Promise<[Address[], number]> {
+  async findByUserIdPaginated(userId: string, page = 1, limit = 10): Promise<[Address[], number]> {
     return await this.repository.findAndCount({
       where: {
-        user: {
-          id: userId,
-        },
+        user_id: userId,
         status: 1,
       } as FindOptionsWhere<Address>,
       order: {
