@@ -21,6 +21,7 @@ import {
   Address,
   Order,
   PointHistory,
+  Approval,
 } from '.';
 import { Salutation, UserType } from '../../../default/common/enums/user-type.enum';
 import { UserStatus } from '../constants/auth.constants';
@@ -52,7 +53,7 @@ export class User extends BaseEntity {
   @Column({ type: 'varchar', length: 20, nullable: true })
   code?: string;
 
-  @Column({ type: 'tinyint', default: UserStatus.ACTIVE })
+  @Column({ type: 'varchar', default: UserStatus.PARTIAL_APPROVED })
   status!: UserStatus;
 
   @Column({ type: 'tinyint', default: 0 })
@@ -165,7 +166,9 @@ export class User extends BaseEntity {
   @OneToMany(() => Order, (Order) => Order.user)
   orders?: Order[];
 
-
   @OneToMany(() => PointHistory, (PointHistory) => PointHistory.user)
   pointHistories?: PointHistory[];
+
+  @OneToMany(() => Approval, (approval) => approval.user, { nullable: true })
+  approvals?: Approval[];
 }
