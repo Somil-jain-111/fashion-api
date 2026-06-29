@@ -8,8 +8,8 @@ import {
   CreateDateColumn,
   PrimaryGeneratedColumn,
 } from 'typeorm';
-import { User } from 'src/modules/auth/entities/users.entity';
-import { ApprovalStatus, ApprovalType } from 'src/default/common/enums/approvals.enum';
+import { User } from '../../auth/entities/index';
+import { ApprovalStatus, ApprovalType } from '../../../default/common/enums/approvals.enum';
 
 @Entity('approvals')
 export class Approval extends BaseEntity {

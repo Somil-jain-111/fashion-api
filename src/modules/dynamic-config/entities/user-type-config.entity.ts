@@ -1,7 +1,7 @@
 import { Entity, Column } from 'typeorm';
 //
-import { BaseEntity } from 'src/default/common/entities';
-import { UserType } from 'src/default/common/enums/user-type.enum';
+import { BaseEntity } from '../../../default/common/entities';
+import { UserType } from '../../../default/common/enums/user-type.enum';
 
 @Entity('user_type_config')
 export class UserTypeConfig extends BaseEntity {

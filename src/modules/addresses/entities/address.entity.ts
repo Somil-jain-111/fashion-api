@@ -11,7 +11,7 @@ import {
 } from 'typeorm';
 
 import { User } from '../../auth/entities';
-import { addressType } from 'src/default/common/enums/address.enum';
+import { addressType } from '../../../default/common/enums/address.enum';
 import { AddressStatus } from '../enum/address-status.enum';
 
 @Entity({ name: 'addresses' })

@@ -1,6 +1,6 @@
 import { Entity, Column } from 'typeorm';
 //
-import { BaseEntity } from 'src/default/common/entities';
+import { BaseEntity } from '../../../default/common/entities';
 
 @Entity('application_config')
 export class ApplicationConfig extends BaseEntity {

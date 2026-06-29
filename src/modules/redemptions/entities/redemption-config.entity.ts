@@ -1,4 +1,4 @@
-import { UserRole, UserType } from 'src/default/common/enums/user-type.enum';
+import { UserRole } from '../../../default/common/enums/user-type.enum';
 import {
   Entity,
   Column,
