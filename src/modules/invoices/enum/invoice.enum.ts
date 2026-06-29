@@ -1,0 +1,12 @@
+export enum InvoiceStatus {
+  PENDING = 'PENDING',
+  APPROVED = 'APPROVED',
+  REJECTED = 'REJECTED',
+  CANCELLED = 'CANCELLED',
+}
+
+export enum InvoiceScanStatus {
+  NOT_SCANNED = 'NOT_SCANNED',
+  PARTIALLY_SCANNED = 'PARTIALLY_SCANNED',
+  FULLY_SCANNED = 'FULLY_SCANNED',
+}
