@@ -27,6 +27,7 @@ import { RedemptionProviderResponseHandler } from './handlers/redemption-provide
 import { RedemptionProviderPayloadBuilder } from './builders/redemption-provider-payload.builder';
 import { OrderPlaceProvider } from './provider/order-place.provider';
 import { ConfirmOrderDto } from './dto/confirm-order.dto';
+import { DataSource } from 'typeorm';
 
 @Injectable()
 export class RedemptionsService {
@@ -43,11 +44,12 @@ export class RedemptionsService {
     private redemptionOtpValidator: RedemptionOtpValidator,
     private readonly redemptionProviderResponseHandler: RedemptionProviderResponseHandler,
     private readonly redemptionProviderPayloadBuilder: RedemptionProviderPayloadBuilder,
-    private readonly orderPlaceProvider: OrderPlaceProvider
+    private readonly orderPlaceProvider: OrderPlaceProvider,
+    private readonly dataSource: DataSource
   ) {}
 
   async createOrderSummary(
-    userId: string,
+    userId: number,
     dto: CreateOrderSummaryDto,
     userRole: UserRole
   ): Promise<OrderSummaryResponseDto> {
@@ -81,12 +83,12 @@ export class RedemptionsService {
        */
       const [aadhaarKyc, panKyc] = await Promise.all([
         this.kycVerificationRepository.findOne({
-          user_id: userId,
+          user: { id: userId },
           type: KycType.AADHAAR,
           status: KycStatus.VERIFIED,
         }),
         this.kycVerificationRepository.findOne({
-          user_id: userId,
+          user: { id: userId },
           type: KycType.PAN,
           status: KycStatus.VERIFIED,
         }),
@@ -166,7 +168,8 @@ export class RedemptionsService {
       const strategy = new PointHistoryCalculationStrategy(
         user.id,
         BigInt(redeemPoints),
-        isPanVerified ? 1 : 0
+        isPanVerified ? 1 : 0,
+        this.dataSource
       );
 
       const calculation = await strategy.calculatePoints();
@@ -266,7 +269,7 @@ export class RedemptionsService {
     });
   }
 
-  async sendRedemptionOtp(userId: string, dto: SendRedemptionOtpDto) {
+  async sendRedemptionOtp(userId: number, dto: SendRedemptionOtpDto) {
     const tag = 'RedemptionsService.sendRedemptionOtp';
 
     ConsoleLogger.log('SEND_REDEMPTION_OTP_START', {
@@ -287,7 +290,7 @@ export class RedemptionsService {
      */
     const order = await this.orderRepository.findOne({
       id: dto.orderId,
-      user_id: userId,
+      user: { id: userId },
     });
 
     if (!order) {
@@ -379,7 +382,7 @@ export class RedemptionsService {
     };
   }
 
-  async confirmOrder(userId: string, dto: ConfirmOrderDto) {
+  async confirmOrder(userId: number, dto: ConfirmOrderDto) {
     const tag = 'RedemptionsService.confirmOrder';
 
     ConsoleLogger.log('CONFIRM_ORDER_START', {
@@ -400,7 +403,7 @@ export class RedemptionsService {
      */
     const order = await this.orderRepository.findOne({
       id: dto.orderId,
-      user_id: userId,
+      user: { id: userId },
     });
 
     if (!order) {
@@ -467,7 +470,7 @@ export class RedemptionsService {
       );
 
       const pointHistoryObj = this.pointHistoryRepository.create({
-        user_id: user.id,
+        user: { id: user.id },
         order_id: order.id,
         points: totalDeduction,
         description: 'ORDER PLACED',

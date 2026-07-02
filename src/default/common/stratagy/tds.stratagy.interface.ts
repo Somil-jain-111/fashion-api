@@ -1,14 +1,16 @@
 import moment from 'moment';
 import { PointHistory } from 'src/modules/auth/entities';
 import { PointStatusEnum } from 'src/modules/redemptions/enum/point-history-status.enum.';
+import { DataSource } from 'typeorm';
 
 export class PointHistoryCalculationStrategy {
   private taxLimit = 59400;
 
   constructor(
-    private userId: string,
+    private userId: number,
     private points: bigint,
-    private panKyc: number
+    private panKyc: number,
+    private dataSource: DataSource
   ) {}
 
   async calculatePoints() {
@@ -75,7 +77,9 @@ export class PointHistoryCalculationStrategy {
    * (points - tds_points)
    */
   private async getRedeemedPoints(startDateTime: string, endDateTime: string): Promise<number> {
-    const result = await PointHistory.createQueryBuilder('uph')
+    const result = await this.dataSource
+      .getRepository(PointHistory)
+      .createQueryBuilder('uph')
       .select('COALESCE(SUM(uph.points - COALESCE(uph.tds_points, 0)),0)', 'total')
       .where('uph.user_id = :userId', {
         userId: this.userId,
@@ -97,7 +101,9 @@ export class PointHistoryCalculationStrategy {
    * in the current financial year.
    */
   private async hasTdsEntry(startDateTime: string, endDateTime: string): Promise<boolean> {
-    const count = await PointHistory.createQueryBuilder('uph')
+    const count = await this.dataSource
+      .getRepository(PointHistory)
+      .createQueryBuilder('uph')
       .where('uph.user_id = :userId', {
         userId: this.userId,
       })

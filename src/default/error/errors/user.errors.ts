@@ -41,6 +41,12 @@ export const USER_ERRORS = {
     statusCode: 403,
   },
 
+  USER_BLOCKED: {
+    code: 'USR_007',
+    message: 'User has been blocked',
+    statusCode: 403,
+  },
+
   USER_HOLD: {
     code: 'USR_008',
     message: 'User account is on hold',

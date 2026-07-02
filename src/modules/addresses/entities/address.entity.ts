@@ -23,8 +23,6 @@ export class Address extends BaseEntity {
   @PrimaryGeneratedColumn('increment', { type: 'bigint' })
   id!: string;
 
-  @Column({ type: 'bigint' })
-  user_id!: string;
   @ManyToOne(() => User, (user) => user.addresses, {
     nullable: false,
     onDelete: 'CASCADE',

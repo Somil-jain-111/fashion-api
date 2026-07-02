@@ -97,7 +97,7 @@ export class KycService {
     );
   }
 
-  async generateAadhaarOtp(userId: string, body: GenerateAadharOtpDto): Promise<any> {
+  async generateAadhaarOtp(userId: number, body: GenerateAadharOtpDto): Promise<any> {
     const tag = 'KycService.generateAadhaarOtp';
 
     const { aadharNumber, aadharFrontImage, aadharBackImage } = body;
@@ -131,7 +131,7 @@ export class KycService {
         KycType.AADHAAR
       );
 
-    if (existingVerifiedAadhaar && existingVerifiedAadhaar.user_id !== userId) {
+    if (existingVerifiedAadhaar && existingVerifiedAadhaar.user.id !== userId) {
       throw new BusinessException(ERROR_CODES.KYC.AADHAAR_ALREADY_IN_USE);
     }
 
@@ -216,7 +216,7 @@ export class KycService {
     };
   }
 
-  async verifyAadhaarOtp(userId: string, body: VerifyAadhaarOtpDto): Promise<any> {
+  async verifyAadhaarOtp(userId: number, body: VerifyAadhaarOtpDto): Promise<any> {
     const tag = 'KycService.verifyAadhaarOtp';
     const { referenceId, referenceIdOtp, otp } = body;
 
@@ -360,7 +360,7 @@ export class KycService {
       message: 'Aadhaar verified successfully',
     };
   }
-  async verifyPan(userId: string, body: VerifyPanDto): Promise<any> {
+  async verifyPan(userId: number, body: VerifyPanDto): Promise<any> {
     const tag = 'KycService.verifyPan';
 
     const { panCard, panImage } = body;
@@ -397,7 +397,7 @@ export class KycService {
       KycType.PAN
     );
 
-    if (existingPan && existingPan.user_id !== userIdString) {
+    if (existingPan && existingPan.user.id !== userId) {
       throw new BusinessException(ERROR_CODES.KYC.PAN_ALREADY_IN_USE);
     }
 
@@ -409,7 +409,7 @@ export class KycService {
     });
 
     await this.kycVerificationLogRepository.createLog({
-      user_id: userIdString,
+      user_id: userId,
       type: KycType.PAN,
       status: panProviderResult.success ? KycLogStatus.VERIFIED : KycLogStatus.FAILED,
       referenceId: transactionId,
@@ -447,7 +447,7 @@ export class KycService {
     const isNameMatched = matchScore >= 85;
 
     await this.kycVerificationLogRepository.createLog({
-      user_id: userIdString,
+      user_id: userId,
       type: KycType.NAME_MATCH,
       status: nameMatchResult.success ? KycLogStatus.VERIFIED : KycLogStatus.FAILED,
       referenceId: nameMatchResult.requestPayload?.transaction_id,
@@ -470,7 +470,7 @@ export class KycService {
     ]);
 
     await this.kycVerificationRepository.upsertVerifiedKyc({
-      userId: userIdString,
+      userId: userId,
       type: KycType.PAN,
       referenceId: transactionId,
       documentNumber: encryptedPan,

@@ -1,9 +1,9 @@
-import { Injectable } from "@nestjs/common";
-import { User } from "../entities";
-import { UserRepository } from "src/default/common/repositories";
-import { ERROR_CODES } from "src/default/error/error.code";
-import { BusinessException } from "src/default/error/business.exception";
-import { UserStatus } from "../constants/auth.constants";
+import { Injectable } from '@nestjs/common';
+import { User } from '../entities';
+import { UserRepository } from 'src/default/common/repositories';
+import { ERROR_CODES } from 'src/default/error/error.code';
+import { BusinessException } from 'src/default/error/business.exception';
+import { UserStatus } from '../constants/auth.constants';
 
 @Injectable()
 export class UserAuthValidator {
@@ -21,7 +21,7 @@ export class UserAuthValidator {
     return user;
   }
 
-  async validateActiveUserById(userId: string): Promise<User> {
+  async validateActiveUserById(userId: number): Promise<User> {
     const user = await this.userRepository.findById(userId);
 
     if (!user) {
@@ -47,10 +47,15 @@ export class UserAuthValidator {
 
   private throwIfUserNotActive(status: UserStatus): void {
     switch (status) {
+      case UserStatus.PARTIAL_APPROVED:
       case UserStatus.ACTIVE:
         return;
-      case UserStatus.REJECTED:
-        throw new BusinessException(ERROR_CODES.USER.USER_REJECTED);
+
+      case UserStatus.IN_APPROVAL:
+        throw new BusinessException(ERROR_CODES.USER.USER_PENDING);
+
+      case UserStatus.BLOCKED:
+        throw new BusinessException(ERROR_CODES.USER.USER_BLOCKED);
 
       case UserStatus.INACTIVE:
         throw new BusinessException(ERROR_CODES.USER.USER_INACTIVE);
@@ -65,10 +70,15 @@ export class UserAuthValidator {
 
   validateUserStatus(status: UserStatus): void {
     switch (status) {
+      case UserStatus.PARTIAL_APPROVED:
       case UserStatus.ACTIVE:
         return;
-      case UserStatus.REJECTED:
-        throw new BusinessException(ERROR_CODES.USER.USER_REJECTED);
+
+      case UserStatus.IN_APPROVAL:
+        throw new BusinessException(ERROR_CODES.USER.USER_PENDING);
+
+      case UserStatus.BLOCKED:
+        throw new BusinessException(ERROR_CODES.USER.USER_BLOCKED);
 
       case UserStatus.INACTIVE:
         throw new BusinessException(ERROR_CODES.USER.USER_INACTIVE);

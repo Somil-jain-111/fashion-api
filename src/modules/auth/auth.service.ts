@@ -219,7 +219,7 @@ export class AuthService {
     };
   }
 
-  async logout(userId: string, accessToken?: string) {
+  async logout(userId: number, accessToken?: string) {
     const user = await this.userAuthValidator.validateActiveUserById(userId);
 
     if (!accessToken) {

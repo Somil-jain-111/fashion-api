@@ -14,10 +14,12 @@ export enum UserType {
 
 export enum Salutation {
   MR = 'MR',
-
   MRS = 'MRS',
-
   MISS = 'MISS',
-
   DR = 'DR',
+}
+
+export enum UserPartnerType {
+  INDIVIDUAL = 'individual',
+  ENTITY = 'entity',
 }

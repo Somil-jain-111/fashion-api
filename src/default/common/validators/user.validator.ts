@@ -1,14 +1,11 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable } from '@nestjs/common';
 
-import { BusinessException } from "src/default/error/business.exception";
-import { ERROR_CODES } from "src/default/error/error.code";
-import {
-  RolesRepository,
-  UserRepository,
-} from "src/default/common/repositories";
-import { UserStatus } from "src/modules/auth/constants/auth.constants";
-import { UserAuthValidator } from "src/modules/auth/validators/user-auth.validator";
-import { UserRole, UserType } from "../enums/user-type.enum";
+import { BusinessException } from 'src/default/error/business.exception';
+import { ERROR_CODES } from 'src/default/error/error.code';
+import { RolesRepository, UserRepository } from 'src/default/common/repositories';
+import { UserStatus } from 'src/modules/auth/constants/auth.constants';
+import { UserAuthValidator } from 'src/modules/auth/validators/user-auth.validator';
+import { UserPartnerType, UserRole, UserType } from '../enums/user-type.enum';
 
 @Injectable()
 export class UserValidator {
@@ -16,7 +13,7 @@ export class UserValidator {
     private readonly userRepository: UserRepository,
     private readonly roleRepository: RolesRepository,
 
-    private readonly userAuthValidator: UserAuthValidator,
+    private readonly userAuthValidator: UserAuthValidator
   ) {}
 
   async findOrCreateActiveUserByMobile(mobile: string) {
@@ -34,10 +31,11 @@ export class UserValidator {
       user = await this.userRepository.save({
         mobile,
         status: UserStatus.ACTIVE,
-        user_type: UserType.USER,
-        role_id: role.id,
+        // user_type: UserType.USER,
+        partnerType: UserPartnerType.INDIVIDUAL,
+        role: { id: role.id },
       });
-      console.log("user", user);
+      console.log('user', user);
 
       return user;
     }
