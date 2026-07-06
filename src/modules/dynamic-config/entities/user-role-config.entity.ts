@@ -13,7 +13,6 @@ export class UserRoleConfig extends BaseEntity {
 
   @Column({
     type: 'json',
-    default: true,
     name: 'redemption_options',
   })
   redemptionOptions?: Record<string, any>;

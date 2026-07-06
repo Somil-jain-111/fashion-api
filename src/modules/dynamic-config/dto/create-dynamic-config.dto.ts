@@ -1,7 +1,7 @@
 import { IsEnum, IsBoolean, IsOptional, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 //
-import { UserType } from 'src/default/common/enums/user-type.enum';
+import { UserRole } from 'src/default/common/enums/user-type.enum';
 import {
   AdditionalSettingsDto,
   RedemptionOptionsDto,
@@ -9,8 +9,8 @@ import {
 } from './edit-dynamic-config.dto';
 
 export class CreateDynamicConfigDto {
-  @IsEnum(UserType)
-  userType: UserType;
+  @IsEnum(UserRole)
+  userRole: UserRole;
 
   @IsOptional()
   @IsBoolean()

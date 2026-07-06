@@ -1,7 +1,7 @@
 import { Column, Entity, Index, JoinColumn, ManyToOne } from 'typeorm';
 //
 import { User } from '../../auth/entities';
-import { BaseEntity } from 'src/default/common/entities';
+import { BaseEntity } from '../../../default/common/entities';
 import { KycStatus, KycType } from '../../../default/common/enums/kyc.enum';
 
 @Entity('kyc_verifications')

@@ -65,12 +65,12 @@ export class KYCController {
     return DataSanitizer.sanitizeData(response);
   }
 
-  // @Post("gst/verify")
-  // @ResponseMessage(SUCCESS_MESSAGES.KYC.GST_VERIFIED)
-  // async verifyGst(@Req() req: any, @Body() body: VerifyGstDto) {
-  //   const userId = req.user.id;
+  @Post("gst/verify")
+  @ResponseMessage(SUCCESS_MESSAGES.KYC.GST_VERIFIED)
+  async verifyGst(@Req() req: any, @Body() body: VerifyGstDto) {
+    const userId = req.user.id;
 
-  //   const response = this.kycService.verifyGst(body, userId);
-  //   return DataSanitizer.sanitizeData(response);
-  // }
+    const response = await this.kycService.verifyGst(userId, body);
+    return DataSanitizer.sanitizeData(response);
+  }
 }

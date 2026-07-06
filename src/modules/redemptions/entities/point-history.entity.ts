@@ -1,18 +1,9 @@
-import {
-  Entity,
-  PrimaryGeneratedColumn,
-  Column,
-  CreateDateColumn,
-  UpdateDateColumn,
-  ManyToOne,
-  JoinColumn,
-  Index,
-} from 'typeorm';
-
+import { Entity, Column, ManyToOne, JoinColumn, Index } from 'typeorm';
+//
 import { Order, User } from '../../auth/entities';
 import { RedemptionType } from '../enum/redemption-type.enum';
 import { PointStatusEnum } from '../enum/point-history-status.enum.';
-import { BaseEntity } from 'src/default/common/entities';
+import { BaseEntity } from '../../../default/common/entities';
 
 @Entity({ name: 'point_histories' })
 @Index('idx_point_user', ['user'])

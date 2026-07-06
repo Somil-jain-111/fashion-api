@@ -1,7 +1,7 @@
 import { IsEnum, IsBoolean, IsOptional, IsNumber, ValidateNested, Min, Max } from 'class-validator';
 import { Type } from 'class-transformer';
 //
-import { UserType } from 'src/default/common/enums/user-type.enum';
+import { UserRole } from 'src/default/common/enums/user-type.enum';
 
 export class ApprovalLimitsDto {
   @IsOptional()
@@ -92,8 +92,8 @@ export class RedemptionLimitsDto {
 }
 
 export class EditDynamicConfigDto {
-  @IsEnum(UserType)
-  userType: UserType;
+  @IsEnum(UserRole)
+  userRole: UserRole;
 
   @IsOptional()
   @IsBoolean()

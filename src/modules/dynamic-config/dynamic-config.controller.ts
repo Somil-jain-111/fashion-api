@@ -11,7 +11,7 @@ import {
 } from '@nestjs/common';
 //
 import { Roles } from 'src/default/common/decorators/roles.decorator';
-import { UserRole, UserType } from 'src/default/common/enums/user-type.enum';
+import { UserRole } from 'src/default/common/enums/user-type.enum';
 import { DynamicConfigService } from './dynamic-config.service';
 import { CreateDynamicConfigDto } from './dto/create-dynamic-config.dto';
 import { EditDynamicConfigDto } from './dto/edit-dynamic-config.dto';
@@ -39,7 +39,7 @@ export class DynamicConfigController {
       throw new BadRequestException('Invalid User Role');
     }
 
-    return DataSanitizer.sanitizeData(await this.configService.getConfigByUserType(role, false));
+    return DataSanitizer.sanitizeData(await this.configService.getConfigByUserRole(role, false));
   }
 
   /**
@@ -50,13 +50,13 @@ export class DynamicConfigController {
   // @Roles([RoleType.SUPERADMIN])
   @SkipThrottle()
   @Get()
-  async getAllConfigs(@Req() req, @Query('role') role?: UserType) {
+  async getAllConfigs(@Req() req, @Query('role') role?: UserRole) {
     const isSuperAdmin =
       String(req.user.roles?.[0])?.toLowerCase() === UserRole.SUPERADMIN.toLowerCase();
 
     if (role) {
       return DataSanitizer.sanitizeData(
-        await this.configService.getConfigByUserType(role, isSuperAdmin)
+        await this.configService.getConfigByUserRole(role, isSuperAdmin)
       );
     }
 
@@ -87,7 +87,7 @@ export class DynamicConfigController {
   @Put('update')
   async updateConfig(@Req() req, @Body() dto: EditDynamicConfigDto) {
     const userId = req.user.userId;
-    const result = await this.configService.updateUserTypeConfig(dto, userId);
+    const result = await this.configService.updateUserRoleConfig(dto, userId);
     return DataSanitizer.sanitizeData(result);
   }
 }

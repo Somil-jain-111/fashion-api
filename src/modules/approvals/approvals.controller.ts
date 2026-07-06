@@ -1,34 +1,33 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Post, Body, Param, Req, UseGuards } from '@nestjs/common';
 import { ApprovalsService } from './approvals.service';
-import { CreateApprovalDto } from './dto/create-approval.dto';
-import { UpdateApprovalDto } from './dto/update-approval.dto';
+import { ApprovalActionDto } from './dto/approval-action.dto';
+import { JwtAuthGuard } from 'src/default/common/guards/jwt-auth.guard';
+import { RolesGuard } from 'src/default/common/guards/roles.guard';
+import { Roles } from 'src/default/common/decorators/roles.decorator';
+import { UserRole } from 'src/default/common/enums/user-type.enum';
+import { ResponseMessage } from 'src/default/common/decorators/response-message.decorator';
+import { DataSanitizer } from 'src/default/common/utils/sanitize.utils';
 
+@UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('approvals')
 export class ApprovalsController {
   constructor(private readonly approvalsService: ApprovalsService) {}
 
-  @Post()
-  create(@Body() createApprovalDto: CreateApprovalDto) {
-    return this.approvalsService.create(createApprovalDto);
-  }
-
-  @Get()
-  findAll() {
-    return this.approvalsService.findAll();
-  }
-
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.approvalsService.findOne(+id);
-  }
-
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateApprovalDto: UpdateApprovalDto) {
-    return this.approvalsService.update(+id, updateApprovalDto);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.approvalsService.remove(+id);
+  @Roles([UserRole.L1, UserRole.L2, UserRole.SALESPERSON, UserRole.SUPERADMIN])
+  @Post(':id/action')
+  @ResponseMessage('Approval action processed successfully')
+  async handleApprovalAction(
+    @Req() req: any,
+    @Param('id') id: string,
+    @Body() dto: ApprovalActionDto,
+  ) {
+    const approverId = Number(req.user.id);
+    const response = await this.approvalsService.handleApprovalAction(
+      approverId,
+      Number(id),
+      dto.action,
+      dto.remarks,
+    );
+    return DataSanitizer.sanitizeData(response);
   }
 }

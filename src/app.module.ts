@@ -39,6 +39,7 @@ import { VisitsModule } from './modules/visits/visits.module';
 import { ApprovalsModule } from './modules/approvals/approvals.module';
 import { AddressesModule } from './modules/addresses/addresses.module';
 import { PublicModule } from './modules/public/public.module';
+import { OnboardingModule } from './modules/onboarding/onboarding.module';
 
 @Module({
   imports: [
@@ -79,6 +80,7 @@ import { PublicModule } from './modules/public/public.module';
     ApprovalsModule,
     AddressesModule,
     PublicModule,
+    OnboardingModule,
   ],
   providers: [
     {

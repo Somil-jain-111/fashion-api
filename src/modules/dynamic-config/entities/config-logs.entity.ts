@@ -1,8 +1,8 @@
 import { Entity, Column, ManyToOne, JoinColumn, CreateDateColumn } from 'typeorm';
 //
-import { User } from 'src/modules/auth/entities';
-import { BaseEntity } from 'src/default/common/entities';
-import { UserRole } from 'src/default/common/enums/user-type.enum';
+import { User } from '../../auth/entities';
+import { BaseEntity } from '../../../default/common/entities';
+import { UserRole } from '../../../default/common/enums/user-type.enum';
 
 @Entity('config_logs')
 export class ConfigLog extends BaseEntity {

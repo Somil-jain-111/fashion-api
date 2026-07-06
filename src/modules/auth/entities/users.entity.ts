@@ -25,7 +25,7 @@ import {
 } from '.';
 import { Salutation, UserPartnerType } from '../../../default/common/enums/user-type.enum';
 import { UserStatus } from '../constants/auth.constants';
-import { BaseEntity } from 'src/default/common/entities';
+import { BaseEntity } from '../../../default/common/entities';
 import { UserStoreInfo } from './user-store-info.entity';
 @Entity('users')
 @Unique('UQ_MOBILE', ['mobile'])

@@ -1,44 +1,47 @@
 import { DataSource, Repository } from 'typeorm';
 import { Injectable } from '@nestjs/common';
 //
-import { UserType } from '../enums/user-type.enum';
-import { ApplicationConfig, UserTypeConfig } from '../../../modules/dynamic-config/entities';
+import { UserRole } from '../enums/user-type.enum';
+import { ApplicationConfig, UserRoleConfig } from '../../../modules/dynamic-config/entities';
+import { ConfigLog } from 'src/modules/dynamic-config/entities/config-logs.entity';
 
 @Injectable()
 export class DynamicConfigRepository {
-  private userTypeConfigRepo: Repository<UserTypeConfig>;
+  private userRoleConfigRepo: Repository<UserRoleConfig>;
   private applicationConfigRepo: Repository<ApplicationConfig>;
+  private configLogsRepo: Repository<ConfigLog>;
 
   constructor(private readonly dataSource: DataSource) {
-    this.userTypeConfigRepo = this.dataSource.getRepository(UserTypeConfig);
+    this.userRoleConfigRepo = this.dataSource.getRepository(UserRoleConfig);
     this.applicationConfigRepo = this.dataSource.getRepository(ApplicationConfig);
+    this.configLogsRepo = this.dataSource.getRepository(ConfigLog);
   }
 
   /**
    *
-   * @UserTypeConfig methods
+   * @UserRoleConfig methods
    *
    */
 
-  async createUserTypeConfig(config: UserTypeConfig) {
-    const createdConfig = this.userTypeConfigRepo.create(config);
+  async createUserRoleConfig(config: UserRoleConfig) {
+    const createdConfig = this.userRoleConfigRepo.create(config);
 
-    return await this.userTypeConfigRepo.save(createdConfig);
+    return await this.userRoleConfigRepo.save(createdConfig);
   }
 
-  async updateUserTypeConfig(configId: number, updatedConfig: Partial<UserTypeConfig>) {
-    return await this.userTypeConfigRepo.update(configId, updatedConfig);
+  async updateUserRoleConfig(configId: number, updatedConfig: Partial<UserRoleConfig>) {
+    return await this.userRoleConfigRepo.update(configId, updatedConfig);
   }
 
-  async getAllUserTypeConfigs(filters: {
+  async getAllUserRoleConfigs(filters: {
     active?: boolean;
     page?: number;
     limit?: number;
-  }): Promise<{ data: UserTypeConfig[]; totalCount: number }> {
-    const queryBuilder = this.userTypeConfigRepo.createQueryBuilder('userTypeConfig');
+  }): Promise<{ data: UserRoleConfig[]; totalCount: number }> {
+    const queryBuilder = this.userRoleConfigRepo.createQueryBuilder('UserRoleConfig');
 
     if (filters.active) {
-      queryBuilder.andWhere('userTypeConfig.isActive = :active', { active: filters.active });
+      queryBuilder.andWhere('UserRoleConfig.isActive = :active', { active: filters.active });
     }
 
     if (filters.page && filters.limit) {
@@ -50,10 +53,10 @@ export class DynamicConfigRepository {
     return { data, totalCount };
   }
 
-  async getUserConfigByUserType(userType: UserType): Promise<UserTypeConfig | null> {
-    return this.userTypeConfigRepo.findOne({
+  async getUserConfigByUserRole(userRole: UserRole): Promise<UserRoleConfig | null> {
+    return this.userRoleConfigRepo.findOne({
       where: {
-        userType: userType,
+        userRole: userRole,
         active: true,
       },
     });
@@ -76,9 +79,16 @@ export class DynamicConfigRepository {
   async saveConfigLog(logData: {
     previousValues: Record<string, any>;
     newValues: Record<string, any>;
-    userType: UserType;
-    user: { id: bigint };
-  }): Promise<void> {
-    console.log('Dynamic Config Change Log:', JSON.stringify(logData));
+    userRole: UserRole;
+    userId: number;
+  }): Promise<ConfigLog> {
+    const log = await this.configLogsRepo.create({
+      actionBy: { id: logData.userId },
+      previousValues: logData.previousValues,
+      newValues: logData.newValues,
+      userRole: logData.userRole,
+    });
+
+    return await this.configLogsRepo.save(log);
   }
 }

@@ -1,4 +1,4 @@
-import { BaseEntity } from 'src/default/common/entities';
+import { BaseEntity } from '../../../default/common/entities';
 import { KycLogStatus, KycType } from '../../../default/common/enums/kyc.enum';
 import { User } from '../../auth/entities';
 import { Column, Entity, Index, JoinColumn, ManyToOne } from 'typeorm';

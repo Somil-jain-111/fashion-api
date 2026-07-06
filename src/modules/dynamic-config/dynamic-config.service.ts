@@ -1,10 +1,10 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 //
 import { DynamicConfigRepository } from 'src/default/common/repositories/dynamic-config.repository';
-import { UserType } from 'src/default/common/enums/user-type.enum';
+import { UserRoleConfig } from './entities';
+import { UserRole } from 'src/default/common/enums/user-type.enum';
 import { CreateDynamicConfigDto } from './dto/create-dynamic-config.dto';
 import { EditDynamicConfigDto } from './dto/edit-dynamic-config.dto';
-import { UserTypeConfig } from './entities/user-type-config.entity';
 
 @Injectable()
 export class DynamicConfigService {
@@ -51,15 +51,15 @@ export class DynamicConfigService {
   }
 
   /**
-   * Formats a UserTypeConfig entity
+   * Formats a UserRoleConfig entity
    */
-  private formatUserTypeConfig(config: UserTypeConfig | null, showAll: boolean = false): any {
+  private formatUserRoleConfig(config: UserRoleConfig | null, showAll: boolean = false): any {
     if (!config) {
       return null;
     }
 
     return {
-      userType: config.userType,
+      userRole: config.userRole,
       redemptionEnabled: config.redemptionEnabled,
       redemptionOptions: config.redemptionOptions || {},
       ...(showAll && {
@@ -72,24 +72,24 @@ export class DynamicConfigService {
   /**
    * Maintain the unique check separately using service
    */
-  async checkUserTypeUniqueness(userType: UserType, excludeId?: number): Promise<void> {
-    const existing = await this.dynamicConfigRepository.getUserConfigByUserType(userType);
+  async checkUserRoleUniqueness(userRole: UserRole, excludeId?: number): Promise<void> {
+    const existing = await this.dynamicConfigRepository.getUserConfigByUserRole(userRole);
 
     if (existing) {
       if (excludeId === undefined || Number(existing.id) !== excludeId) {
-        throw new BadRequestException(`Configuration for user type '${userType}' already exists.`);
+        throw new BadRequestException(`Configuration for user type '${userRole}' already exists.`);
       }
     }
   }
 
-  async getConfigByUserType(userType: UserType, showAll: boolean = false): Promise<any> {
-    const config = await this.dynamicConfigRepository.getUserConfigByUserType(userType);
+  async getConfigByUserRole(userRole: UserRole, showAll: boolean = false): Promise<any> {
+    const config = await this.dynamicConfigRepository.getUserConfigByUserRole(userRole);
 
     if (!config) {
-      throw new NotFoundException(`Configuration not found for user type: ${userType}`);
+      throw new NotFoundException(`Configuration not found for user type: ${userRole}`);
     }
 
-    const formattedConfig = this.formatUserTypeConfig(config, showAll);
+    const formattedConfig = this.formatUserRoleConfig(config, showAll);
 
     const finalResponse = { ...formattedConfig };
 
@@ -103,7 +103,7 @@ export class DynamicConfigService {
   }
 
   async getAllConfigs(showAll: boolean = false): Promise<Record<string, any>> {
-    const { data: configs } = await this.dynamicConfigRepository.getAllUserTypeConfigs({
+    const { data: configs } = await this.dynamicConfigRepository.getAllUserRoleConfigs({
       active: true,
     });
 
@@ -117,7 +117,7 @@ export class DynamicConfigService {
 
     if (configs && configs.length > 0) {
       configs.forEach((config) => {
-        finalResponse[config.userType] = this.formatUserTypeConfig(config, showAll);
+        finalResponse[config.userRole] = this.formatUserRoleConfig(config, showAll);
       });
     }
 
@@ -125,12 +125,12 @@ export class DynamicConfigService {
   }
 
   async createConfig(dto: CreateDynamicConfigDto): Promise<any> {
-    await this.checkUserTypeUniqueness(dto.userType);
+    await this.checkUserRoleUniqueness(dto.userRole);
 
     const isRedemptionEnabled = dto.redemptionEnabled ?? true;
 
-    const configData: Partial<UserTypeConfig> = {
-      userType: dto.userType,
+    const configData: Partial<UserRoleConfig> = {
+      userRole: dto.userRole,
       redemptionEnabled: isRedemptionEnabled,
       redemptionOptions: dto.redemptionOptions
         ? {
@@ -198,18 +198,18 @@ export class DynamicConfigService {
         : null,
     };
 
-    const created = await this.dynamicConfigRepository.createUserTypeConfig(
-      configData as UserTypeConfig
+    const created = await this.dynamicConfigRepository.createUserRoleConfig(
+      configData as UserRoleConfig
     );
 
-    return this.formatUserTypeConfig(created, true);
+    return this.formatUserRoleConfig(created, true);
   }
 
-  async updateUserTypeConfig(dto: EditDynamicConfigDto, userId: bigint | number): Promise<any> {
-    const existing = await this.dynamicConfigRepository.getUserConfigByUserType(dto.userType);
+  async updateUserRoleConfig(dto: EditDynamicConfigDto, userId: bigint | number): Promise<any> {
+    const existing = await this.dynamicConfigRepository.getUserConfigByUserRole(dto.userRole);
 
     if (!existing) {
-      throw new NotFoundException(`Configuration with user type ${dto.userType} not found.`);
+      throw new NotFoundException(`Configuration with user type ${dto.userRole} not found.`);
     }
 
     const previousValues = JSON.parse(JSON.stringify(existing));
@@ -323,7 +323,7 @@ export class DynamicConfigService {
 
     const newValues = JSON.parse(JSON.stringify(existing));
 
-    await this.dynamicConfigRepository.updateUserTypeConfig(existing.id, existing);
+    await this.dynamicConfigRepository.updateUserRoleConfig(existing.id, existing);
 
     const { previousChanges, newChanges, hasChanges } = this.getObjectDiff(
       previousValues,
@@ -334,11 +334,11 @@ export class DynamicConfigService {
       await this.dynamicConfigRepository.saveConfigLog({
         previousValues: previousChanges,
         newValues: newChanges,
-        userType: dto.userType,
-        user: { id: BigInt(userId) } as any,
+        userRole: dto.userRole,
+        userId: Number(userId),
       });
     }
 
-    return await this.getConfigByUserType(existing.userType, true);
+    return await this.getConfigByUserRole(existing.userRole, true);
   }
 }

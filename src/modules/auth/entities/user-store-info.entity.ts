@@ -1,8 +1,8 @@
 import { Column, Entity, JoinColumn, OneToOne } from 'typeorm';
 //
 import { User } from './users.entity';
-import { BaseEntity } from 'src/default/common/entities';
-import { StoreAddressProofType } from 'src/default/common/enums/user-store.enum';
+import { BaseEntity } from '../../../default/common/entities';
+import { StoreAddressProofType } from '../../../default/common/enums/user-store.enum';
 
 @Entity('user_store_info')
 export class UserStoreInfo extends BaseEntity {

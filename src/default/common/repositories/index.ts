@@ -14,3 +14,5 @@ export * from './voucher.repository';
 export * from './point-history.repository';
 export * from './redemption-config.repository';
 export * from './dynamic-config.repository';
+export * from './approval.repository';
+export * from './user-store-info.repository';

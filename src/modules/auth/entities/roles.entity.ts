@@ -1,7 +1,7 @@
 import { Column, Entity, OneToMany } from 'typeorm';
 //
 import { User } from '.';
-import { BaseEntity } from 'src/default/common/entities';
+import { BaseEntity } from '../../../default/common/entities';
 import { UserRole, UserType } from '../../../default/common/enums/user-type.enum';
 
 @Entity('roles')

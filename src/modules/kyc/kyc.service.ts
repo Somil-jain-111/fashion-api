@@ -1,5 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { VerifyPanDto } from './dto/verify-pan.dto';
+import { VerifyGstDto } from './dto/verify-gst.dto';
+import { GstProvider } from './provider/gst.provider';
+import { User } from '../auth/entities/users.entity';
 import { ConsoleLogger } from 'src/default/logger/console/console.service';
 import {
   KycVerificationLogRepository,
@@ -31,6 +34,7 @@ export class KycService {
     private nameMatchProvider: NameMatchProvider,
     private panProvider: PanProvider,
     private aadhaarProvider: AadhaarProvider,
+    private gstProvider: GstProvider,
     private readonly configService: AppConfigService
 
     // private readonly AuthTokenHelper,
@@ -496,6 +500,116 @@ export class KycService {
     return {
       verified: true,
       matchScore,
+    };
+  }
+
+  async verifyGst(userId: number, body: VerifyGstDto): Promise<any> {
+    const tag = 'KycService.verifyGst';
+    const { gstNumber } = body;
+    const gst = gstNumber.toUpperCase();
+    const userIdString = userId.toString();
+
+    ConsoleLogger.log('VERIFY_GST_START', {
+      tag,
+      data: {
+        userId: userIdString,
+        gst,
+      },
+    });
+
+    const user = await this.userAuthValidator.validateActiveUserById(userId);
+
+    const encryptedGst = await this.encryptKycData(gst);
+
+    const existingUserGst = await this.kycVerificationRepository.findByUserIdAndType(
+      userIdString,
+      KycType.GST
+    );
+
+    if (existingUserGst?.status === KycStatus.VERIFIED) {
+      throw new BusinessException(ERROR_CODES.KYC.GST_VERIFICATION_FAILED, {
+        reason: 'GST is already verified',
+      });
+    }
+
+    const existingGst = await this.kycVerificationRepository.findByDocumentNumberAndType(
+      encryptedGst,
+      KycType.GST
+    );
+
+    if (existingGst && existingGst.user.id !== userId) {
+      throw new BusinessException(ERROR_CODES.KYC.GST_VERIFICATION_FAILED, {
+        reason: 'This GST number is already in use by another account',
+      });
+    }
+
+    const transactionId = await ReferenceIdUtil.generateKycReferenceId('GST');
+
+    const gstProviderResult = await this.gstProvider.verifyGst({
+      gstNumber: gst,
+      transactionId,
+    });
+
+    await this.kycVerificationLogRepository.createLog({
+      user_id: userId,
+      type: KycType.GST,
+      status: gstProviderResult.success ? KycLogStatus.VERIFIED : KycLogStatus.FAILED,
+      referenceId: transactionId,
+      documentNumber: encryptedGst,
+      provider: 'REWARDS_API',
+      requestPayload: gstProviderResult.requestPayload,
+      responsePayload: gstProviderResult.responseData,
+      failureReason: gstProviderResult.success ? null : gstProviderResult.message,
+    });
+
+    if (!gstProviderResult.success) {
+      const message = gstProviderResult.message || 'GST verification failed';
+      throw new BusinessException(ERROR_CODES.KYC.GST_VERIFICATION_FAILED, {
+        reason: message,
+      });
+    }
+
+    const gstApiData = gstProviderResult.responseData?.data || {};
+
+    const [encryptedGstImage, encryptedApiData] = await Promise.all([
+      this.encryptKycData(''),
+      this.encryptKycData(gstProviderResult.responseData),
+    ]);
+
+    await this.kycVerificationRepository.upsertVerifiedKyc({
+      userId: userId,
+      type: KycType.GST,
+      referenceId: transactionId,
+      documentNumber: encryptedGst,
+      verifiedName: this.encryptKycData(gstApiData.trade_name || gstApiData.legal_name || user.username),
+      provider: 'REWARDS_API',
+      providerRequest: gstProviderResult.requestPayload,
+      providerResponse: encryptedApiData,
+      metadata: {
+        tradeName: gstApiData.trade_name,
+        legalName: gstApiData.legal_name,
+        address: gstApiData.primary_address,
+      },
+    });
+
+    // Update user's firmName if it's not already set
+    if (gstApiData.trade_name || gstApiData.legal_name) {
+      const firmName = gstApiData.trade_name || gstApiData.legal_name;
+      const userRepository = this.kycVerificationRepository.getRepository().manager.getRepository(User);
+      await userRepository.update(userId, { firmName });
+    }
+
+    ConsoleLogger.log('VERIFY_GST_SUCCESS', {
+      tag,
+      data: {
+        userId: userIdString,
+      },
+    });
+
+    return {
+      verified: true,
+      tradeName: gstApiData.trade_name || null,
+      legalName: gstApiData.legal_name || null,
     };
   }
 }

@@ -7,6 +7,7 @@ import { KycService } from "./kyc.service";
 
 import { PanProvider } from "./provider/pan.provider";
 import { AadhaarProvider } from "./provider/aadhaar.provider";
+import { GstProvider } from "./provider/gst.provider";
 
 import { ConfigModule } from "src/default/config/config.module";
 import { AuthModule } from "../auth/auth.module";
@@ -48,6 +49,7 @@ import { RedisModule } from "src/default/databases/redis/redis.module";
     NameMatchProvider,
     PanProvider,
     AadhaarProvider,
+    GstProvider,
     UserAuthValidator,
     IdempotencyService,
     

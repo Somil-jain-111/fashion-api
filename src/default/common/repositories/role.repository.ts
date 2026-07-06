@@ -1,8 +1,8 @@
-import { DataSource, QueryRunner } from "typeorm";
-import { BaseRepository } from "./base.repository";
-import { UserRole, UserType } from "../enums/user-type.enum";
-import { Roles } from "src/modules/auth/entities";
-import { Injectable } from "@nestjs/common";
+import { DataSource, QueryRunner } from 'typeorm';
+import { BaseRepository } from './base.repository';
+import { UserRole } from '../enums/user-type.enum';
+import { Roles } from 'src/modules/auth/entities';
+import { Injectable } from '@nestjs/common';
 
 @Injectable()
 export class RolesRepository extends BaseRepository<Roles> {
@@ -10,13 +10,8 @@ export class RolesRepository extends BaseRepository<Roles> {
     super(dataSource.getRepository(Roles));
   }
 
-  async findByName(
-    name: UserRole,
-    queryRunner?: QueryRunner,
-  ): Promise<Roles | null> {
-    const repo = queryRunner
-      ? queryRunner.manager.getRepository(Roles)
-      : this.repository;
+  async findByName(name: UserRole, queryRunner?: QueryRunner): Promise<Roles | null> {
+    const repo = queryRunner ? queryRunner.manager.getRepository(Roles) : this.repository;
 
     return await repo.findOne({
       where: {
@@ -25,13 +20,8 @@ export class RolesRepository extends BaseRepository<Roles> {
     });
   }
 
-  async findByCode(
-    code: string,
-    queryRunner?: QueryRunner,
-  ): Promise<Roles | null> {
-    const repo = queryRunner
-      ? queryRunner.manager.getRepository(Roles)
-      : this.repository;
+  async findByCode(code: string, queryRunner?: QueryRunner): Promise<Roles | null> {
+    const repo = queryRunner ? queryRunner.manager.getRepository(Roles) : this.repository;
 
     return await repo.findOne({
       where: {
@@ -47,11 +37,9 @@ export class RolesRepository extends BaseRepository<Roles> {
       user_type?: string;
       active?: boolean;
     },
-    queryRunner?: QueryRunner,
+    queryRunner?: QueryRunner
   ): Promise<Roles> {
-    const repo = queryRunner
-      ? queryRunner.manager.getRepository(Roles)
-      : this.repository;
+    const repo = queryRunner ? queryRunner.manager.getRepository(Roles) : this.repository;
 
     const role = repo.create({
       name: data.name,

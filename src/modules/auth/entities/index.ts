@@ -16,3 +16,4 @@ export * from '../../redemptions/entities/shipping-details.entity';
 export * from '../../redemptions/entities/voucher.entity';
 export * from '../../redemptions/entities/redemption-config.entity';
 export * from '../../approvals/entities/approval.entity';
+export * from './user-store-info.entity';

@@ -8,7 +8,7 @@ export enum UserStatus {
   BLOCKED = 'blocked',
   // User is being processed for read only view (L1 L2 approval)
   IN_APPROVAL = 'in_approval',
-  // User is not approved by Sales Officer YET (Read only mode)
+  // User is NOT approved by Sales Officer YET (Read only mode)
   PARTIAL_APPROVED = 'partial_approved',
   DELETED = 'deleted',
 }

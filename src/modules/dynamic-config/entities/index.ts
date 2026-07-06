@@ -1,2 +1,2 @@
-export * from './user-type-config.entity';
+export * from './user-role-config.entity';
 export * from './application-config.entity';

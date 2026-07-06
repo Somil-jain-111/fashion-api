@@ -52,7 +52,6 @@ export class AuthService {
     const user = await this.userValidator.findOrCreateActiveUserByMobile(dto.mobile);
 
     const otpPlain = await OtpHelper.generateOtp();
-    console.log(otpPlain);
     const otpExpiry = await DateHelper.getOtpExpiryDate();
     const otp = CommonUtils.encrypt(otpPlain);
 
