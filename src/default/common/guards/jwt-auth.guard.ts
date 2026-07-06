@@ -1,16 +1,16 @@
-import { ExecutionContext, Injectable } from "@nestjs/common";
-import { AuthGuard } from "@nestjs/passport";
-import { BusinessException } from "src/default/error/business.exception";
-import { ERROR_CODES } from "src/default/error/error.code";
-import { ConsoleLogger } from "src/default/logger/console/console.service";
+import { ExecutionContext, Injectable } from '@nestjs/common';
+import { AuthGuard } from '@nestjs/passport';
+import { BusinessException } from 'src/default/error/business.exception';
+import { ERROR_CODES } from 'src/default/error/error.code';
+import { ConsoleLogger } from 'src/default/logger/console/console.service';
 
 @Injectable()
-export class JwtAuthGuard extends AuthGuard("jwt") {
+export class JwtAuthGuard extends AuthGuard('jwt') {
   handleRequest(err: any, user: any, info: any, context: ExecutionContext) {
     const request = context.switchToHttp().getRequest();
 
-    ConsoleLogger.warn("JWT_AUTH_FAILED_DEBUG", {
-      tag: "JwtAuthGuard.handleRequest",
+    ConsoleLogger.warn('JWT_AUTH_FAILED_DEBUG', {
+      tag: 'JwtAuthGuard.handleRequest',
       data: {
         err: err?.message || null,
         user: user || null,

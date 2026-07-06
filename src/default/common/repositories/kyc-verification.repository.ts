@@ -1,8 +1,8 @@
-import { Injectable } from "@nestjs/common";
-import { DataSource, EntityManager, Repository } from "typeorm";
-import { KycStatus, KycType } from "../../../default/common/enums/kyc.enum";
-import { BaseRepository } from "src/default/common/repositories/base.repository";
-import { KycVerificationEntity } from "src/modules/auth/entities";
+import { Injectable } from '@nestjs/common';
+import { DataSource, EntityManager, Repository } from 'typeorm';
+import { KycStatus, KycType } from '../../../default/common/enums/kyc.enum';
+import { BaseRepository } from 'src/default/common/repositories/base.repository';
+import { KycVerificationEntity } from 'src/modules/auth/entities';
 
 @Injectable()
 export class KycVerificationRepository extends BaseRepository<KycVerificationEntity> {
@@ -10,35 +10,31 @@ export class KycVerificationRepository extends BaseRepository<KycVerificationEnt
     super(dataSource.getRepository(KycVerificationEntity));
   }
 
-  private getKycRepository(
-    manager?: EntityManager,
-  ): Repository<KycVerificationEntity> {
-    return manager
-      ? manager.getRepository(KycVerificationEntity)
-      : this.repository;
+  private getKycRepository(manager?: EntityManager): Repository<KycVerificationEntity> {
+    return manager ? manager.getRepository(KycVerificationEntity) : this.repository;
   }
 
   async findByUserIdAndType(
     userId: string,
     type: KycType,
-    manager?: EntityManager,
+    manager?: EntityManager
   ): Promise<KycVerificationEntity | null> {
     return this.getKycRepository(manager).findOne({
       where: {
-        user_id: userId,
+        user: { id: Number(userId) },
         type,
       },
     });
   }
 
   async findVerifiedByUserIdAndType(
-    userId: string,
+    userId: number,
     type: KycType,
-    manager?: EntityManager,
+    manager?: EntityManager
   ): Promise<KycVerificationEntity | null> {
     return this.getKycRepository(manager).findOne({
       where: {
-        user_id: userId,
+        user: { id: Number(userId) },
         type,
         status: KycStatus.VERIFIED,
       },
@@ -47,7 +43,7 @@ export class KycVerificationRepository extends BaseRepository<KycVerificationEnt
 
   async findByReferenceId(
     referenceId: string,
-    manager?: EntityManager,
+    manager?: EntityManager
   ): Promise<KycVerificationEntity | null> {
     return this.getKycRepository(manager).findOne({
       where: {
@@ -59,7 +55,7 @@ export class KycVerificationRepository extends BaseRepository<KycVerificationEnt
   async findByDocumentNumberAndType(
     documentNumber: string,
     type: KycType,
-    manager?: EntityManager,
+    manager?: EntityManager
   ): Promise<KycVerificationEntity | null> {
     return this.getKycRepository(manager).findOne({
       where: {
@@ -71,7 +67,7 @@ export class KycVerificationRepository extends BaseRepository<KycVerificationEnt
 
   async upsertVerifiedKyc(
     data: {
-      userId: string;
+      userId: number;
       type: KycType;
       referenceId?: string;
       documentNumber?: string;
@@ -82,13 +78,13 @@ export class KycVerificationRepository extends BaseRepository<KycVerificationEnt
       providerResponse?: Record<string, any>;
       metadata?: Record<string, any>;
     },
-    manager?: EntityManager,
+    manager?: EntityManager
   ): Promise<KycVerificationEntity> {
     const repo = this.getKycRepository(manager);
 
     const existing = await repo.findOne({
       where: {
-        user_id: data.userId,
+        user: { id: data.userId },
         type: data.type,
       },
     });
@@ -98,8 +94,7 @@ export class KycVerificationRepository extends BaseRepository<KycVerificationEnt
         status: KycStatus.VERIFIED,
         referenceId: data.referenceId ?? existing.referenceId,
         documentNumber: data.documentNumber ?? existing.documentNumber,
-        maskedDocumentNumber:
-          data.maskedDocumentNumber ?? existing.maskedDocumentNumber,
+        maskedDocumentNumber: data.maskedDocumentNumber ?? existing.maskedDocumentNumber,
         verifiedName: data.verifiedName ?? existing.verifiedName,
         provider: data.provider ?? existing.provider,
         providerRequest: data.providerRequest ?? existing.providerRequest,
@@ -112,7 +107,7 @@ export class KycVerificationRepository extends BaseRepository<KycVerificationEnt
     }
 
     const entity = repo.create({
-      user_id: data.userId,
+      user: { id: data.userId },
       type: data.type,
       status: KycStatus.VERIFIED,
       referenceId: data.referenceId,
@@ -130,21 +125,21 @@ export class KycVerificationRepository extends BaseRepository<KycVerificationEnt
   }
 
   async updateStatus(
-    userId: string,
+    userId: number,
     type: KycType,
     status: KycStatus,
     failureReason?: string,
-    manager?: EntityManager,
+    manager?: EntityManager
   ): Promise<void> {
     await this.getKycRepository(manager).update(
       {
-        user_id: userId,
+        user: { id: userId },
         type,
       },
       {
         status,
         failureReason,
-      },
+      }
     );
   }
 }

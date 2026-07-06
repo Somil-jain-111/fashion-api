@@ -10,13 +10,12 @@ export class AddressRepository extends BaseRepository<Address> {
     super(dataSource.getRepository(Address));
   }
 
-  async findByUserId(userId: string): Promise<Address[]> {
+  async findByUserId(userId: number): Promise<Address[]> {
     return await this.repository.find({
       where: {
         user: {
           id: userId,
         },
-        status: 1,
       } as FindOptionsWhere<Address>,
       order: {
         created_at: 'DESC',
@@ -24,7 +23,7 @@ export class AddressRepository extends BaseRepository<Address> {
     });
   }
 
-  async findDefaultAddress(userId: string): Promise<Address | null> {
+  async findDefaultAddress(userId: number): Promise<Address | null> {
     return await this.repository.findOne({
       where: {
         user: {
@@ -36,7 +35,7 @@ export class AddressRepository extends BaseRepository<Address> {
     });
   }
 
-  async findActiveAddressById(addressId: string, userId: string): Promise<Address | null> {
+  async findActiveAddressById(addressId: string, userId: number): Promise<Address | null> {
     return await this.repository.findOne({
       where: {
         id: addressId,
@@ -46,7 +45,7 @@ export class AddressRepository extends BaseRepository<Address> {
     });
   }
 
-  async softDeleteAddress(addressId: string, userId: string): Promise<void> {
+  async softDeleteAddress(addressId: string, userId: number): Promise<void> {
     await await this.repository.update(
       {
         id: addressId,
@@ -87,7 +86,7 @@ export class AddressRepository extends BaseRepository<Address> {
     );
   }
 
-  async findByUserIdPaginated(userId: string, page = 1, limit = 10): Promise<[Address[], number]> {
+  async findByUserIdPaginated(userId: number, page = 1, limit = 10): Promise<[Address[], number]> {
     return await this.repository.findAndCount({
       where: {
         user_id: userId,

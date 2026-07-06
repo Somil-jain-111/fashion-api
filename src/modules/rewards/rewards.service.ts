@@ -14,7 +14,7 @@ export class RewardsService {
     private userAuthValidator: UserAuthValidator
   ) {}
 
-  async getAllProducts(userId: string, filters: GetProductQueryDTO) {
+  async getAllProducts(userId: number, filters: GetProductQueryDTO) {
     const tag = 'RedemptionService.getAllProducts';
 
     const page = filters.page || 1;
@@ -107,7 +107,7 @@ export class RewardsService {
     };
   }
 
-  async getCatalogueCategories(userId: string) {
+  async getCatalogueCategories(userId: number) {
     const tag = 'RedemptionService.getCatalogueCategories';
 
     ConsoleLogger.log('FETCH_CATALOGUE_CATEGORIES_START', {
@@ -116,7 +116,6 @@ export class RewardsService {
     });
 
     await this.userAuthValidator.validateActiveUserById(userId);
-
 
     const providerResult = await this.productProvider.fetchCatalogueCategories();
 

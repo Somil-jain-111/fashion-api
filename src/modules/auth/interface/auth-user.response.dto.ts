@@ -1,4 +1,4 @@
-import { UserStatus } from "../constants/auth.constants";
+import { UserStatus } from '../constants/auth.constants';
 
 export class AuthUserResponseDto {
   id: string;

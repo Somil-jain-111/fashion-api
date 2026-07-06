@@ -5,12 +5,12 @@ import {
   Unique,
   CreateDateColumn,
   UpdateDateColumn,
-  BaseEntity,
   OneToMany,
   JoinColumn,
   ManyToOne,
   Check,
   Index,
+  OneToOne,
 } from 'typeorm';
 import {
   LoginHistories,
@@ -22,88 +22,24 @@ import {
   Order,
   PointHistory,
   InvoiceEntity,
+  Approval,
 } from '.';
-import { Salutation, UserType } from '../../../default/common/enums/user-type.enum';
+import { Salutation, UserPartnerType } from '../../../default/common/enums/user-type.enum';
 import { UserStatus } from '../constants/auth.constants';
+import { BaseEntity } from '../../../default/common/entities';
+import { UserStoreInfo } from './user-store-info.entity';
 @Entity('users')
 @Unique('UQ_MOBILE', ['mobile'])
-@Unique('UQ_WHATSAPP', ['whatsapp_number'])
+@Unique('UQ_WHATSAPP', ['whatsappNumber'])
 @Check(`points >= 0`)
 @Index(['mobile'])
 @Index(['status'])
 export class User extends BaseEntity {
-  @PrimaryGeneratedColumn('increment', { type: 'bigint' })
-  id!: string;
-
-  @Column({
-    type: 'enum',
-    enum: UserType,
-  })
-  user_type!: UserType;
-
-  @Column({ type: 'varchar', length: 100, nullable: true })
-  firmname?: string;
-
-  @Column({ type: 'varchar', length: 100, nullable: true })
-  pvt_name?: string;
-
+  /**
+   * @Default Fields
+   */
   @Column({ type: 'varchar', length: 36, nullable: true, unique: true })
   uuid?: string;
-
-  @Column({ type: 'varchar', length: 20, nullable: true })
-  code?: string;
-
-  @Column({ type: 'tinyint', default: UserStatus.ACTIVE })
-  status!: UserStatus;
-
-  @Column({ type: 'tinyint', default: 0 })
-  flag!: number;
-
-  @Column({ type: 'tinyint', default: 0 })
-  testRecord!: number;
-
-  @Column({ type: 'varchar', length: 100, nullable: true })
-  otp?: string | null;
-
-  @Column({ type: 'datetime', nullable: true })
-  otp_expiry?: Date | null;
-
-  @Column({ type: 'int', default: 0 })
-  otp_attempt_count!: number;
-
-  @Column({ type: 'varchar', nullable: true })
-  password?: string;
-
-  @Column({ type: 'bigint', unsigned: true, default: 0 })
-  points!: bigint;
-
-  @Column({
-    type: 'text',
-    nullable: true,
-  })
-  refreshToken?: string | null;
-
-  @Column('timestamp', { name: 'refresh_token_expiry', nullable: true })
-  refreshTokenExpiry?: Date | null;
-
-  @OneToMany(() => LoginHistories, (loginHistories) => loginHistories.user)
-  loginHistory!: LoginHistories[];
-
-  @Column({ type: 'bigint', nullable: true })
-  role_id?: string | null;
-
-  @ManyToOne(() => Roles, (role) => role.users)
-  @JoinColumn({ name: 'role_id' })
-  role!: Roles;
-
-  @Column({ type: 'varchar', length: 255, default: null })
-  image_url?: string;
-
-  @Column({ type: 'varchar', length: 20, default: null })
-  refferal_code?: string;
-
-  @Column({ type: 'boolean', default: false })
-  user_registered: boolean;
 
   @Column({
     type: 'enum',
@@ -118,17 +54,58 @@ export class User extends BaseEntity {
   @Column({ type: 'varchar', length: 15, nullable: true })
   mobile?: string | null;
 
-  @Column({ type: 'varchar', length: 15, nullable: true })
-  whatsapp_number?: string | null;
+  @Column({ type: 'varchar', length: 15, nullable: true, name: 'whatsapp_number' })
+  whatsappNumber?: string | null;
 
   @Column({ type: 'varchar', length: 255, nullable: true, unique: true })
   email?: string;
 
-  @Column({ type: 'date', nullable: true, default: null })
-  date_of_birth?: Date;
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  password?: string;
 
-  @Column({ type: 'bigint', nullable: true })
-  created_by!: bigint | null;
+  @Column({ type: 'varchar', length: 100, nullable: true, name: 'firm_name' })
+  firmName?: string;
+
+  @Column({ type: 'varchar', length: 100, nullable: true, name: 'private_name' })
+  privateName?: string;
+
+  @Column({
+    type: 'enum',
+    enum: UserPartnerType,
+    nullable: true,
+    name: 'partner_type',
+  })
+  partnerType?: UserPartnerType;
+
+  @Column({ type: 'varchar', length: 20, nullable: true })
+  code?: string;
+
+  @Column({ type: 'enum', enum: UserStatus, default: UserStatus.IN_APPROVAL })
+  status!: UserStatus;
+
+  @Column({ type: 'tinyint', default: 0 })
+  flag!: number;
+
+  @Column({ type: 'boolean', default: false })
+  isTestRecord!: boolean;
+
+  @Column({ type: 'bigint', unsigned: true, default: 0 })
+  points!: bigint;
+
+  @Column({ type: 'varchar', length: 255, default: null })
+  image_url?: string;
+
+  /**
+   * @Auth Fields
+   */
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  otp?: string;
+
+  @Column({ type: 'datetime', nullable: true })
+  otp_expiry?: Date | null;
+
+  @Column({ type: 'bigint', default: 0 })
+  otp_attempt_count!: number;
 
   @Column({ type: 'boolean', default: false })
   isDefaultOtp!: boolean;
@@ -139,26 +116,55 @@ export class User extends BaseEntity {
   @Column({ type: 'boolean', default: true })
   otpTrigger!: boolean;
 
+  @Column('timestamp', { name: 'refresh_token_expiry', nullable: true })
+  refreshTokenExpiry?: Date | null;
+
   @Column({ type: 'varchar', length: 255, nullable: true })
   resetPasswordToken?: string | null;
 
   @Column({ type: 'datetime', nullable: true })
   resetPasswordTokenExpiry?: Date | null;
 
+  @Column({
+    type: 'text',
+    nullable: true,
+  })
+  refreshToken?: string | null;
+
+  /**
+   * @Misc Fields
+   */
+  @Column({ type: 'varchar', length: 20, default: null })
+  refferal_code?: string;
+
+  @Column({ type: 'date', nullable: true, default: null })
+  date_of_birth?: Date;
+
+  /**
+   * @Relation fields
+   */
+  @ManyToOne(() => Roles, (role) => role.users)
+  @JoinColumn({ name: 'role_id' })
+  role!: Roles;
+
+  @OneToOne(() => UserStoreInfo, (userStoreInfo) => userStoreInfo.user, { nullable: true })
+  @JoinColumn({ name: 'user_store_info_id' })
+  storeInformation!: UserStoreInfo;
+
+  @OneToMany(() => LoginHistories, (loginHistories) => loginHistories.user)
+  loginHistory!: LoginHistories[];
+
+  @OneToOne(() => User, (user) => user.id, { nullable: true })
+  created_by!: User | null;
+
   @OneToMany(() => RevokedToken, (revokedToken) => revokedToken.user)
   revokedTokens!: RevokedToken[];
 
-  @CreateDateColumn({ type: 'datetime' })
-  created_at!: Date;
+  @OneToMany(() => KycVerificationEntity, (kyc) => kyc.user)
+  kyc!: User[];
 
-  @UpdateDateColumn({ type: 'datetime' })
-  updated_at!: Date;
-
-  @OneToMany(() => KycVerificationEntity, (kyc) => kyc.kyc)
-  users!: User[];
-
-  @OneToMany(() => KycVerificationLogEntity, (kyc) => kyc.kyc_logs)
-  user_logs!: User[];
+  @OneToMany(() => KycVerificationLogEntity, (kyc_logs) => kyc_logs.user)
+  kyc_logs!: User[];
 
   @OneToMany(() => Address, (address) => address.user)
   addresses?: Address[];
@@ -171,4 +177,6 @@ export class User extends BaseEntity {
 
   @OneToMany(() => InvoiceEntity, (invoiceEntity) => invoiceEntity.user)
   invoice?: InvoiceEntity[];
+  @OneToMany(() => Approval, (approval) => approval.user, { nullable: true })
+  approvals?: Approval[];
 }

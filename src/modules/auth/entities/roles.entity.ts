@@ -1,25 +1,13 @@
-import {
-  BaseEntity,
-  Column,
-  CreateDateColumn,
-  Entity,
-  OneToMany,
-  PrimaryGeneratedColumn,
-  UpdateDateColumn,
-} from "typeorm";
-import { User } from ".";
-import {
-  UserRole,
-  UserType,
-} from "../../../default/common/enums/user-type.enum";
+import { Column, Entity, OneToMany } from 'typeorm';
+//
+import { User } from '.';
+import { BaseEntity } from '../../../default/common/entities';
+import { UserRole, UserType } from '../../../default/common/enums/user-type.enum';
 
-@Entity("roles")
+@Entity('roles')
 export class Roles extends BaseEntity {
-  @PrimaryGeneratedColumn("increment", { type: "bigint" })
-  id!: string;
-
   @Column({
-    type: "enum",
+    type: 'enum',
     enum: UserRole,
     nullable: false,
   })
@@ -29,14 +17,8 @@ export class Roles extends BaseEntity {
   users?: User[];
 
   @Column({
-    type: "enum",
+    type: 'enum',
     enum: UserType,
   })
   user_type!: UserType;
-
-  @CreateDateColumn({ type: "datetime" })
-  created_at!: Date;
-
-  @UpdateDateColumn({ type: "datetime" })
-  updated_at!: Date;
 }

@@ -40,6 +40,7 @@ import { AddressesModule } from './modules/addresses/addresses.module';
 import { PublicModule } from './modules/public/public.module';
 import { PaymentVerificationModule } from './modules/payment-verification/payment-verification.module';
 import { PayoutModule } from './modules/payout/payout.module';
+import { OnboardingModule } from './modules/onboarding/onboarding.module';
 
 @Module({
   imports: [
@@ -81,6 +82,7 @@ import { PayoutModule } from './modules/payout/payout.module';
     PublicModule,
     PaymentVerificationModule,
     PayoutModule,
+    OnboardingModule,
   ],
   providers: [
     {

@@ -1,8 +1,8 @@
-import { DataSource, LessThan, QueryRunner } from "typeorm";
-import { BaseRepository } from "./base.repository";
-import { RevokedToken } from "src/modules/auth/entities";
-import { TokenType } from "../enums/token-type.enum";
-import { Injectable } from "@nestjs/common";
+import { DataSource, LessThan, QueryRunner } from 'typeorm';
+import { BaseRepository } from './base.repository';
+import { RevokedToken } from 'src/modules/auth/entities';
+import { TokenType } from '../enums/token-type.enum';
+import { Injectable } from '@nestjs/common';
 
 @Injectable()
 export class RevokedTokenRepository extends BaseRepository<RevokedToken> {
@@ -13,15 +13,13 @@ export class RevokedTokenRepository extends BaseRepository<RevokedToken> {
   async revokeToken(
     data: {
       token_hash: string;
-      user_id?: string | null;
+      user_id?: number | null;
       token_type: TokenType;
       expires_at: Date;
     },
-    queryRunner?: QueryRunner,
+    queryRunner?: QueryRunner
   ): Promise<RevokedToken> {
-    const repo = queryRunner
-      ? queryRunner.manager.getRepository(RevokedToken)
-      : this.repository;
+    const repo = queryRunner ? queryRunner.manager.getRepository(RevokedToken) : this.repository;
 
     const revokedToken = repo.create({
       token_hash: data.token_hash,
@@ -33,13 +31,8 @@ export class RevokedTokenRepository extends BaseRepository<RevokedToken> {
     return await repo.save(revokedToken);
   }
 
-  async isTokenRevoked(
-    tokenHash: string,
-    queryRunner?: QueryRunner,
-  ): Promise<boolean> {
-    const repo = queryRunner
-      ? queryRunner.manager.getRepository(RevokedToken)
-      : this.repository;
+  async isTokenRevoked(tokenHash: string, queryRunner?: QueryRunner): Promise<boolean> {
+    const repo = queryRunner ? queryRunner.manager.getRepository(RevokedToken) : this.repository;
 
     const count = await repo.count({
       where: {
@@ -52,11 +45,9 @@ export class RevokedTokenRepository extends BaseRepository<RevokedToken> {
 
   async findByTokenHash(
     tokenHash: string,
-    queryRunner?: QueryRunner,
+    queryRunner?: QueryRunner
   ): Promise<RevokedToken | null> {
-    const repo = queryRunner
-      ? queryRunner.manager.getRepository(RevokedToken)
-      : this.repository;
+    const repo = queryRunner ? queryRunner.manager.getRepository(RevokedToken) : this.repository;
 
     return await repo.findOne({
       where: {
@@ -69,9 +60,7 @@ export class RevokedTokenRepository extends BaseRepository<RevokedToken> {
   }
 
   async deleteExpiredTokens(queryRunner?: QueryRunner): Promise<number> {
-    const repo = queryRunner
-      ? queryRunner.manager.getRepository(RevokedToken)
-      : this.repository;
+    const repo = queryRunner ? queryRunner.manager.getRepository(RevokedToken) : this.repository;
 
     const result = await repo.delete({
       expires_at: LessThan(new Date()),
@@ -83,15 +72,13 @@ export class RevokedTokenRepository extends BaseRepository<RevokedToken> {
   async revokeManyTokens(
     data: Array<{
       token_hash: string;
-      user_id?: string | null;
+      user_id?: number | null;
       token_type: TokenType;
       expires_at: Date;
     }>,
-    queryRunner?: QueryRunner,
+    queryRunner?: QueryRunner
   ): Promise<RevokedToken[]> {
-    const repo = queryRunner
-      ? queryRunner.manager.getRepository(RevokedToken)
-      : this.repository;
+    const repo = queryRunner ? queryRunner.manager.getRepository(RevokedToken) : this.repository;
 
     const revokedTokens = repo.create(
       data.map((item) => ({
@@ -99,7 +86,7 @@ export class RevokedTokenRepository extends BaseRepository<RevokedToken> {
         user_id: item.user_id ?? null,
         token_type: item.token_type,
         expires_at: item.expires_at,
-      })),
+      }))
     );
 
     return await repo.save(revokedTokens);
@@ -107,17 +94,15 @@ export class RevokedTokenRepository extends BaseRepository<RevokedToken> {
 
   async findActiveRevokedTokensByUserId(
     userId: bigint,
-    queryRunner?: QueryRunner,
+    queryRunner?: QueryRunner
   ): Promise<RevokedToken[]> {
-    const repo = queryRunner
-      ? queryRunner.manager.getRepository(RevokedToken)
-      : this.repository;
+    const repo = queryRunner ? queryRunner.manager.getRepository(RevokedToken) : this.repository;
 
     return await repo
-      .createQueryBuilder("revokedToken")
-      .where("revokedToken.user_id = :userId", { userId })
-      .andWhere("revokedToken.expires_at > :now", { now: new Date() })
-      .orderBy("revokedToken.created_at", "DESC")
+      .createQueryBuilder('revokedToken')
+      .where('revokedToken.user_id = :userId', { userId })
+      .andWhere('revokedToken.expires_at > :now', { now: new Date() })
+      .orderBy('revokedToken.created_at', 'DESC')
       .getMany();
   }
 }
