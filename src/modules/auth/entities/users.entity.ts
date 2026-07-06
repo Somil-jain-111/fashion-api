@@ -25,6 +25,7 @@ import {
 } from '.';
 import { Salutation, UserType } from '../../../default/common/enums/user-type.enum';
 import { UserStatus } from '../constants/auth.constants';
+import { ApprovalStatus, OnboardingStep } from 'src/modules/onboarding-approval/enums/approval-status.enum';
 @Entity('users')
 @Unique('UQ_MOBILE', ['mobile'])
 @Unique('UQ_WHATSAPP', ['whatsapp_number'])
@@ -76,6 +77,30 @@ export class User extends BaseEntity {
 
   @Column({ type: 'bigint', unsigned: true, default: 0 })
   points!: bigint;
+
+ // ---- Onboarding & Approval (mirrors RetailerApproval for fast reads) ----
+  @Column({
+    type: 'enum',
+    enum: ApprovalStatus,
+    nullable: true,
+  })
+  approval_status?: ApprovalStatus | null;
+
+  @Column({
+    type: 'enum',
+    enum: OnboardingStep,
+    nullable: true,
+  })
+  onboarding_step?: OnboardingStep | null;
+
+  // set at registration -> retailer can earn points from day one
+  @Column({ type: 'datetime', nullable: true })
+  earning_enabled_at?: Date | null;
+
+  // set on L2 approval, OR auto-set by cron after 30 days from earning_enabled_at
+  // if still unverified, whichever comes first
+  @Column({ type: 'datetime', nullable: true })
+  redemption_enabled_at?: Date | null;
 
   @Column({
     type: 'text',

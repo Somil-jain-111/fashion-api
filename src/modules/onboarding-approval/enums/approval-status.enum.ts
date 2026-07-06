@@ -1,0 +1,56 @@
+export enum OnboardingStep {
+  BASIC = 'BASIC',
+  PAN = 'PAN',
+  AADHAAR = 'AADHAAR',
+  GST = 'GST',
+  STORE = 'STORE',
+}
+
+export enum BeneficiaryType {
+  INDIVIDUAL = 'INDIVIDUAL',
+  ENTITY = 'ENTITY',
+}
+
+export enum VerificationStatus {
+  PENDING = 'PENDING',
+  VERIFIED = 'VERIFIED',
+  FAILED = 'FAILED',
+}
+
+export enum ApprovalStatus {
+  PENDING_L1 = 'PENDING_L1',
+  PENDING_L2 = 'PENDING_L2',
+  APPROVED = 'APPROVED',
+  REJECTED = 'REJECTED',
+  REWORK = 'REWORK',
+  TEMP_BLOCKED = 'TEMP_BLOCKED',
+  PERM_BLOCKED = 'PERM_BLOCKED',
+  REKYC_REQUIRED = 'REKYC_REQUIRED',
+}
+
+export enum ApprovalLevel {
+  L1 = 'L1',
+  L2 = 'L2',
+}
+
+export enum ApprovalActorRole {
+  SYSTEM = 'SYSTEM',
+  L1 = 'L1',
+  L2 = 'L2',
+  ADMIN = 'ADMIN',
+}
+
+export enum ApprovalAction {
+  SUBMITTED = 'SUBMITTED',
+  L1_FORWARDED_L2 = 'L1_FORWARDED_L2',
+  L1_REWORK = 'L1_REWORK',
+  L1_TEMP_BLOCKED = 'L1_TEMP_BLOCKED',
+  L2_APPROVED = 'L2_APPROVED',
+  L2_REJECTED = 'L2_REJECTED',
+  L2_REWORK = 'L2_REWORK',
+  L2_PERM_BLOCKED = 'L2_PERM_BLOCKED',
+  L2_REOPENED = 'L2_REOPENED',
+  ADMIN_OVERRIDE = 'ADMIN_OVERRIDE',
+  REKYC_INITIATED = 'REKYC_INITIATED',
+  REKYC_SUBMITTED = 'REKYC_SUBMITTED',
+}
