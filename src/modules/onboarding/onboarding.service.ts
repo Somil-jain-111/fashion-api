@@ -241,8 +241,10 @@ export class OnboardingService {
         where: { role: { id: l1Role.id } },
       });
 
-      if (l1Users && l1Users.length > 0) {
+      if (l1Users?.length > 0) {
         assignedToUser = l1Users[0]; // Currently assigns to the first L1 user found
+      } else {
+        throw new BusinessException(ERROR_CODES.APPROVAL.INVALID_LEVEL);
       }
     }
 
