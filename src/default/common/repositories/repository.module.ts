@@ -10,6 +10,9 @@ import { PincodeRepository } from './pincode.repository';
 import { PointHistoryRepository } from './point-history.repository';
 import { ShippingDetailRepository } from './shipping-details.repository';
 import { VoucherRepository } from './voucher.repository';
+import { DynamicConfigRepository } from './dynamic-config.repository';
+import { ApprovalRepository } from './approval.repository';
+import { UserStoreInfoRepository } from './user-store-info.repository';
 
 @Global()
 @Module({
@@ -25,6 +28,9 @@ import { VoucherRepository } from './voucher.repository';
     PointHistoryRepository,
     ShippingDetailRepository,
     VoucherRepository,
+    DynamicConfigRepository,
+    ApprovalRepository,
+    UserStoreInfoRepository,
   ],
   exports: [
     UserRepository,
@@ -38,6 +44,10 @@ import { VoucherRepository } from './voucher.repository';
     PointHistoryRepository,
     ShippingDetailRepository,
     VoucherRepository,
+    DynamicConfigRepository,
+    ApprovalRepository,
+    UserStoreInfoRepository,
   ],
 })
 export class RepositoryModule {}
+

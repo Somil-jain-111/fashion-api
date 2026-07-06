@@ -28,7 +28,7 @@ export class RevokedToken extends BaseEntity {
   token_hash!: string;
 
   @Column({ type: "bigint", nullable: true })
-  user_id?: string | null;
+  user_id?: number | null;
 
   @ManyToOne(() => User, (user) => user.revokedTokens, {
     nullable: true,

@@ -1,29 +1,16 @@
-import { KycStatus, KycType } from '../../../default/common/enums/kyc.enum';
+import { Column, Entity, Index, JoinColumn, ManyToOne } from 'typeorm';
+//
 import { User } from '../../auth/entities';
-import {
-  Column,
-  CreateDateColumn,
-  Entity,
-  Index,
-  JoinColumn,
-  ManyToOne,
-  PrimaryGeneratedColumn,
-  UpdateDateColumn,
-} from 'typeorm';
+import { BaseEntity } from '../../../default/common/entities';
+import { KycStatus, KycType } from '../../../default/common/enums/kyc.enum';
 
 @Entity('kyc_verifications')
-@Index(['user_id', 'type'])
+@Index(['user'])
 @Index(['type', 'status'])
-export class KycVerificationEntity {
-  @PrimaryGeneratedColumn('increment', { type: 'bigint' })
-  id!: string;
-
-  @Column({ name: 'user_id', type: 'bigint' })
-  user_id: string;
-
-  @ManyToOne(() => User, (user) => user.users)
+export class KycVerificationEntity extends BaseEntity {
+  @ManyToOne(() => User, (user) => user.id, { nullable: false })
   @JoinColumn({ name: 'user_id' })
-  kyc!: User;
+  user!: User;
 
   @Column({
     type: 'enum',
@@ -64,10 +51,4 @@ export class KycVerificationEntity {
 
   @Column({ name: 'failure_reason', nullable: true })
   failureReason?: string;
-
-  @CreateDateColumn({ name: 'created_at' })
-  created_at: Date;
-
-  @UpdateDateColumn({ name: 'updated_at' })
-  updated_at: Date;
 }

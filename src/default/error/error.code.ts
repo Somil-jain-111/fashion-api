@@ -20,8 +20,9 @@ import {
   KYC_ERRORS,
   REWARDS_ERRORS,
   ADDRESS_ERRORS,
-  OTP_ERRORS
-} from "./errors";
+  OTP_ERRORS,
+  APPROVAL_ERRORS,
+} from './errors';
 
 export type ErrorCodeValue = {
   code: string;
@@ -48,10 +49,11 @@ export const ERROR_CODES = {
   SHIPPING: SHIPPING_ERRORS,
   USER: USER_ERRORS,
   VALIDATION: VALIDATION_ERRORS,
-  KYC:KYC_ERRORS,
-  REWARDS:REWARDS_ERRORS,
-  ADDRESS:ADDRESS_ERRORS,
-  OTP:OTP_ERRORS
+  KYC: KYC_ERRORS,
+  REWARDS: REWARDS_ERRORS,
+  ADDRESS: ADDRESS_ERRORS,
+  OTP: OTP_ERRORS,
+  APPROVAL: APPROVAL_ERRORS,
 } as const;
 
 export type ErrorCodeGroups = typeof ERROR_CODES;
@@ -68,4 +70,4 @@ export function getErrorCodeByCode(code: string): ErrorCodeValue | null {
   return null;
 }
 
-export * from "./errors";
+export * from './errors';

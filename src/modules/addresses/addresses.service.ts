@@ -71,7 +71,7 @@ export class AddressesService {
     return response;
   }
 
-  async getMyAddresses(userId: string, query: PaginationQueryDto): Promise<AddressListResponseDTO> {
+  async getMyAddresses(userId: number, query: PaginationQueryDto): Promise<AddressListResponseDTO> {
     const tag = 'AddressesService.getMyAddresses';
 
     const page = query.page || 1;
@@ -96,7 +96,7 @@ export class AddressesService {
     return new AddressListResponseDTO(addresses, totalItems, page, limit);
   }
 
-  async getAddressById(userId: string, addressId: string): Promise<AddressResponseDTO> {
+  async getAddressById(userId: number, addressId: string): Promise<AddressResponseDTO> {
     const tag = 'AddressesService.getAddressById';
 
     ConsoleLogger.log('GET_ADDRESS_BY_ID_START', {
@@ -123,7 +123,7 @@ export class AddressesService {
     return new AddressResponseDTO(address);
   }
 
-  async createAddress(userId: string, dto: CreateAddressDto): Promise<AddressResponseDTO> {
+  async createAddress(userId: number, dto: CreateAddressDto): Promise<AddressResponseDTO> {
     const tag = 'AddressesService.createAddress';
 
     ConsoleLogger.log('CREATE_ADDRESS_START', {
@@ -170,7 +170,7 @@ export class AddressesService {
   }
 
   async updateAddress(
-    userId: string,
+    userId: number,
     addressId: string,
     dto: UpdateAddressDto
   ): Promise<AddressResponseDTO> {
@@ -232,7 +232,7 @@ export class AddressesService {
     return new AddressResponseDTO(updatedAddress);
   }
 
-  async deleteAddress(userId: string, addressId: string) {
+  async deleteAddress(userId: number, addressId: string) {
     const tag = 'AddressesService.deleteAddress';
 
     ConsoleLogger.log('DELETE_ADDRESS_START', {

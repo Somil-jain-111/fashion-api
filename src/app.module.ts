@@ -41,6 +41,7 @@ import { PublicModule } from './modules/public/public.module';
 import { PaymentVerificationModule } from './modules/payment-verification/payment-verification.module';
 import { PayoutModule } from './modules/payout/payout.module';
 import { OnboardingApprovalModule } from './modules/onboarding-approval/onboarding-approval.module';
+import { OnboardingModule } from './modules/onboarding/onboarding.module';
 
 @Module({
   imports: [
@@ -82,7 +83,8 @@ import { OnboardingApprovalModule } from './modules/onboarding-approval/onboardi
     PublicModule,
     PaymentVerificationModule,
     PayoutModule,
-    OnboardingApprovalModule
+    OnboardingApprovalModule,
+    OnboardingModule,
   ],
   providers: [
     {

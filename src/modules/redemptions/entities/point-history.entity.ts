@@ -1,18 +1,9 @@
-import {
-  Entity,
-  PrimaryGeneratedColumn,
-  Column,
-  CreateDateColumn,
-  UpdateDateColumn,
-  BaseEntity,
-  ManyToOne,
-  JoinColumn,
-  Index,
-} from 'typeorm';
-
+import { Entity, Column, ManyToOne, JoinColumn, Index } from 'typeorm';
+//
 import { Order, User } from '../../auth/entities';
 import { RedemptionType } from '../enum/redemption-type.enum';
 import { PointStatusEnum } from '../enum/point-history-status.enum.';
+import { BaseEntity } from '../../../default/common/entities';
 
 @Entity({ name: 'point_histories' })
 @Index('idx_point_user', ['user'])
@@ -21,9 +12,6 @@ import { PointStatusEnum } from '../enum/point-history-status.enum.';
 @Index('idx_point_type', ['type'])
 @Index('idx_point_transaction', ['transaction_id'])
 export class PointHistory extends BaseEntity {
-  @PrimaryGeneratedColumn('increment', { type: 'bigint' })
-  id!: bigint;
-
   @Column({ type: 'int', default: 0 })
   points!: number;
 
@@ -69,11 +57,8 @@ export class PointHistory extends BaseEntity {
   transaction_id?: string | null;
 
   @Column({ type: 'bigint' })
-  user_id!: string;
-
-  @Column({ type: 'bigint' })
   order_id!: string;
-  
+
   @ManyToOne(() => User, (user) => user.pointHistories, {
     nullable: false,
   })
@@ -85,10 +70,4 @@ export class PointHistory extends BaseEntity {
   })
   @JoinColumn({ name: 'order_id' })
   order?: Order | null;
-
-  @CreateDateColumn({ type: 'datetime' })
-  created_at!: Date;
-
-  @UpdateDateColumn({ type: 'datetime' })
-  updated_at!: Date;
 }

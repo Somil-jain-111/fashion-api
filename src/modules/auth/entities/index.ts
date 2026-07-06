@@ -19,3 +19,5 @@ export * from '../../invoices/entities/invoice-assortment.entity';
 export * from '../../invoices/entities/invoice-item.entity';
 export * from '../../invoices/entities/invoice-pair-detail.entity';
 export * from '../../invoices/entities/invoice.entity';
+export * from '../../approvals/entities/approval.entity';
+export * from './user-store-info.entity';

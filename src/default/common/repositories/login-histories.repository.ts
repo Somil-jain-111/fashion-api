@@ -1,7 +1,7 @@
-import { DataSource, QueryRunner } from "typeorm";
-import { BaseRepository } from "./base.repository";
-import { LoginHistories, User } from "src/modules/auth/entities";
-import { Injectable } from "@nestjs/common";
+import { DataSource, QueryRunner } from 'typeorm';
+import { BaseRepository } from './base.repository';
+import { LoginHistories, User } from 'src/modules/auth/entities';
+import { Injectable } from '@nestjs/common';
 
 @Injectable()
 export class LoginHistoriesRepository extends BaseRepository<LoginHistories> {
@@ -18,14 +18,12 @@ export class LoginHistoriesRepository extends BaseRepository<LoginHistories> {
       ipAddress?: string | null;
       status?: number;
     },
-    queryRunner?: QueryRunner,
+    queryRunner?: QueryRunner
   ): Promise<LoginHistories> {
-    const repo = queryRunner
-      ? queryRunner.manager.getRepository(LoginHistories)
-      : this.repository;
+    const repo = queryRunner ? queryRunner.manager.getRepository(LoginHistories) : this.repository;
 
     const loginHistory = repo.create({
-      user_id: (data.user.id),
+      user: { id: Number(data.user.id) } as Partial<User>,
       latitude: data.latitude ?? null,
       longitude: data.longitude ?? null,
       ipAddress: data.ipAddress ?? null,
@@ -35,13 +33,8 @@ export class LoginHistoriesRepository extends BaseRepository<LoginHistories> {
     return await repo.save(loginHistory);
   }
 
-  async findByUserId(
-    userId: bigint,
-    queryRunner?: QueryRunner,
-  ): Promise<LoginHistories[]> {
-    const repo = queryRunner
-      ? queryRunner.manager.getRepository(LoginHistories)
-      : this.repository;
+  async findByUserId(userId: bigint, queryRunner?: QueryRunner): Promise<LoginHistories[]> {
+    const repo = queryRunner ? queryRunner.manager.getRepository(LoginHistories) : this.repository;
 
     return await repo.find({
       where: {
@@ -50,18 +43,16 @@ export class LoginHistoriesRepository extends BaseRepository<LoginHistories> {
         },
       } as any,
       order: {
-        created_at: "DESC",
+        created_at: 'DESC',
       } as any,
     });
   }
 
   async findLatestByUserId(
     userId: bigint,
-    queryRunner?: QueryRunner,
+    queryRunner?: QueryRunner
   ): Promise<LoginHistories | null> {
-    const repo = queryRunner
-      ? queryRunner.manager.getRepository(LoginHistories)
-      : this.repository;
+    const repo = queryRunner ? queryRunner.manager.getRepository(LoginHistories) : this.repository;
 
     return await repo.findOne({
       where: {
@@ -70,7 +61,7 @@ export class LoginHistoriesRepository extends BaseRepository<LoginHistories> {
         },
       } as any,
       order: {
-        created_at: "DESC",
+        created_at: 'DESC',
       } as any,
     });
   }
