@@ -71,10 +71,10 @@ export class User extends BaseEntity {
   @Column({
     type: 'enum',
     enum: UserPartnerType,
-    default: UserPartnerType.INDIVIDUAL,
+    nullable: true,
     name: 'partner_type',
   })
-  partnerType!: UserPartnerType;
+  partnerType?: UserPartnerType;
 
   @Column({ type: 'varchar', length: 20, nullable: true })
   code?: string;
@@ -97,8 +97,8 @@ export class User extends BaseEntity {
   /**
    * @Auth Fields
    */
-  @Column({ type: 'varchar', length: 6, nullable: true })
-  otp?: string | null;
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  otp?: string;
 
   @Column({ type: 'datetime', nullable: true })
   otp_expiry?: Date | null;

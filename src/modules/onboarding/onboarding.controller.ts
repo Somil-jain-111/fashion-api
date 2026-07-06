@@ -11,13 +11,13 @@ import { IdempotencyInterceptor } from 'src/default/common/interceptors/idempote
 import { NoCache } from 'src/default/cache/cache.decorator';
 import { DataSanitizer } from 'src/default/common/utils/sanitize.utils';
 
-@NoCache()
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles([UserRole.RETAILER])
 @Controller('onboarding')
 export class OnboardingController {
   constructor(private readonly onboardingService: OnboardingService) {}
 
+  @NoCache()
   @Put('basic-info')
   @ResponseMessage('Basic info updated successfully')
   async saveBasicInfo(@Req() req: any, @Body() dto: SaveBasicInfoDto) {
@@ -26,6 +26,7 @@ export class OnboardingController {
     return DataSanitizer.sanitizeData(response);
   }
 
+  @NoCache()
   @Post('store-info')
   @ResponseMessage('Store info saved successfully')
   async saveStoreInfo(@Req() req: any, @Body() dto: SaveStoreInfoDto) {
@@ -34,6 +35,7 @@ export class OnboardingController {
     return DataSanitizer.sanitizeData(response);
   }
 
+  @NoCache()
   @Get('status')
   @ResponseMessage('Onboarding status fetched successfully')
   async getStatus(@Req() req: any) {
@@ -42,6 +44,7 @@ export class OnboardingController {
     return DataSanitizer.sanitizeData(response);
   }
 
+  @NoCache()
   @UseInterceptors(IdempotencyInterceptor)
   @Post('submit')
   @ResponseMessage('Profile submitted for approval successfully')

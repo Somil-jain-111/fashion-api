@@ -581,7 +581,9 @@ export class KycService {
       type: KycType.GST,
       referenceId: transactionId,
       documentNumber: encryptedGst,
-      verifiedName: this.encryptKycData(gstApiData.trade_name || gstApiData.legal_name || user.username),
+      verifiedName: this.encryptKycData(
+        gstApiData.trade_name || gstApiData.legal_name || user.username
+      ),
       provider: 'REWARDS_API',
       providerRequest: gstProviderResult.requestPayload,
       providerResponse: encryptedApiData,
@@ -595,7 +597,9 @@ export class KycService {
     // Update user's firmName if it's not already set
     if (gstApiData.trade_name || gstApiData.legal_name) {
       const firmName = gstApiData.trade_name || gstApiData.legal_name;
-      const userRepository = this.kycVerificationRepository.getRepository().manager.getRepository(User);
+      const userRepository = this.kycVerificationRepository
+        .getRepository()
+        .manager.getRepository(User);
       await userRepository.update(userId, { firmName });
     }
 

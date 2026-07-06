@@ -28,6 +28,7 @@ export class OnboardingService {
 
   async saveBasicInfo(userId: number, dto: SaveBasicInfoDto) {
     const user = await this.userRepository.findById(userId);
+
     if (!user) {
       throw new BusinessException(
         ERROR_CODES.USER.USER_NOT_FOUND || {
@@ -39,24 +40,31 @@ export class OnboardingService {
     }
 
     // Check email uniqueness
-    const existingUserWithEmail = await this.userRepository.findByEmail(dto.email);
-    if (existingUserWithEmail && Number(existingUserWithEmail.id) !== userId) {
-      throw new BusinessException({
-        code: 'AUTH_009',
-        message: 'Email address already in use',
-        statusCode: 400,
-      });
+    if (dto.email) {
+      const existingUserWithEmail = await this.userRepository.findByEmail(dto.email);
+
+      if (existingUserWithEmail && Number(existingUserWithEmail.id) !== userId) {
+        throw new BusinessException({
+          code: 'AUTH_009',
+          message: 'Email address already in use',
+          statusCode: 400,
+        });
+      }
     }
 
     // Resolve whatsapp number: default to mobile if not provided
-    let whatsappNumber = dto.whatsappNumber;
-    if (!whatsappNumber) {
-      whatsappNumber = user.mobile;
-    }
+    // let whatsappNumber = dto.whatsappNumber;
+
+    // if (!whatsappNumber) {
+    //   whatsappNumber = user.mobile;
+    // }
 
     // Check whatsapp uniqueness
-    if (whatsappNumber) {
-      const existingUserWithWhatsapp = await this.userRepository.findOne({ whatsappNumber });
+    if (dto.whatsappNumber) {
+      const existingUserWithWhatsapp = await this.userRepository.findOne({
+        whatsappNumber: dto.whatsappNumber,
+      });
+
       if (existingUserWithWhatsapp && Number(existingUserWithWhatsapp.id) !== userId) {
         throw new BusinessException({
           code: 'AUTH_010',
@@ -67,16 +75,18 @@ export class OnboardingService {
     }
 
     // Update user basic info
-    await this.userRepository.updateById(userId, {
-      username: dto.username,
-      email: dto.email,
-      whatsappNumber,
+    const updatedData = await this.userRepository.updateById(userId, {
+      username: dto.name,
       partnerType: dto.partnerType,
+      ...(dto.email && {
+        email: dto.email,
+      }),
+      ...(dto.whatsappNumber && {
+        whatsappNumber: dto.whatsappNumber,
+      }),
     });
 
-    return {
-      message: 'Basic info updated successfully',
-    };
+    return updatedData;
   }
 
   async saveStoreInfo(userId: number, dto: SaveStoreInfoDto) {
@@ -137,6 +147,7 @@ export class OnboardingService {
 
   async getStatus(userId: number) {
     const user = await this.userRepository.findOne({ id: userId }, ['storeInformation']);
+
     if (!user) {
       throw new BusinessException(
         ERROR_CODES.USER.USER_NOT_FOUND || {
@@ -147,7 +158,7 @@ export class OnboardingService {
       );
     }
 
-    const basicInfoComplete = !!(user.username && user.email && user.partnerType);
+    const basicInfoComplete = !!(user.username && user.partnerType);
 
     const panKyc = await this.kycVerificationRepository.findVerifiedByUserIdAndType(
       userId,

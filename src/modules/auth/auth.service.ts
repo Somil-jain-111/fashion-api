@@ -29,18 +29,19 @@ import { RevokedTokenRepository } from 'src/default/common/repositories/revoked_
 import { TokenType } from 'src/default/common/enums/token-type.enum';
 import { TokenHashHelper } from 'src/default/common/helper/token-hash.helper';
 import { UserValidator } from 'src/default/common/validators';
+import { AppConfigService } from 'src/default/config/config.service';
 
 @Injectable()
 export class AuthService {
   constructor(
     private userRepository: UserRepository,
     private revokedTokenRepository: RevokedTokenRepository,
-
     private loginHistoryRepository: LoginHistoriesRepository,
 
     private readonly jwtService: JwtService,
     private readonly userAuthValidator: UserAuthValidator,
-    private readonly userValidator: UserValidator
+    private readonly userValidator: UserValidator,
+    private readonly appConfigService: AppConfigService
     // private readonly AuthTokenHelper,
   ) {}
   // async onModuleInit() {
@@ -49,9 +50,14 @@ export class AuthService {
   // }
 
   async sendOtp(dto: SendOtpDto): Promise<{ mobile: string; otp_expiry_in_minutes: Number }> {
-    const user = await this.userValidator.findOrCreateActiveUserByMobile(dto.mobile);
+    const user = await this.userValidator.findOrCreateActiveUserByMobile(dto, true);
 
-    const otpPlain = await OtpHelper.generateOtp();
+    let otpPlain = await OtpHelper.generateOtp();
+
+    if (!this.appConfigService.isProduction()) {
+      otpPlain = this.appConfigService.getNonProdOtp().toString();
+    }
+
     const otpExpiry = await DateHelper.getOtpExpiryDate();
     const otp = CommonUtils.encrypt(otpPlain);
 

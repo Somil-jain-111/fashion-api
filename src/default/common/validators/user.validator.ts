@@ -5,7 +5,7 @@ import { ERROR_CODES } from 'src/default/error/error.code';
 import { RolesRepository, UserRepository } from 'src/default/common/repositories';
 import { UserStatus } from 'src/modules/auth/constants/auth.constants';
 import { UserAuthValidator } from 'src/modules/auth/validators/user-auth.validator';
-import { UserPartnerType, UserRole, UserType } from '../enums/user-type.enum';
+import { SendOtpDto } from 'src/modules/auth/dto/send-otp.dto';
 
 @Injectable()
 export class UserValidator {
@@ -16,31 +16,34 @@ export class UserValidator {
     private readonly userAuthValidator: UserAuthValidator
   ) {}
 
-  async findOrCreateActiveUserByMobile(mobile: string) {
-    let user = await this.userRepository.findByMobile(mobile);
+  async findOrCreateActiveUserByMobile(dto: SendOtpDto, createUser: boolean = true) {
+    let user = await this.userRepository.findByMobile(dto.mobile);
 
     if (!user) {
-      let role = await this.roleRepository.findByName(UserRole.RETAILER);
-      if (!role) {
-        role = await this.roleRepository.createRole({
-          name: UserRole.RETAILER,
-          code: null,
-          user_type: UserType.USER,
-        });
-      }
-      user = await this.userRepository.save({
-        mobile,
-        status: UserStatus.ACTIVE,
-        // user_type: UserType.USER,
-        partnerType: UserPartnerType.INDIVIDUAL,
-        role: { id: role.id },
-      });
-      console.log('user', user);
+      if (createUser) {
+        let role = await this.roleRepository.findByName(dto.role);
 
-      return user;
+        if (!role) {
+          throw new BusinessException(ERROR_CODES.AUTH.INVALID_ROLE);
+        }
+
+        user = await this.userRepository.save({
+          mobile: dto.mobile,
+          status: UserStatus.IN_APPROVAL,
+          ...(dto.partnerType && {
+            partnerType: dto.partnerType,
+          }),
+          role: { id: role.id },
+        });
+
+        return user;
+      } else {
+        throw new BusinessException(ERROR_CODES.AUTH.INVALID_MOBILE);
+      }
     }
 
-    await this.userAuthValidator.validateActiveUserByMobile(mobile);
+    await this.userAuthValidator.validateActiveUserByMobile(dto.mobile);
+
     return user;
   }
 

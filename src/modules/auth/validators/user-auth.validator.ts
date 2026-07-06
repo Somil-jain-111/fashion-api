@@ -16,7 +16,7 @@ export class UserAuthValidator {
       throw new BusinessException(ERROR_CODES.USER.USER_NOT_FOUND);
     }
 
-    this.throwIfUserNotActive(user.status);
+    // this.throwIfUserNotActive(user.status);
 
     return user;
   }
@@ -70,12 +70,10 @@ export class UserAuthValidator {
 
   validateUserStatus(status: UserStatus): void {
     switch (status) {
-      case UserStatus.PARTIAL_APPROVED:
       case UserStatus.ACTIVE:
-        return;
-
+      case UserStatus.PARTIAL_APPROVED:
       case UserStatus.IN_APPROVAL:
-        throw new BusinessException(ERROR_CODES.USER.USER_PENDING);
+        return;
 
       case UserStatus.BLOCKED:
         throw new BusinessException(ERROR_CODES.USER.USER_BLOCKED);

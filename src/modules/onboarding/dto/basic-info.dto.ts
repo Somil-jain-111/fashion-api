@@ -4,10 +4,10 @@ import { UserPartnerType } from 'src/default/common/enums/user-type.enum';
 export class SaveBasicInfoDto {
   @IsString()
   @IsNotEmpty({ message: 'Name is required' })
-  username: string;
+  name: string;
 
   @IsEmail({}, { message: 'Invalid email address' })
-  @IsNotEmpty({ message: 'Email is required' })
+  @IsOptional()
   email: string;
 
   @IsString()
