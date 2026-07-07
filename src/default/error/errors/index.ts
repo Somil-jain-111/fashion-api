@@ -21,3 +21,4 @@ export * from './rewars.errors';
 export * from './address.errors';
 export * from './otp.errors';
 export * from './approval.errors';
+export * from './onboarding.error';
