@@ -40,6 +40,7 @@ import { ApprovalsModule } from './modules/approvals/approvals.module';
 import { AddressesModule } from './modules/addresses/addresses.module';
 import { PublicModule } from './modules/public/public.module';
 import { OnboardingModule } from './modules/onboarding/onboarding.module';
+import { S3Module } from './default/common/services/s3/s3.module';
 
 @Module({
   imports: [
@@ -81,6 +82,7 @@ import { OnboardingModule } from './modules/onboarding/onboarding.module';
     AddressesModule,
     PublicModule,
     OnboardingModule,
+    S3Module,
   ],
   providers: [
     {
