@@ -33,13 +33,15 @@ import { RewardsModule } from './modules/rewards/rewards.module';
 import { RedemptionsModule } from './modules/redemptions/redemptions.module';
 import { SupportModule } from './modules/support/support.module';
 import { ComplaintsModule } from './modules/complaints/complaints.module';
-import { PaymentModule } from './modules/payment/payment.module';
 import { RoutesModule } from './modules/routes/routes.module';
 import { VisitsModule } from './modules/visits/visits.module';
 import { ApprovalsModule } from './modules/approvals/approvals.module';
 import { AddressesModule } from './modules/addresses/addresses.module';
 import { PublicModule } from './modules/public/public.module';
+import { PaymentVerificationModule } from './modules/payment-verification/payment-verification.module';
+import { PayoutModule } from './modules/payout/payout.module';
 import { OnboardingModule } from './modules/onboarding/onboarding.module';
+import { S3Module } from './default/common/services/s3/s3.module';
 
 @Module({
   imports: [
@@ -74,13 +76,15 @@ import { OnboardingModule } from './modules/onboarding/onboarding.module';
     RedemptionsModule,
     SupportModule,
     ComplaintsModule,
-    PaymentModule,
     RoutesModule,
     VisitsModule,
     ApprovalsModule,
     AddressesModule,
     PublicModule,
+    PaymentVerificationModule,
+    PayoutModule,
     OnboardingModule,
+    S3Module,
   ],
   providers: [
     {

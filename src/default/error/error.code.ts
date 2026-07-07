@@ -22,6 +22,7 @@ import {
   ADDRESS_ERRORS,
   OTP_ERRORS,
   APPROVAL_ERRORS,
+  ONBOARD_ERRORS,
 } from './errors';
 
 export type ErrorCodeValue = {
@@ -54,6 +55,7 @@ export const ERROR_CODES = {
   ADDRESS: ADDRESS_ERRORS,
   OTP: OTP_ERRORS,
   APPROVAL: APPROVAL_ERRORS,
+  ONBOARD: ONBOARD_ERRORS,
 } as const;
 
 export type ErrorCodeGroups = typeof ERROR_CODES;
