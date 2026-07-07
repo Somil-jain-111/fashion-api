@@ -27,7 +27,7 @@ export class OnboardingController {
   }
 
   @NoCache()
-  @Post('store-info')
+  @Put('store-info')
   @ResponseMessage('Store info saved successfully')
   async saveStoreInfo(@Req() req: any, @Body() dto: SaveStoreInfoDto) {
     const userId = Number(req.user.id);
