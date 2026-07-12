@@ -84,7 +84,7 @@ async function bootstrap() {
 
   const expressApp = app.getHttpAdapter().getInstance();
   expressApp.get('/', (req: any, res: any) => {
-    res.json('Welcome To the SKIPPER API');
+    res.json('Welcome To the CAMPUS SHOES API');
   });
 
   // Enable api versioning with a prefix
