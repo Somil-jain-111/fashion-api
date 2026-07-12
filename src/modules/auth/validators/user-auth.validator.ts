@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { User } from '../entities';
-import { UserRepository } from 'src/default/common/repositories';
+import { UserRepository } from 'src/modules/user/repository';
 import { ERROR_CODES } from 'src/default/error/error.code';
 import { BusinessException } from 'src/default/error/business.exception';
 import { UserStatus } from '../constants/auth.constants';

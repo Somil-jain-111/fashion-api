@@ -6,11 +6,7 @@ export class StatusCodeUtil {
    * @param context - Additional context to generate more specific codes (e.g., entity name).
    * @returns The custom status code.
    */
-  static getStatusCode(
-    action: string,
-    success: boolean,
-    context?: string,
-  ): number {
+  static getStatusCode(action: string, success: boolean, context?: string): number {
     // Define base codes for actions
     const baseCodes = {
       create: 20001,
@@ -26,9 +22,7 @@ export class StatusCodeUtil {
     const contextOffset = context ? this.getContextOffset(context) : 0;
 
     // Add offset for error or success
-    const statusCode = success
-      ? baseCode + contextOffset
-      : baseCode + contextOffset + 50000;
+    const statusCode = success ? baseCode + contextOffset : baseCode + contextOffset + 50000;
 
     return statusCode;
   }

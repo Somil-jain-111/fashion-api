@@ -7,8 +7,8 @@ import { ConsoleLogger } from 'src/default/logger/console/console.service';
 import {
   KycVerificationLogRepository,
   KycVerificationRepository,
-  UserRepository,
-} from 'src/default/common/repositories';
+} from 'src/modules/kyc/repository';
+
 import { BusinessException } from 'src/default/error/business.exception';
 import { ERROR_CODES } from 'src/default/error/error.code';
 import { UserAuthValidator } from '../auth/validators/user-auth.validator';
@@ -304,7 +304,7 @@ export class KycService {
     /**
      * 5. Upload provider profile image if needed
      */
-    let uploadedAadhaarImage: string | null = null;
+    const uploadedAadhaarImage: string | null = null;
 
     // if (aadhaarData.profile_image) {
     //   uploadedAadhaarImage = await this.imageUpload(aadhaarData.profile_image, {

@@ -1,10 +1,10 @@
 // src/modules/kyc/provider/name-match.provider.ts
 
-import { Injectable } from "@nestjs/common";
-import axios, { AxiosRequestConfig } from "axios";
-import { KycHmacHelper } from "src/default/common/helper/kyc-hmac.helper";
-import { AppConfigService } from "src/default/config/config.service";
-import { ConsoleLogger } from "src/default/logger/console/console.service";
+import { Injectable } from '@nestjs/common';
+import axios, { AxiosRequestConfig } from 'axios';
+import { KycHmacHelper } from 'src/default/common/helper/kyc-hmac.helper';
+import { AppConfigService } from 'src/default/config/config.service';
+import { ConsoleLogger } from 'src/default/logger/console/console.service';
 
 type NameMatchInput = {
   userName: string;
@@ -27,36 +27,33 @@ export class NameMatchProvider {
 
   async matchName(data: NameMatchInput): Promise<KycProviderResult> {
     const payload = {
-      type: "name_match",
+      type: 'name_match',
       transaction_id: data.transactionId,
       name_1: data.userName,
       name_2: data.apiUserName,
     };
 
     const isLive =
-      this.configService.get("NODE_ENV") === "production" ||
-      this.configService.get("NODE_ENV") === "qa";
+      this.configService.get('NODE_ENV') === 'production' ||
+      this.configService.get('NODE_ENV') === 'qa';
 
     const baseUrl = isLive
-      ? this.configService.get("Rewards_API_Base_Url_Live")
-      : this.configService.get("Rewards_API_Base_Url_Dev");
+      ? this.configService.get('Rewards_API_Base_Url_Live')
+      : this.configService.get('Rewards_API_Base_Url_Dev');
 
     const permanentToken = isLive
-      ? this.configService.get("Rewards_API_Permanent_Token_Live")
-      : this.configService.get("Rewards_API_Permanent_Token_Dev");
+      ? this.configService.get('Rewards_API_Permanent_Token_Live')
+      : this.configService.get('Rewards_API_Permanent_Token_Dev');
 
-    const secretKey = this.configService.get("KYC_SECRET_KEY");
+    const secretKey = this.configService.get('KYC_SECRET_KEY');
 
     const requestConfig: AxiosRequestConfig = {
-      method: "post",
+      method: 'post',
       url: `${baseUrl}/gratification/kyc`,
       headers: {
-        "x-hmac": KycHmacHelper.generateSecretKey(
-          { result: payload },
-          secretKey,
-        ),
+        'x-hmac': KycHmacHelper.generateSecretKey({ result: payload }, secretKey),
         permanent_token: permanentToken,
-        "content-type": "application/json",
+        'content-type': 'application/json',
       },
       data: payload,
     };
@@ -70,19 +67,18 @@ export class NameMatchProvider {
         requestPayload: payload,
         responseData: response.data,
         statusCode: response.status,
-        message: response.data?.message || "Name matching successful",
+        message: response.data?.message || 'Name matching successful',
       };
     } catch (error) {
       const errorResponse = error.response?.data || {
         status: false,
-        message: "Unknown error",
+        message: 'Unknown error',
       };
 
-      const statusCode =
-        errorResponse?.data?.statuscode || error.response?.status || 400;
+      const statusCode = errorResponse?.data?.statuscode || error.response?.status || 400;
 
-      ConsoleLogger.error("NAME_MATCH_PROVIDER_ERROR", error?.stack, {
-        tag: "NameMatchProvider.matchName",
+      ConsoleLogger.error('NAME_MATCH_PROVIDER_ERROR', error?.stack, {
+        tag: 'NameMatchProvider.matchName',
         data: {
           transactionId: data.transactionId,
           statusCode,
@@ -96,7 +92,7 @@ export class NameMatchProvider {
         requestPayload: payload,
         responseData: errorResponse,
         statusCode,
-        message: errorResponse.message || "Name matching failed",
+        message: errorResponse.message || 'Name matching failed',
       };
     }
   }

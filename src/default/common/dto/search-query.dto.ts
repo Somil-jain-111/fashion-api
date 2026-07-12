@@ -1,6 +1,6 @@
 // src/common/dto/search-query.dto.ts
 
-import { IsOptional, IsString, MaxLength } from "class-validator";
+import { IsOptional, IsString, MaxLength } from 'class-validator';
 
 export class SearchQueryDto {
   @IsOptional()

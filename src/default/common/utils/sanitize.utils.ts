@@ -1,11 +1,11 @@
 export class DataSanitizer {
   private static readonly defaultSensitiveFields = [
-    "password",
-    "otp",
-    "otpGeneratedAt",
-    "refreshToken",
-    "refreshTokenExpiry",
-    "accessToken",
+    'password',
+    'otp',
+    'otpGeneratedAt',
+    'refreshToken',
+    'refreshTokenExpiry',
+    'accessToken',
   ];
 
   /**
@@ -18,40 +18,28 @@ export class DataSanitizer {
   static sanitizeData(
     data: any,
     additionalFields: string[] = [],
-    overrideSensitiveFields?: string[],
+    overrideSensitiveFields?: string[]
   ): any {
     const sensitiveFields = overrideSensitiveFields
       ? overrideSensitiveFields
       : [...this.defaultSensitiveFields, ...additionalFields];
 
     if (Array.isArray(data)) {
-      return data.map((item) =>
-        this.sanitizeData(item, additionalFields, overrideSensitiveFields),
-      );
-    } else if (typeof data === "object" && data !== null) {
+      return data.map((item) => this.sanitizeData(item, additionalFields, overrideSensitiveFields));
+    } else if (typeof data === 'object' && data !== null) {
       return this.removeSensitiveFields(data, sensitiveFields);
     }
     return data;
   }
 
-  private static removeSensitiveFields(
-    obj: Record<string, any>,
-    sensitiveFields: string[],
-  ): any {
+  private static removeSensitiveFields(obj: Record<string, any>, sensitiveFields: string[]): any {
     const sanitizedObject = { ...obj };
 
     for (const key in sanitizedObject) {
       if (sensitiveFields.includes(key)) {
         delete sanitizedObject[key];
-      } else if (
-        typeof sanitizedObject[key] === "object" &&
-        sanitizedObject[key] !== null
-      ) {
-        sanitizedObject[key] = this.sanitizeData(
-          sanitizedObject[key],
-          [],
-          sensitiveFields,
-        );
+      } else if (typeof sanitizedObject[key] === 'object' && sanitizedObject[key] !== null) {
+        sanitizedObject[key] = this.sanitizeData(sanitizedObject[key], [], sensitiveFields);
       }
     }
 

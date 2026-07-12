@@ -1,9 +1,4 @@
-import {
-  BadRequestException,
-  Injectable,
-  NotFoundException,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 
@@ -13,7 +8,8 @@ import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
-import { LoginHistoriesRepository, UserRepository } from 'src/default/common/repositories';
+import { LoginHistoriesRepository } from 'src/modules/auth/repository';
+import { UserRepository } from 'src/modules/user/repository';
 import { OtpHelper } from 'src/default/common/helper/otp.helper';
 import { DateHelper } from 'src/default/common/helper/date.helper';
 import { UserAuthValidator } from './validators/user-auth.validator';
@@ -25,7 +21,7 @@ import { AuthTokenHelper } from 'src/default/common/helper/auth-token.helper';
 import { UserResponseMapper } from './mapper/user-response.mapper';
 import { ResetTokenHelper } from 'src/default/common/helper/reset-token.helper';
 import { RESET_TOKEN_EXPIRY_MINUTES } from './constants/auth.constants';
-import { RevokedTokenRepository } from 'src/default/common/repositories/revoked_token.repository';
+import { RevokedTokenRepository } from 'src/modules/auth/repository';
 import { TokenType } from 'src/default/common/enums/token-type.enum';
 import { TokenHashHelper } from 'src/default/common/helper/token-hash.helper';
 import { UserValidator } from 'src/default/common/validators';
@@ -49,7 +45,7 @@ export class AuthService {
   //   // this.loginHistoryRepository = RepositoryFactory.get("loginhistories");
   // }
 
-  async sendOtp(dto: SendOtpDto): Promise<{ mobile: string; otp_expiry_in_minutes: Number }> {
+  async sendOtp(dto: SendOtpDto): Promise<{ mobile: string; otp_expiry_in_minutes: number }> {
     const user = await this.userValidator.findOrCreateActiveUserByMobile(dto, true);
 
     let otpPlain = await OtpHelper.generateOtp();

@@ -1,12 +1,10 @@
 export class Formatter {
-  static toStringOrEmpty(
-    value?: { toString(): string } | string | number | null,
-  ): string {
-    return value === null || value === undefined ? "" : value.toString();
+  static toStringOrEmpty(value?: { toString(): string } | string | number | null): string {
+    return value === null || value === undefined ? '' : value.toString();
   }
 
   static toIsoStringOrEmpty(value?: Date | null): string {
-    return value ? value.toISOString() : "";
+    return value ? value.toISOString() : '';
   }
 
   /**
@@ -18,7 +16,7 @@ export class Formatter {
    * @returns A JSON string or the original input if not an object.
    */
   static safeStringify(data: any, trueObject: boolean = false): string {
-    if (typeof data === "object" && data !== null) {
+    if (typeof data === 'object' && data !== null) {
       return trueObject ? JSON.stringify(data, null, 2) : JSON.stringify(data);
     }
     return String(data); // Convert non-object data to string
@@ -32,12 +30,12 @@ export class Formatter {
    * @returns An array of stack trace lines or null if the input is invalid.
    */
   static formatStackTrace(trace: string): string[] | null {
-    if (typeof trace !== "string") {
+    if (typeof trace !== 'string') {
       return null; // Return null if trace is not a string
     }
 
     return trace
-      .split("\n") // Split by newline
+      .split('\n') // Split by newline
       .map((line) => line.trim()) // Trim each line
       .filter((line) => line.length > 0); // Remove empty lines
   }
@@ -55,7 +53,7 @@ export class Formatter {
    */
   static formatString(
     input: string,
-    options?: { capitalize?: boolean; translate?: boolean; lang?: string },
+    options?: { capitalize?: boolean; translate?: boolean; lang?: string }
   ): string {
     const { capitalize = false, translate = false } = options || {};
 
@@ -69,22 +67,17 @@ export class Formatter {
     // Step 2: Capitalize every word if the `capitalize` option is enabled
     if (capitalize) {
       result = result
-        .split(" ")
-        .map(
-          (word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase(),
-        )
-        .join(" ");
+        .split(' ')
+        .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+        .join(' ');
     } else {
       // Step 3: Otherwise, convert to sentence case
       result = result
         .split(/\.|!|\?/) // Split by sentence-ending punctuation
         .map((sentence) => sentence.trim()) // Remove leading/trailing spaces
         .filter((sentence) => sentence.length > 0) // Remove empty sentences
-        .map(
-          (sentence) =>
-            sentence.charAt(0).toUpperCase() + sentence.slice(1).toLowerCase(),
-        ) // Capitalize the first letter of each sentence
-        .join(". "); // Rejoin sentences with period and space
+        .map((sentence) => sentence.charAt(0).toUpperCase() + sentence.slice(1).toLowerCase()) // Capitalize the first letter of each sentence
+        .join('. '); // Rejoin sentences with period and space
     }
 
     return result;

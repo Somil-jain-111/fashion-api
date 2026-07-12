@@ -1,10 +1,10 @@
-import { IsNotEmpty, IsOptional, IsString, Matches } from "class-validator";
+import { IsNotEmpty, IsOptional, IsString, Matches } from 'class-validator';
 
 export class LoginDto {
   @IsOptional()
   @IsString()
   @Matches(/^[6-9]\d{9}$/, {
-    message: "Mobile number must be valid Indian mobile number",
+    message: 'Mobile number must be valid Indian mobile number',
   })
   mobile?: string;
 
@@ -12,7 +12,7 @@ export class LoginDto {
   @IsString()
   email?: string;
 
-  @IsNotEmpty({ message: "Password is required" })
+  @IsNotEmpty({ message: 'Password is required' })
   @IsString()
   password!: string;
 }

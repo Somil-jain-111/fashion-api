@@ -1,10 +1,4 @@
-import {
-  Controller,
-  Get,
-  UseGuards,
-  Req,
-  Query,
-} from '@nestjs/common';
+import { Controller, Get, UseGuards, Req, Query } from '@nestjs/common';
 import { RewardsService } from './rewards.service';
 import { NoCache } from 'src/default/cache/cache.decorator';
 import { JwtAuthGuard } from 'src/default/common/guards/jwt-auth.guard';

@@ -1,16 +1,9 @@
-import {
-  registerDecorator,
-  ValidationArguments,
-  ValidationOptions,
-} from "class-validator";
+import { registerDecorator, ValidationArguments, ValidationOptions } from 'class-validator';
 
-export function IsFromDateBeforeToDate(
-  property: string,
-  validationOptions?: ValidationOptions,
-) {
+export function IsFromDateBeforeToDate(property: string, validationOptions?: ValidationOptions) {
   return function (object: object, propertyName: string) {
     registerDecorator({
-      name: "isFromDateBeforeToDate",
+      name: 'isFromDateBeforeToDate',
       target: object.constructor,
       propertyName,
       constraints: [property],

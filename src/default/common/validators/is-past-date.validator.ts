@@ -1,15 +1,11 @@
 // src/common/validators/is-past-date.validator.ts
 
-import {
-  registerDecorator,
-  ValidationArguments,
-  ValidationOptions,
-} from "class-validator";
+import { registerDecorator, ValidationArguments, ValidationOptions } from 'class-validator';
 
 export function IsPastDate(validationOptions?: ValidationOptions) {
   return function (object: object, propertyName: string) {
     registerDecorator({
-      name: "IsPastDate",
+      name: 'IsPastDate',
       target: object.constructor,
       propertyName,
       options: validationOptions,

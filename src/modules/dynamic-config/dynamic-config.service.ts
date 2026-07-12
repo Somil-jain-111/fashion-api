@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 //
-import { DynamicConfigRepository } from 'src/default/common/repositories/dynamic-config.repository';
+import { DynamicConfigRepository } from 'src/modules/dynamic-config/repository';
 import { UserRoleConfig } from './entities';
 import { UserRole } from 'src/default/common/enums/user-type.enum';
 import { CreateDynamicConfigDto } from './dto/create-dynamic-config.dto';

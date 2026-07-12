@@ -19,14 +19,14 @@ export class ApprovalsController {
   async handleApprovalAction(
     @Req() req: any,
     @Param('id') id: string,
-    @Body() dto: ApprovalActionDto,
+    @Body() dto: ApprovalActionDto
   ) {
     const approverId = Number(req.user.id);
     const response = await this.approvalsService.handleApprovalAction(
       approverId,
       Number(id),
       dto.action,
-      dto.remarks,
+      dto.remarks
     );
     return DataSanitizer.sanitizeData(response);
   }

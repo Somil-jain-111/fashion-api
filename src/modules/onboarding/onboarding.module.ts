@@ -7,11 +7,7 @@ import { RedisModule } from 'src/default/databases/redis/redis.module';
 import { IdempotencyService } from 'src/default/idempotency/idempotency.service';
 
 @Module({
-  imports: [
-    AuthModule,
-    KycModule,
-    RedisModule,
-  ],
+  imports: [AuthModule, KycModule, RedisModule],
   controllers: [OnboardingController],
   providers: [
     OnboardingService,

@@ -1,7 +1,7 @@
-import { Injectable, OnModuleDestroy } from "@nestjs/common";
-import Redis from "ioredis";
-import { ConsoleLogger } from "../../logger/console/console.service";
-import { AppConfigService } from "src/default/config/config.service";
+import { Injectable, OnModuleDestroy } from '@nestjs/common';
+import Redis from 'ioredis';
+import { ConsoleLogger } from '../../logger/console/console.service';
+import { AppConfigService } from 'src/default/config/config.service';
 
 @Injectable()
 export class RedisService implements OnModuleDestroy {
@@ -13,10 +13,10 @@ export class RedisService implements OnModuleDestroy {
 
   private getRedisConfig() {
     return {
-      host: this.configService.get("REDIS_HOST") || "127.0.0.1",
-      port: Number(this.configService.get("REDIS_PORT")) || 6379,
-      password: this.configService.get("REDIS_PASSWORD") || undefined,
-      db: Number(this.configService.get("REDIS_DB")) || 0,
+      host: this.configService.get('REDIS_HOST') || '127.0.0.1',
+      port: Number(this.configService.get('REDIS_PORT')) || 6379,
+      password: this.configService.get('REDIS_PASSWORD') || undefined,
+      db: Number(this.configService.get('REDIS_DB')) || 0,
 
       /**
        * Required for BullMQ also.
@@ -35,9 +35,9 @@ export class RedisService implements OnModuleDestroy {
     });
   }
 
-  async set(key: string, value: any, ttl?: number): Promise<"OK" | null> {
+  async set(key: string, value: any, ttl?: number): Promise<'OK' | null> {
     return ttl
-      ? await this.client.set(key, JSON.stringify(value), "EX", ttl)
+      ? await this.client.set(key, JSON.stringify(value), 'EX', ttl)
       : await this.client.set(key, JSON.stringify(value));
   }
 
@@ -47,17 +47,17 @@ export class RedisService implements OnModuleDestroy {
   }
 
   async delete(key: string): Promise<number> {
-    ConsoleLogger.log(`Deleting key ${key}`, "RedisService");
+    ConsoleLogger.log(`Deleting key ${key}`, 'RedisService');
     return this.client.del(key);
   }
 
   async quit() {
-    ConsoleLogger.log("Closing Redis connection", "RedisService");
+    ConsoleLogger.log('Closing Redis connection', 'RedisService');
     await this.client.quit();
   }
 
   async onModuleDestroy() {
-    ConsoleLogger.log("Closing Redis connection", "RedisService");
+    ConsoleLogger.log('Closing Redis connection', 'RedisService');
     await this.client.quit();
   }
 }

@@ -1,13 +1,8 @@
-import {
-  Injectable,
-  NestInterceptor,
-  ExecutionContext,
-  CallHandler,
-} from "@nestjs/common";
-import { Observable } from "rxjs";
-import { v4 as uuidv4 } from "uuid";
-import { LocalStorageContextUtil } from "../utils/local-storage.util";
-import { ContextType } from "../constants/context.option";
+import { Injectable, NestInterceptor, ExecutionContext, CallHandler } from '@nestjs/common';
+import { Observable } from 'rxjs';
+import { v4 as uuidv4 } from 'uuid';
+import { LocalStorageContextUtil } from '../utils/local-storage.util';
+import { ContextType } from '../constants/context.option';
 
 @Injectable()
 export class LocalStorageInterceptor implements NestInterceptor {

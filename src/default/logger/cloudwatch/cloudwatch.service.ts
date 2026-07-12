@@ -5,11 +5,11 @@ import {
   DescribeLogGroupsCommand,
   DescribeLogStreamsCommand,
   PutLogEventsCommand,
-} from "@aws-sdk/client-cloudwatch-logs";
-import { Injectable, OnModuleInit } from "@nestjs/common";
-import { AppConfigService } from "../../../default/config/config.service";
-import { DataSanitizer } from "../../../default/common/utils/sanitize.utils";
-import { Formatter } from "../../../default/common/utils/format.util";
+} from '@aws-sdk/client-cloudwatch-logs';
+import { Injectable, OnModuleInit } from '@nestjs/common';
+import { AppConfigService } from '../../../default/config/config.service';
+import { DataSanitizer } from '../../../default/common/utils/sanitize.utils';
+import { Formatter } from '../../../default/common/utils/format.util';
 
 @Injectable()
 export class CloudwatchService implements OnModuleInit {
@@ -21,19 +21,17 @@ export class CloudwatchService implements OnModuleInit {
    */
   private streamSequenceTokens = new Map<string, string | undefined>();
 
-  private readonly logLevels = ["log", "error", "warn", "debug", "verbose"];
+  private readonly logLevels = ['log', 'error', 'warn', 'debug', 'verbose'];
 
   constructor(private readonly appConfigService: AppConfigService) {
-    const appName = this.appConfigService.get("APP_NAME") || "NestApp";
-    const nodeEnv = this.appConfigService.get("NODE_ENV") || "development";
+    const appName = this.appConfigService.get('APP_NAME') || 'NestApp';
+    const nodeEnv = this.appConfigService.get('NODE_ENV') || 'development';
 
     this.logGroupName = `${appName}-${nodeEnv}`;
 
-    const awsRegion = this.appConfigService.get("AWS_REGION");
-    const awsAccessKeyId = this.appConfigService.get("AWS_ACCESS_KEY_ID");
-    const awsSecretAccessKey = this.appConfigService.get(
-      "AWS_SECRET_ACCESS_KEY",
-    );
+    const awsRegion = this.appConfigService.get('AWS_REGION');
+    const awsAccessKeyId = this.appConfigService.get('AWS_ACCESS_KEY_ID');
+    const awsSecretAccessKey = this.appConfigService.get('AWS_SECRET_ACCESS_KEY');
 
     this.cloudWatchClient = new CloudWatchLogsClient({
       region: awsRegion,
@@ -56,7 +54,7 @@ export class CloudwatchService implements OnModuleInit {
   async sendLog(payload: any) {
     if (!this.cloudWatchClient) return;
 
-    const level = String(payload?.level || "log").toLowerCase();
+    const level = String(payload?.level || 'log').toLowerCase();
     const logStreamName = this.getLogStreamName(level);
 
     try {
@@ -81,28 +79,28 @@ export class CloudwatchService implements OnModuleInit {
             },
           ],
           sequenceToken,
-        }),
+        })
       );
 
       this.streamSequenceTokens.set(logStreamName, res.nextSequenceToken);
     } catch (err: any) {
-      if (err.name === "InvalidSequenceTokenException") {
+      if (err.name === 'InvalidSequenceTokenException') {
         await this.retryWithExpectedSequenceToken(err, logStreamName, payload);
         return;
       }
 
-      if (err.name === "ResourceNotFoundException") {
+      if (err.name === 'ResourceNotFoundException') {
         await this.ensureLogStreamExists(logStreamName);
         await this.sendLog(payload);
         return;
       }
 
-      console.error("CloudWatch log error:", err);
+      console.error('CloudWatch log error:', err);
     }
   }
 
   private getTodayDate(): string {
-    return new Date().toISOString().split("T")[0];
+    return new Date().toISOString().split('T')[0];
   }
 
   private getLogStreamName(level: string): string {
@@ -121,15 +119,13 @@ export class CloudwatchService implements OnModuleInit {
 
     const response = await this.cloudWatchClient.send(command);
 
-    const exists = response.logGroups?.some(
-      (group) => group.logGroupName === this.logGroupName,
-    );
+    const exists = response.logGroups?.some((group) => group.logGroupName === this.logGroupName);
 
     if (!exists) {
       await this.cloudWatchClient.send(
         new CreateLogGroupCommand({
           logGroupName: this.logGroupName,
-        }),
+        })
       );
     }
   }
@@ -144,9 +140,7 @@ export class CloudwatchService implements OnModuleInit {
 
     const response = await this.cloudWatchClient.send(command);
 
-    const stream = response.logStreams?.find(
-      (item) => item.logStreamName === logStreamName,
-    );
+    const stream = response.logStreams?.find((item) => item.logStreamName === logStreamName);
 
     if (stream) {
       this.streamSequenceTokens.set(logStreamName, stream.uploadSequenceToken);
@@ -157,17 +151,13 @@ export class CloudwatchService implements OnModuleInit {
       new CreateLogStreamCommand({
         logGroupName: this.logGroupName,
         logStreamName,
-      }),
+      })
     );
 
     this.streamSequenceTokens.set(logStreamName, undefined);
   }
 
-  private async retryWithExpectedSequenceToken(
-    err: any,
-    logStreamName: string,
-    payload: any,
-  ) {
+  private async retryWithExpectedSequenceToken(err: any, logStreamName: string, payload: any) {
     if (!this.cloudWatchClient) return;
 
     const expectedSequenceToken = err.expectedSequenceToken;
@@ -185,7 +175,7 @@ export class CloudwatchService implements OnModuleInit {
           },
         ],
         sequenceToken: expectedSequenceToken,
-      }),
+      })
     );
 
     this.streamSequenceTokens.set(logStreamName, res.nextSequenceToken);
@@ -193,7 +183,7 @@ export class CloudwatchService implements OnModuleInit {
 
   private stringifyWithBigInt(data: any) {
     return JSON.stringify(data, (_key, value) =>
-      typeof value === "bigint" ? value.toString() : value,
+      typeof value === 'bigint' ? value.toString() : value
     );
   }
 }

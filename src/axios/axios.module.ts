@@ -1,6 +1,6 @@
-import { Module } from "@nestjs/common";
-import { HttpModule } from "@nestjs/axios";
-import { AxiosLoggingInterceptor } from "src/axios/axios.interceptor";
+import { Module } from '@nestjs/common';
+import { HttpModule } from '@nestjs/axios';
+import { AxiosLoggingInterceptor } from 'src/axios/axios.interceptor';
 
 @Module({
   imports: [HttpModule],

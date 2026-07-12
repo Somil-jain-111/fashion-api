@@ -24,7 +24,6 @@ import { BullSetupModule } from './bull/bull.module';
 // import { MediaService } from './modules/media/media.service';
 import { AuditModule } from './modules/audit/audit.module';
 import { AuthModule } from './modules/auth/auth.module';
-import { RepositoryModule } from './default/common/repositories/repository.module';
 import { KycModule } from './modules/kyc/kyc.module';
 import { JourneyIdMiddleware } from './default/common/middleware/journey-id.middleware';
 import { OrdersModule } from './modules/orders/orders.module';
@@ -68,7 +67,6 @@ import { S3Module } from './default/common/services/s3/s3.module';
     BullSetupModule,
     AuditModule,
     AuthModule,
-    RepositoryModule,
     KycModule,
     OrdersModule,
     InvoicesModule,

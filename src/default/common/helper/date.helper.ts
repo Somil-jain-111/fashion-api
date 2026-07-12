@@ -1,5 +1,8 @@
-import { OTP_EXPIRY_MINUTES, REFRESH_TOKEN_EXPIRY_DAYS, RESET_TOKEN_EXPIRY_MINUTES } from "src/modules/auth/constants/auth.constants";
-
+import {
+  OTP_EXPIRY_MINUTES,
+  REFRESH_TOKEN_EXPIRY_DAYS,
+  RESET_TOKEN_EXPIRY_MINUTES,
+} from 'src/modules/auth/constants/auth.constants';
 
 export class DateHelper {
   static getOtpExpiryDate(): Date {
@@ -13,11 +16,9 @@ export class DateHelper {
     expiry.setDate(expiry.getDate() + REFRESH_TOKEN_EXPIRY_DAYS);
     return expiry;
   }
-   static getResetTokenExpiryDate(): Date {
+  static getResetTokenExpiryDate(): Date {
     const expiryDate = new Date();
-    expiryDate.setMinutes(
-      expiryDate.getMinutes() + RESET_TOKEN_EXPIRY_MINUTES,
-    );
+    expiryDate.setMinutes(expiryDate.getMinutes() + RESET_TOKEN_EXPIRY_MINUTES);
     return expiryDate;
   }
 }

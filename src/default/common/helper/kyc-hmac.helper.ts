@@ -1,20 +1,10 @@
-import * as crypto from "crypto";
+import * as crypto from 'crypto';
 
 export class KycHmacHelper {
-  static generateSecretKey(
-    data: any,
-    secretKey: string,
-  ): string {
+  static generateSecretKey(data: any, secretKey: string): string {
     const body: Record<string, any> = {};
 
-    const fields = [
-      "type",
-      "id_number",
-      "transaction_id",
-      "otp",
-      "name_1",
-      "name_2",
-    ];
+    const fields = ['type', 'id_number', 'transaction_id', 'otp', 'name_1', 'name_2'];
 
     for (const field of fields) {
       if (data?.result?.[field] !== undefined && data?.result?.[field] !== null) {
@@ -24,9 +14,6 @@ export class KycHmacHelper {
 
     const requestBody = JSON.stringify(body);
 
-    return crypto
-      .createHmac("sha256", secretKey)
-      .update(requestBody)
-      .digest("hex");
+    return crypto.createHmac('sha256', secretKey).update(requestBody).digest('hex');
   }
 }
