@@ -12,13 +12,12 @@ export class UpdateAddressDto {
   })
   mobile?: string;
 
-
   @IsOptional()
   @IsString()
   @MaxLength(255)
   addressLine1?: string;
 
-@IsOptional()
+  @IsOptional()
   @IsString()
   @MaxLength(255)
   addressLine2?: string;

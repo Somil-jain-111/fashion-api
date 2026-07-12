@@ -1,7 +1,7 @@
 // src/default/common/entities/invoice-item.entity.ts
 
 import {
-    BaseEntity,
+  BaseEntity,
   Column,
   Entity,
   Index,

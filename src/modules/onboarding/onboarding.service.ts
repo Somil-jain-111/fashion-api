@@ -3,16 +3,16 @@ import { Injectable } from '@nestjs/common';
 import {
   UserRepository,
   RolesRepository,
-  ApprovalRepository,
   UserStoreInfoRepository,
-  KycVerificationRepository,
-} from 'src/default/common/repositories';
+} from 'src/modules/user/repository';
+import { ApprovalRepository } from 'src/modules/approvals/repository';
+import { KycVerificationRepository } from 'src/modules/kyc/repository';
 import { User } from '../auth/entities/users.entity';
 import { SaveBasicInfoDto } from './dto/basic-info.dto';
 import { SaveStoreInfoDto } from './dto/store-info.dto';
 import { ERROR_CODES } from 'src/default/error/error.code';
 import { UserStatus } from '../auth/constants/auth.constants';
-import { KycType, KycStatus } from 'src/default/common/enums/kyc.enum';
+import { KycType } from 'src/default/common/enums/kyc.enum';
 import { BusinessException } from 'src/default/error/business.exception';
 import { UserPartnerType, UserRole } from 'src/default/common/enums/user-type.enum';
 import { ApprovalStatus, ApprovalType } from 'src/default/common/enums/approvals.enum';

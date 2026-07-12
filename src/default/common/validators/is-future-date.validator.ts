@@ -1,15 +1,11 @@
 // src/common/validators/is-future-date.validator.ts
 
-import {
-  registerDecorator,
-  ValidationArguments,
-  ValidationOptions,
-} from "class-validator";
+import { registerDecorator, ValidationArguments, ValidationOptions } from 'class-validator';
 
 export function IsFutureDate(validationOptions?: ValidationOptions) {
   return function (object: object, propertyName: string) {
     registerDecorator({
-      name: "IsFutureDate",
+      name: 'IsFutureDate',
       target: object.constructor,
       propertyName,
       options: validationOptions,

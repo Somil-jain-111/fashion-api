@@ -1,10 +1,10 @@
-import { Injectable } from "@nestjs/common";
-import axios, { AxiosRequestConfig } from "axios";
-import { KycHmacHelper } from "src/default/common/helper/kyc-hmac.helper";
-import { AppConfigService } from "src/default/config/config.service";
-import { BusinessException } from "src/default/error/business.exception";
-import { ERROR_CODES } from "src/default/error/error.code";
-import { ConsoleLogger } from "src/default/logger/console/console.service";
+import { Injectable } from '@nestjs/common';
+import axios, { AxiosRequestConfig } from 'axios';
+import { KycHmacHelper } from 'src/default/common/helper/kyc-hmac.helper';
+import { AppConfigService } from 'src/default/config/config.service';
+import { BusinessException } from 'src/default/error/business.exception';
+import { ERROR_CODES } from 'src/default/error/error.code';
+import { ConsoleLogger } from 'src/default/logger/console/console.service';
 
 type GstVerifyInput = {
   gstNumber: string;
@@ -28,39 +28,36 @@ export class GstProvider {
     const gst = data.gstNumber.toUpperCase();
 
     const payload = {
-      type: "kyc_gst",
+      type: 'kyc_gst',
       id_number: gst,
       transaction_id: data.transactionId,
     };
 
     const isLive =
-      this.configService.get("NODE_ENV") === "production" ||
-      this.configService.get("NODE_ENV") === "qa";
+      this.configService.get('NODE_ENV') === 'production' ||
+      this.configService.get('NODE_ENV') === 'qa';
 
     const baseUrl = isLive
-      ? this.configService.get("Rewards_API_Base_Url_Live")
-      : this.configService.get("Rewards_API_Base_Url_Dev");
+      ? this.configService.get('Rewards_API_Base_Url_Live')
+      : this.configService.get('Rewards_API_Base_Url_Dev');
 
     const permanentToken = isLive
-      ? this.configService.get("Rewards_API_Permanent_Token_Live")
-      : this.configService.get("Rewards_API_Permanent_Token_Dev");
+      ? this.configService.get('Rewards_API_Permanent_Token_Live')
+      : this.configService.get('Rewards_API_Permanent_Token_Dev');
 
-    const secretKey = this.configService.get("KYC_SECRET_KEY");
+    const secretKey = this.configService.get('KYC_SECRET_KEY');
 
     if (!secretKey) {
       throw new BusinessException(ERROR_CODES.KYC.KYC_SECRET_KEY_MISSING);
     }
 
     const requestConfig: AxiosRequestConfig = {
-      method: "post",
+      method: 'post',
       url: `${baseUrl}/gratification/kyc`,
       headers: {
-        "x-hmac": KycHmacHelper.generateSecretKey(
-          { result: payload },
-          secretKey,
-        ),
+        'x-hmac': KycHmacHelper.generateSecretKey({ result: payload }, secretKey),
         permanent_token: permanentToken,
-        "content-type": "application/json",
+        'content-type': 'application/json',
       },
       data: payload,
     };
@@ -74,19 +71,18 @@ export class GstProvider {
         requestPayload: payload,
         responseData: response.data,
         statusCode: response.status,
-        message: response.data?.message || "GST verification successful",
+        message: response.data?.message || 'GST verification successful',
       };
     } catch (error) {
       const errorResponse = error.response?.data || {
         status: false,
-        message: "Unknown error",
+        message: 'Unknown error',
       };
 
-      const statusCode =
-        errorResponse?.data?.statuscode || error.response?.status || 400;
+      const statusCode = errorResponse?.data?.statuscode || error.response?.status || 400;
 
-      ConsoleLogger.error("GST_PROVIDER_ERROR", error?.stack, {
-        tag: "GstProvider.verifyGst",
+      ConsoleLogger.error('GST_PROVIDER_ERROR', error?.stack, {
+        tag: 'GstProvider.verifyGst',
         data: {
           gst,
           statusCode,
@@ -100,7 +96,7 @@ export class GstProvider {
         requestPayload: payload,
         responseData: errorResponse,
         statusCode,
-        message: errorResponse.message || "GST verification failed",
+        message: errorResponse.message || 'GST verification failed',
       };
     }
   }

@@ -1,4 +1,4 @@
 export enum ContextType {
-  JOURNEY_ID = "journeyId",
-  CURRENT_USER = "token.sub",
+  JOURNEY_ID = 'journeyId',
+  CURRENT_USER = 'token.sub',
 }

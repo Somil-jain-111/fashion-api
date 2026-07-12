@@ -1,9 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import {
-  ApprovalRepository,
-  UserRepository,
-  RolesRepository,
-} from 'src/default/common/repositories';
+import { ApprovalRepository } from 'src/modules/approvals/repository';
+import { UserRepository, RolesRepository } from 'src/modules/user/repository';
 import { BusinessException } from 'src/default/error/business.exception';
 import { ERROR_CODES } from 'src/default/error/error.code';
 import { UserStatus } from '../auth/constants/auth.constants';

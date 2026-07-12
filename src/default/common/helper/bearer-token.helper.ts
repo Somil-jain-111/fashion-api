@@ -8,9 +8,9 @@ export class BearerTokenHelper {
       return null;
     }
 
-    const [type, token] = authHeader.split(" ");
+    const [type, token] = authHeader.split(' ');
 
-    if (type !== "Bearer" || !token) {
+    if (type !== 'Bearer' || !token) {
       return null;
     }
 

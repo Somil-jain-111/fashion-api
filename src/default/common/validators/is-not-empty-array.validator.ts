@@ -1,15 +1,11 @@
 // src/common/validators/is-not-empty-array.validator.ts
 
-import {
-  registerDecorator,
-  ValidationArguments,
-  ValidationOptions,
-} from "class-validator";
+import { registerDecorator, ValidationArguments, ValidationOptions } from 'class-validator';
 
 export function IsNotEmptyArray(validationOptions?: ValidationOptions) {
   return function (object: object, propertyName: string) {
     registerDecorator({
-      name: "IsNotEmptyArray",
+      name: 'IsNotEmptyArray',
       target: object.constructor,
       propertyName,
       options: validationOptions,

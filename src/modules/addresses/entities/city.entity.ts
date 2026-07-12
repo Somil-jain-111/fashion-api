@@ -9,32 +9,32 @@ import {
   OneToMany,
   JoinColumn,
   Index,
-} from "typeorm";
-import { State,Pincode } from '../../auth/entities';
+} from 'typeorm';
+import { State, Pincode } from '../../auth/entities';
 
-@Entity({ name: "cities" })
-@Index("idx_city_state", ["state"])
-@Index("idx_city_status", ["status"])
+@Entity({ name: 'cities' })
+@Index('idx_city_state', ['state'])
+@Index('idx_city_status', ['status'])
 export class City extends BaseEntity {
-  @PrimaryGeneratedColumn("increment", { type: "bigint" })
+  @PrimaryGeneratedColumn('increment', { type: 'bigint' })
   id!: bigint;
 
-  @Column({ type: "varchar", length: 100, nullable: false })
+  @Column({ type: 'varchar', length: 100, nullable: false })
   name!: string;
 
   @ManyToOne(() => State, (s) => s.city)
-  @JoinColumn({ name: "state_id" })
+  @JoinColumn({ name: 'state_id' })
   state!: State;
 
   @OneToMany(() => Pincode, (p) => p.city)
   pincode!: Pincode[];
 
-  @Column({ type: "tinyint", default: 1 })
+  @Column({ type: 'tinyint', default: 1 })
   status?: number;
 
-  @CreateDateColumn({ type: "datetime" })
+  @CreateDateColumn({ type: 'datetime' })
   created_at!: Date;
 
-  @UpdateDateColumn({ type: "datetime" })
+  @UpdateDateColumn({ type: 'datetime' })
   updated_at!: Date;
 }

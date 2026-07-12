@@ -7,8 +7,8 @@ import { ConsoleLogger } from 'src/default/logger/console/console.service';
 import {
   KycVerificationLogRepository,
   KycVerificationRepository,
-  UserRepository,
-} from 'src/default/common/repositories';
+} from 'src/modules/kyc/repository';
+
 import { BusinessException } from 'src/default/error/business.exception';
 import { ERROR_CODES } from 'src/default/error/error.code';
 import { UserAuthValidator } from '../auth/validators/user-auth.validator';
@@ -23,11 +23,13 @@ import { AadhaarProvider } from './provider/aadhaar.provider';
 import { VerifyAadhaarOtpDto } from './dto/verify-aadhar-otp.dto';
 import { LocalStorageContextUtil } from 'src/default/common/utils/local-storage.util';
 import { ContextType } from 'src/default/common/constants/context.option';
+import { UserRepository } from '../user/repository';
+import { UserPartnerType } from 'src/default/common/enums/user-type.enum';
 
 @Injectable()
 export class KycService {
   constructor(
-    // private userRepository: UserRepository,
+    private userRepository: UserRepository,
     private kycVerificationRepository: KycVerificationRepository,
     private kycVerificationLogRepository: KycVerificationLogRepository,
     private userAuthValidator: UserAuthValidator,
@@ -304,7 +306,7 @@ export class KycService {
     /**
      * 5. Upload provider profile image if needed
      */
-    let uploadedAadhaarImage: string | null = null;
+    const uploadedAadhaarImage: string | null = null;
 
     // if (aadhaarData.profile_image) {
     //   uploadedAadhaarImage = await this.imageUpload(aadhaarData.profile_image, {
@@ -517,7 +519,13 @@ export class KycService {
       },
     });
 
-    const user = await this.userAuthValidator.validateActiveUserById(userId);
+    const user = await this.userRepository.findOne({ id: Number(userId) });
+
+    await this.userAuthValidator.validateUserStatus(user.status);
+
+    if (user.partnerType !== UserPartnerType.INDIVIDUAL) {
+      throw new BusinessException(ERROR_CODES.KYC.INVALID_PARTNER_TYPE_FOR_GST);
+    }
 
     const encryptedGst = await this.encryptKycData(gst);
 
@@ -597,10 +605,7 @@ export class KycService {
     // Update user's firmName if it's not already set
     if (gstApiData.trade_name || gstApiData.legal_name) {
       const firmName = gstApiData.trade_name || gstApiData.legal_name;
-      const userRepository = this.kycVerificationRepository
-        .getRepository()
-        .manager.getRepository(User);
-      await userRepository.update(userId, { firmName });
+      await this.userRepository.update(userId, { firmName });
     }
 
     ConsoleLogger.log('VERIFY_GST_SUCCESS', {

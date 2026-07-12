@@ -1,9 +1,7 @@
-import { AsyncLocalStorage } from "async_hooks";
+import { AsyncLocalStorage } from 'async_hooks';
 
 export class LocalStorageContextUtil {
-  private static asyncLocalStorage = new AsyncLocalStorage<
-    Map<string, string>
-  >();
+  private static asyncLocalStorage = new AsyncLocalStorage<Map<string, string>>();
 
   static get(key: string): string | undefined {
     const store = this.asyncLocalStorage.getStore();

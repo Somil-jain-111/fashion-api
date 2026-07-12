@@ -1,6 +1,4 @@
-// src/modules/kyc/kyc.module.ts
-
-import { Module } from '@nestjs/common';
+import { Global, Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
 import { KycService } from './kyc.service';
@@ -17,9 +15,8 @@ import { KYCController } from './kyc.controller';
 import {
   KycVerificationLogRepository,
   KycVerificationRepository,
-} from 'src/default/common/repositories';
+} from 'src/modules/kyc/repository';
 import { NameMatchProvider } from './provider/name-matching.provider';
-import { UserAuthValidator } from '../auth/validators/user-auth.validator';
 import { IdempotencyService } from 'src/default/idempotency/idempotency.service';
 import { RedisModule } from 'src/default/databases/redis/redis.module';
 
@@ -49,7 +46,6 @@ import { RedisModule } from 'src/default/databases/redis/redis.module';
     PanProvider,
     AadhaarProvider,
     GstProvider,
-    UserAuthValidator,
     IdempotencyService,
   ],
 

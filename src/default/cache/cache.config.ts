@@ -1,14 +1,14 @@
-import { CacheModuleOptions, CacheStore } from "@nestjs/cache-manager";
-import { AppConfigService } from "../../default/config/config.service";
-import { redisStore } from "cache-manager-redis-yet";
+import { CacheModuleOptions, CacheStore } from '@nestjs/cache-manager';
+import { AppConfigService } from '../../default/config/config.service';
+import { redisStore } from 'cache-manager-redis-yet';
 
 export const cacheConfig = async (
-  appConfigService: AppConfigService,
+  appConfigService: AppConfigService
 ): Promise<CacheModuleOptions> => {
-  const redisHost = appConfigService.get("REDIS_HOST");
-  const redisPort = Number(appConfigService.get("REDIS_PORT"));
-  const redisPassword = appConfigService.get("REDIS_PASSWORD");
-  const redisTTL = Number(appConfigService.get("REDIS_TTL"));
+  const redisHost = appConfigService.get('REDIS_HOST');
+  const redisPort = Number(appConfigService.get('REDIS_PORT'));
+  const redisPassword = appConfigService.get('REDIS_PASSWORD');
+  const redisTTL = Number(appConfigService.get('REDIS_TTL'));
 
   const store = await redisStore({
     socket: {

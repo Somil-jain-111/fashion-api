@@ -1,16 +1,16 @@
-import { CONSTANTS } from "../constants/common.option";
-import { v4 as uuidv4 } from "uuid";
-import * as bcrypt from "bcrypt";
-import * as crypto from "crypto";
-import { AppConfigService } from "src/default/config/config.service";
-import axios from "axios";
-import { ConflictException } from "@nestjs/common";
-import { ConsoleLogger } from "src/default/logger/console/console.service";
-import { OrderStatus } from "../enums/order-status.enum";
+import { CONSTANTS } from '../constants/common.option';
+import { v4 as uuidv4 } from 'uuid';
+import * as bcrypt from 'bcrypt';
+import * as crypto from 'crypto';
+import { AppConfigService } from 'src/default/config/config.service';
+import axios from 'axios';
+import { ConflictException } from '@nestjs/common';
+import { ConsoleLogger } from 'src/default/logger/console/console.service';
+import { OrderStatus } from '../enums/order-status.enum';
 
 export class CommonUtils {
   private static appConfigService: AppConfigService;
-  private static readonly algorithm = "aes-256-cbc";
+  private static readonly algorithm = 'aes-256-cbc';
   private static secretKey: Buffer;
   private static readonly iv = Buffer.alloc(16, 0); // 16-byte IV
   private static readonly SALT_ROUNDS = 10;
@@ -18,15 +18,11 @@ export class CommonUtils {
   // Initialize the AppConfigService
   static init(appConfigService: AppConfigService) {
     this.appConfigService = appConfigService;
-    const encryptionKey =
-      this.appConfigService.get("ENCRYPTION_SECRET_KEY") || "default_secret";
-    this.secretKey = crypto.scryptSync(encryptionKey, "salt", 32); // Generate 32-byte key
+    const encryptionKey = this.appConfigService.get('ENCRYPTION_SECRET_KEY') || 'default_secret';
+    this.secretKey = crypto.scryptSync(encryptionKey, 'salt', 32); // Generate 32-byte key
   }
 
-  static getPagination(
-    page: number = CONSTANTS.PAGE,
-    size: number = CONSTANTS.SIZE,
-  ) {
+  static getPagination(page: number = CONSTANTS.PAGE, size: number = CONSTANTS.SIZE) {
     const limit = size || 10;
     const offset = (page - 1) * limit;
     return { limit, offset };
@@ -83,29 +79,28 @@ export class CommonUtils {
 
   static async sendSMS(data: any): Promise<any> {
     try {
-      const msg =
-        "Your OTP for participation is " + data.otp + ". Regards,Team Almonds";
+      const msg = 'Your OTP for participation is ' + data.otp + '. Regards,Team Almonds';
 
       const url = `http://125.16.147.178/VoicenSMS/webresources/CreateSMSCampaignPost`;
 
       const payload = {
         filetype: 2,
-        thirdpartyrefno: "SKIPPER_PIPES",
+        thirdpartyrefno: 'SKIPPER_PIPES',
         msisdn: [String(data.mobile)],
         language: 0,
         credittype: 7,
-        senderid: "TCHALM",
+        senderid: 'TCHALM',
         templateid: 0,
         message: `${msg}`,
-        ukey: "KTXq25wGcHqv6xcnGjl9UnAWK",
+        ukey: 'KTXq25wGcHqv6xcnGjl9UnAWK',
         isrefno: true,
       };
 
       const options = {
-        method: "POST",
+        method: 'POST',
         url: url,
         headers: {
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
         },
         data: payload,
       };
@@ -113,35 +108,34 @@ export class CommonUtils {
       return response.data;
     } catch (err) {
       ConsoleLogger.log(err?.message);
-      throw new ConflictException("Something Went Wrong");
+      throw new ConflictException('Something Went Wrong');
     }
   }
   static async sendSmsForOrder(data: any): Promise<any> {
     try {
-      const msg =
-        "Your OTP for participation is " + data.otp + ". Regards,Team Almonds";
+      const msg = 'Your OTP for participation is ' + data.otp + '. Regards,Team Almonds';
 
       const url = `http://125.16.147.178/VoicenSMS/webresources/CreateSMSCampaignPost`;
 
       const payload = {
         filetype: 2,
-        thirdpartyrefno: "SKIPPER_PIPES",
+        thirdpartyrefno: 'SKIPPER_PIPES',
         msisdn: [String(data.mobile)],
         language: 0,
         credittype: 7,
-        senderid: "TCHALM",
+        senderid: 'TCHALM',
         templateid: 0,
         message: `${msg}`,
-        ukey: "KTXq25wGcHqv6xcnGjl9UnAWK",
+        ukey: 'KTXq25wGcHqv6xcnGjl9UnAWK',
         isrefno: true,
       };
 
       //console.log(url);
       const options = {
-        method: "POST",
+        method: 'POST',
         url: url,
         headers: {
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
         },
         data: payload,
       };
@@ -149,38 +143,26 @@ export class CommonUtils {
       return response.data;
     } catch (err) {
       ConsoleLogger.log(err?.message);
-      throw new ConflictException("Something Went Wrong");
+      throw new ConflictException('Something Went Wrong');
     }
   }
   static encrypt(text: string): string {
     if (!this.secretKey) {
-      throw new Error(
-        "CommonUtils.init() must be called before using encrypt()",
-      );
+      throw new Error('CommonUtils.init() must be called before using encrypt()');
     }
-    const cipher = crypto.createCipheriv(
-      this.algorithm,
-      this.secretKey,
-      this.iv,
-    );
-    let encrypted = cipher.update(text, "utf-8", "hex");
-    encrypted += cipher.final("hex");
+    const cipher = crypto.createCipheriv(this.algorithm, this.secretKey, this.iv);
+    let encrypted = cipher.update(text, 'utf-8', 'hex');
+    encrypted += cipher.final('hex');
     return encrypted;
   }
 
   static decrypt(encryptedText: string): string {
     if (!this.secretKey) {
-      throw new Error(
-        "CommonUtils.init() must be called before using decrypt()",
-      );
+      throw new Error('CommonUtils.init() must be called before using decrypt()');
     }
-    const decipher = crypto.createDecipheriv(
-      this.algorithm,
-      this.secretKey,
-      this.iv,
-    );
-    let decrypted = decipher.update(encryptedText, "hex", "utf-8");
-    decrypted += decipher.final("utf-8");
+    const decipher = crypto.createDecipheriv(this.algorithm, this.secretKey, this.iv);
+    let decrypted = decipher.update(encryptedText, 'hex', 'utf-8');
+    decrypted += decipher.final('utf-8');
     return decrypted;
   }
 
@@ -202,9 +184,7 @@ export class CommonUtils {
   }
 
   static generateOrderNumber(): string {
-    const result = Math.floor(
-      100000000000 + Math.random() * 999999999999,
-    ).toString();
+    const result = Math.floor(100000000000 + Math.random() * 999999999999).toString();
     return result;
   }
 
@@ -216,7 +196,7 @@ export class CommonUtils {
     return `REDEEM${transactionId}`;
   }
   static getMonthName(date: Date): string {
-    return date.toLocaleString("en-US", { month: "long" });
+    return date.toLocaleString('en-US', { month: 'long' });
   }
 
   static getYear(date: Date): string {
@@ -228,51 +208,51 @@ export class CommonUtils {
     return regex.test(mobile);
   }
   static HmacKey(body: any): string {
-    const key = "almondRewards";
+    const key = 'almondRewards';
     const requestBody = JSON.stringify(body);
 
-    const hmac = crypto.createHmac("sha256", key);
+    const hmac = crypto.createHmac('sha256', key);
 
     hmac.update(requestBody);
 
-    const hmacHex = hmac.digest("hex");
+    const hmacHex = hmac.digest('hex');
 
     return hmacHex;
   }
   static extractValidJson(response: any): any {
     // Find the first occurrence of a JSON object
-    const jsonStart = response.lastIndexOf("{");
+    const jsonStart = response.lastIndexOf('{');
 
     if (jsonStart !== -1) {
       const possibleJson = response.slice(jsonStart).trim();
       try {
         return JSON.parse(possibleJson);
       } catch {
-        throw new Error("Failed to parse JSON from response");
+        throw new Error('Failed to parse JSON from response');
       }
     }
 
-    throw new Error("No JSON found in response");
+    throw new Error('No JSON found in response');
   }
- 
+
   static async generateUniqueUUIDCode(): Promise<string> {
-    const uuid = uuidv4().replace(/[^a-zA-Z0-9]/g, "");
-    return uuid.substring(0, 12).padEnd(12, "0");
+    const uuid = uuidv4().replace(/[^a-zA-Z0-9]/g, '');
+    return uuid.substring(0, 12).padEnd(12, '0');
   }
 
   static async generateUniqueRefCode(): Promise<string> {
     const now = new Date();
 
     const yy = now.getFullYear().toString().slice(-2);
-    const mm = (now.getMonth() + 1).toString().padStart(2, "0");
-    const dd = now.getDate().toString().padStart(2, "0");
+    const mm = (now.getMonth() + 1).toString().padStart(2, '0');
+    const dd = now.getDate().toString().padStart(2, '0');
 
     // HHMMSSmmm → hours, minutes, seconds, milliseconds
     const timePart =
-      now.getHours().toString().padStart(2, "0") +
-      now.getMinutes().toString().padStart(2, "0") +
-      now.getSeconds().toString().padStart(2, "0") +
-      now.getMilliseconds().toString().padStart(3, "0");
+      now.getHours().toString().padStart(2, '0') +
+      now.getMinutes().toString().padStart(2, '0') +
+      now.getSeconds().toString().padStart(2, '0') +
+      now.getMilliseconds().toString().padStart(3, '0');
 
     // Strong random 4-digit
     const rand = Math.floor(1000 + Math.random() * 9000);
@@ -304,7 +284,7 @@ export class CommonUtils {
       sku: data.sku,
     };
     const key =
-      process.env.NODE_ENV === "production"
+      process.env.NODE_ENV === 'production'
         ? process.env.KYC_SECRET_KEY
         : process.env.KYC_SECRET_KEY;
 
@@ -315,10 +295,10 @@ export class CommonUtils {
     const requestBody = JSON.stringify(body);
 
     //Create an HMAC-SHA256 hash
-    const hmac = crypto.createHmac("sha256", key);
+    const hmac = crypto.createHmac('sha256', key);
     hmac.update(requestBody);
 
-    return hmac.digest("hex"); // return final hash
+    return hmac.digest('hex'); // return final hash
   }
   static async generateSecretKeyForVoucher(data: {
     type: string;
@@ -340,22 +320,22 @@ export class CommonUtils {
 
     // ✅ Secret key (from .env)
     const key =
-      process.env.NODE_ENV === "production"
+      process.env.NODE_ENV === 'production'
         ? process.env.KYC_SECRET_KEY
         : process.env.KYC_SECRET_KEY;
 
     if (!key) {
-      throw new Error("Missing HMAC secret key in environment variables");
+      throw new Error('Missing HMAC secret key in environment variables');
     }
 
     // ✅ Prepare JSON body for hashing
     const requestBody = JSON.stringify(body);
 
     // ✅ Create HMAC-SHA256 hash
-    const hmac = crypto.createHmac("sha256", key);
+    const hmac = crypto.createHmac('sha256', key);
     hmac.update(requestBody);
 
     // ✅ Return final signature (hex format)
-    return hmac.digest("hex");
+    return hmac.digest('hex');
   }
 }

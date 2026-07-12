@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { DataSource, EntityManager, Repository } from 'typeorm';
-import { KycStatus, KycType } from '../../../default/common/enums/kyc.enum';
+import { KycStatus, KycType } from 'src/default/common/enums/kyc.enum';
 import { BaseRepository } from 'src/default/common/repositories/base.repository';
 import { KycVerificationEntity } from 'src/modules/auth/entities';
 

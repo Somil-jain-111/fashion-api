@@ -120,4 +120,10 @@ export const KYC_ERRORS = {
     message: 'Complete PAN KYC to redeem this product.',
     statusCode: 400,
   },
+
+  INVALID_PARTNER_TYPE_FOR_GST: {
+    code: 'KYC_022',
+    message: 'GST KYC cannot be done for this partner type',
+    statusCode: 400,
+  },
 } as const;

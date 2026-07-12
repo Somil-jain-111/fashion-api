@@ -1,7 +1,7 @@
-import { Module, OnModuleInit } from "@nestjs/common";
-import { SwaggerService } from "./swagger.service";
-import { ConfigModule } from "../config/config.module";
-import { AppConfigService } from "../config/config.service";
+import { Module, OnModuleInit } from '@nestjs/common';
+import { SwaggerService } from './swagger.service';
+import { ConfigModule } from '../config/config.module';
+import { AppConfigService } from '../config/config.service';
 
 @Module({
   imports: [ConfigModule],

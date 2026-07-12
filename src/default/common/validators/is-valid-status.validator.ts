@@ -1,18 +1,11 @@
 // src/common/validators/is-valid-status.validator.ts
 
-import {
-  registerDecorator,
-  ValidationArguments,
-  ValidationOptions,
-} from "class-validator";
+import { registerDecorator, ValidationArguments, ValidationOptions } from 'class-validator';
 
-export function IsValidStatus(
-  allowedStatuses: string[],
-  validationOptions?: ValidationOptions,
-) {
+export function IsValidStatus(allowedStatuses: string[], validationOptions?: ValidationOptions) {
   return function (object: object, propertyName: string) {
     registerDecorator({
-      name: "IsValidStatus",
+      name: 'IsValidStatus',
       target: object.constructor,
       propertyName,
       constraints: [allowedStatuses],
@@ -25,7 +18,7 @@ export function IsValidStatus(
 
         defaultMessage(args: ValidationArguments) {
           const [statuses] = args.constraints;
-          return `${args.property} must be one of: ${statuses.join(", ")}`;
+          return `${args.property} must be one of: ${statuses.join(', ')}`;
         },
       },
     });

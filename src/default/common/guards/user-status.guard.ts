@@ -1,15 +1,9 @@
-import {
-  CanActivate,
-  ExecutionContext,
-  Injectable,
-  UnauthorizedException,
-} from "@nestjs/common";
-import { ConsoleLogger } from "src/default/logger/console/console.service";
-import { UserAuthValidator } from "src/modules/auth/validators/user-auth.validator";
+import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from '@nestjs/common';
+import { ConsoleLogger } from 'src/default/logger/console/console.service';
+import { UserAuthValidator } from 'src/modules/auth/validators/user-auth.validator';
 
 @Injectable()
 export class UserStatusGuard implements CanActivate {
-
   private userAuthValidator: UserAuthValidator;
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();
@@ -21,13 +15,10 @@ export class UserStatusGuard implements CanActivate {
     const istHours = istTime.getHours();
 
     // Log for debugging
-    ConsoleLogger.log(
-      `User: ${user?.userId}, IST Hour: ${istHours}`,
-      "UserStatusGuard",
-    );
+    ConsoleLogger.log(`User: ${user?.userId}, IST Hour: ${istHours}`, 'UserStatusGuard');
 
     if (!user || !user.userId) {
-      throw new UnauthorizedException("User not authenticated");
+      throw new UnauthorizedException('User not authenticated');
     }
     await this.userAuthValidator.validateActiveUserById(user.userId);
 

@@ -1,8 +1,8 @@
 // src/default/databases/redis/redis.module.ts
-import { Module, OnModuleInit } from "@nestjs/common";
-import { RedisService } from "./redis.service";
-import { ConfigModule } from "../../config/config.module";
-import { ConsoleLogger } from "src/default/logger/console/console.service";
+import { Module, OnModuleInit } from '@nestjs/common';
+import { RedisService } from './redis.service';
+import { ConfigModule } from '../../config/config.module';
+import { ConsoleLogger } from 'src/default/logger/console/console.service';
 // import { ConsoleLogger } from '../../logger/console/console.service';
 
 @Module({
@@ -12,9 +12,6 @@ import { ConsoleLogger } from "src/default/logger/console/console.service";
 })
 export class RedisModule implements OnModuleInit {
   async onModuleInit() {
-    ConsoleLogger.log(
-      "Redis Module: Connection established successfully!",
-      "RedisModule",
-    );
+    ConsoleLogger.log('Redis Module: Connection established successfully!', 'RedisModule');
   }
 }

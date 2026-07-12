@@ -1,10 +1,7 @@
-import { Injectable } from "@nestjs/common";
-import { JwtService } from "@nestjs/jwt";
-import {
-  JWT_ACCESS_TOKEN_EXPIRY,
-  JWT_REFRESH_TOKEN_EXPIRY,
-} from "./constants/auth.constants";
-import { User } from "./entities";
+import { Injectable } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
+import { JWT_ACCESS_TOKEN_EXPIRY, JWT_REFRESH_TOKEN_EXPIRY } from './constants/auth.constants';
+import { User } from './entities';
 
 @Injectable()
 export class AuthTokenService {

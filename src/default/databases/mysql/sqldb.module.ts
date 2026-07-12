@@ -1,10 +1,10 @@
-import { Module, Global } from "@nestjs/common";
-import { TypeOrmModule } from "@nestjs/typeorm";
-import { sqlDbConfig } from "./sqldb.config";
-import { AppConfigService } from "../../config/config.service";
-import { SqlDbService } from "./sqldb.service";
-import { ConfigModule } from "../../config/config.module";
-import { TransactionService } from "../transaction";
+import { Module, Global } from '@nestjs/common';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { sqlDbConfig } from './sqldb.config';
+import { AppConfigService } from '../../config/config.service';
+import { SqlDbService } from './sqldb.service';
+import { ConfigModule } from '../../config/config.module';
+import { TransactionService } from '../transaction';
 
 @Global()
 @Module({

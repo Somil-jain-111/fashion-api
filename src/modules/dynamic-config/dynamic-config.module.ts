@@ -1,11 +1,13 @@
-import { Module } from "@nestjs/common";
+import { Module } from '@nestjs/common';
 //
-import { DynamicConfigController } from "./dynamic-config.controller";
-import { DynamicConfigService } from "./dynamic-config.service";
+import { DynamicConfigController } from './dynamic-config.controller';
+import { DynamicConfigService } from './dynamic-config.service';
+
+import { DynamicConfigRepository } from './repository';
 
 @Module({
   controllers: [DynamicConfigController],
-  providers: [DynamicConfigService],
+  providers: [DynamicConfigService, DynamicConfigRepository],
   exports: [DynamicConfigService],
 })
 export class DynamicConfigModule {}

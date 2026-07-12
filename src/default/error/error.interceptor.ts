@@ -1,11 +1,6 @@
-import {
-  CallHandler,
-  ExecutionContext,
-  Injectable,
-  NestInterceptor,
-} from "@nestjs/common";
-import { Observable } from "rxjs";
-import { catchError } from "rxjs/operators";
+import { CallHandler, ExecutionContext, Injectable, NestInterceptor } from '@nestjs/common';
+import { Observable } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 
 @Injectable()
 export class ErrorHandlingInterceptor implements NestInterceptor {
@@ -17,7 +12,7 @@ export class ErrorHandlingInterceptor implements NestInterceptor {
           throw error;
         }
         throw error; // Allow filter to handle it
-      }),
+      })
     );
   }
 }

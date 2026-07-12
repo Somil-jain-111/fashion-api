@@ -1,8 +1,8 @@
-import { Processor, WorkerHost } from "@nestjs/bullmq";
-import { Job } from "bullmq";
-import { S3_JOB, S3_QUEUE } from "../constants/s3-queue.constant";
-import { ProcessChunkUploadJob } from "../interfaces/s3-upload.interface";
-import { S3Service } from "../s3.service";
+import { Processor, WorkerHost } from '@nestjs/bullmq';
+import { Job } from 'bullmq';
+import { S3_JOB, S3_QUEUE } from '../constants/s3-queue.constant';
+import { ProcessChunkUploadJob } from '../interfaces/s3-upload.interface';
+import { S3Service } from '../s3.service';
 
 @Processor(S3_QUEUE.UPLOAD)
 export class S3UploadProcessor extends WorkerHost {

@@ -1,7 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { DataSource, FindOptionsWhere } from 'typeorm';
-
-import { BaseRepository } from './base.repository';
+import { BaseRepository } from 'src/default/common/repositories/base.repository';
 import { Address } from 'src/modules/addresses/entities/address.entity';
 
 @Injectable()

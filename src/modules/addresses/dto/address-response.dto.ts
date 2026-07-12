@@ -13,18 +13,17 @@ export class AddressResponseDTO {
   isDefault: boolean;
 
   constructor(address: any) {
-    this.id = address.id?.toString() || "";
+    this.id = address.id?.toString() || '';
     this.name = address.name || null;
-    this.mobile = address.mobile?.toString() || "";
-    this.addressLine1 = address.addressLine1 || address.address || "";
+    this.mobile = address.mobile?.toString() || '';
+    this.addressLine1 = address.addressLine1 || address.address || '';
     this.addressLine2 = address.addressLine2 || null;
     this.landmark = address.landmark || null;
-    this.pincode = address.pincode?.toString() || "";
+    this.pincode = address.pincode?.toString() || '';
     this.cityName = address.cityName || null;
     this.stateName = address.stateName || null;
     this.zoneName = address.zoneName || null;
     this.addressType = address.addressType || address.address_type || null;
     this.isDefault = Boolean(address.isDefault);
-
   }
 }
