@@ -257,7 +257,7 @@ export class CommonUtils {
     // Strong random 4-digit
     const rand = Math.floor(1000 + Math.random() * 9000);
 
-    return `ALMONDBANK${yy}${mm}${dd}${timePart}${rand}SKIPPER`;
+    return `ALMONDBANK${yy}${mm}${dd}${timePart}${rand}CAMPUS_SHOES`;
   }
 
   static async generateSecretKey(data: {
