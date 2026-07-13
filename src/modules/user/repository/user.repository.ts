@@ -1,5 +1,5 @@
 import { DataSource, QueryRunner } from 'typeorm';
-import { BaseRepository } from './base.repository';
+import { BaseRepository } from 'src/default/common/repositories/base.repository';
 import { User } from 'src/modules/auth/entities';
 import { Injectable } from '@nestjs/common';
 

@@ -4,20 +4,17 @@ import {
   ExecutionContext,
   CallHandler,
   ConflictException,
-} from "@nestjs/common";
-import { Observable } from "rxjs";
-import { IdempotencyService } from "../../idempotency/idempotency.service";
-import { BusinessException } from "src/default/error/business.exception";
-import { ERROR_CODES } from "src/default/error/error.code";
+} from '@nestjs/common';
+import { Observable } from 'rxjs';
+import { IdempotencyService } from '../../idempotency/idempotency.service';
+import { BusinessException } from 'src/default/error/business.exception';
+import { ERROR_CODES } from 'src/default/error/error.code';
 
 @Injectable()
 export class IdempotencyInterceptor implements NestInterceptor {
   constructor(private readonly idempotencyService: IdempotencyService) {}
 
-  async intercept(
-    context: ExecutionContext,
-    next: CallHandler,
-  ): Promise<Observable<any>> {
+  async intercept(context: ExecutionContext, next: CallHandler): Promise<Observable<any>> {
     const request = context.switchToHttp().getRequest();
 
     // Check if the request payload is a duplicate

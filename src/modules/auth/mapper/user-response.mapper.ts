@@ -1,5 +1,5 @@
-import { User } from "src/modules/auth/entities";
-import { AuthUserResponseDto } from "../interface/auth-user.response.dto";
+import { User } from 'src/modules/auth/entities';
+import { AuthUserResponseDto } from '../interface/auth-user.response.dto';
 
 export class UserResponseMapper {
   static toAuthUser(user: User): AuthUserResponseDto {

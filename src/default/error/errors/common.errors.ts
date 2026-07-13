@@ -1,27 +1,27 @@
 export const COMMON_ERRORS = {
   SOMETHING_WENT_WRONG: {
-    code: "COM_001",
-    message: "Something went wrong",
+    code: 'COM_001',
+    message: 'Something went wrong',
     statusCode: 500,
   },
   BAD_REQUEST: {
-    code: "COM_002",
-    message: "Bad request",
+    code: 'COM_002',
+    message: 'Bad request',
     statusCode: 400,
   },
   NOT_FOUND: {
-    code: "COM_003",
-    message: "Resource not found",
+    code: 'COM_003',
+    message: 'Resource not found',
     statusCode: 404,
   },
   CONFLICT: {
-    code: "COM_004",
-    message: "Conflict occurred",
+    code: 'COM_004',
+    message: 'Conflict occurred',
     statusCode: 409,
   },
   SERVICE_UNAVAILABLE: {
-    code: "COM_005",
-    message: "Service unavailable",
+    code: 'COM_005',
+    message: 'Service unavailable',
     statusCode: 503,
   },
 } as const;

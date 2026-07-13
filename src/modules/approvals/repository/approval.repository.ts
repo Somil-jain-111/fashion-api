@@ -1,7 +1,8 @@
 import { DataSource } from 'typeorm';
-import { BaseRepository } from './base.repository';
-import { Approval } from 'src/modules/approvals/entities/approval.entity';
 import { Injectable } from '@nestjs/common';
+//
+import { Approval } from 'src/modules/approvals/entities/approval.entity';
+import { BaseRepository } from 'src/default/common/repositories/base.repository';
 
 @Injectable()
 export class ApprovalRepository extends BaseRepository<Approval> {

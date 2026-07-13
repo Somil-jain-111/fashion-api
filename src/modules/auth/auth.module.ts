@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Global, Module } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { JwtModule } from '@nestjs/jwt';
@@ -11,6 +11,11 @@ import { JwtStrategy } from 'src/default/common/stratagy/jwt.strategy';
 import { IdempotencyService } from 'src/default/idempotency/idempotency.service';
 import { RedisModule } from 'src/default/databases/redis/redis.module';
 
+import { LoginHistoriesRepository, RevokedTokenRepository } from './repository';
+import { UserRepository, RolesRepository, UserStoreInfoRepository } from '../user/repository';
+import { AddressesModule } from '../addresses/addresses.module';
+import { ApprovalRepository } from '../approvals/repository';
+
 @Module({
   imports: [
     JwtModule.registerAsync({
@@ -22,6 +27,7 @@ import { RedisModule } from 'src/default/databases/redis/redis.module';
       }),
     }),
     RedisModule,
+    AddressesModule,
   ],
   providers: [
     AuthService,
@@ -31,7 +37,23 @@ import { RedisModule } from 'src/default/databases/redis/redis.module';
     JwtStrategy,
     IdempotencyService,
     AppConfigService,
+    ApprovalRepository,
+    UserRepository,
+    RolesRepository,
+    UserStoreInfoRepository,
+    RevokedTokenRepository,
+    LoginHistoriesRepository,
   ],
   controllers: [AuthController],
+  exports: [
+    AuthService,
+    UserAuthValidator,
+    UserRepository,
+    ApprovalRepository,
+    RolesRepository,
+    UserStoreInfoRepository,
+    RevokedTokenRepository,
+    LoginHistoriesRepository,
+  ],
 })
 export class AuthModule {}

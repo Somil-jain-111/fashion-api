@@ -1,7 +1,7 @@
 import { DataSource, LessThan, QueryRunner } from 'typeorm';
-import { BaseRepository } from './base.repository';
+import { BaseRepository } from 'src/default/common/repositories/base.repository';
 import { RevokedToken } from 'src/modules/auth/entities';
-import { TokenType } from '../enums/token-type.enum';
+import { TokenType } from 'src/default/common/enums/token-type.enum';
 import { Injectable } from '@nestjs/common';
 
 @Injectable()

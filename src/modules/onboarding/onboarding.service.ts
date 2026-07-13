@@ -1,23 +1,29 @@
 import { Injectable } from '@nestjs/common';
+//
 import {
   UserRepository,
-  UserStoreInfoRepository,
-  ApprovalRepository,
-  KycVerificationRepository,
   RolesRepository,
-} from 'src/default/common/repositories';
+  UserStoreInfoRepository,
+} from 'src/modules/user/repository';
+import { ApprovalRepository } from 'src/modules/approvals/repository';
+import { KycVerificationRepository } from 'src/modules/kyc/repository';
+import { User } from '../auth/entities/users.entity';
 import { SaveBasicInfoDto } from './dto/basic-info.dto';
 import { SaveStoreInfoDto } from './dto/store-info.dto';
-import { BusinessException } from 'src/default/error/business.exception';
 import { ERROR_CODES } from 'src/default/error/error.code';
 import { UserStatus } from '../auth/constants/auth.constants';
-import { KycType, KycStatus } from 'src/default/common/enums/kyc.enum';
+import { KycType } from 'src/default/common/enums/kyc.enum';
+import { BusinessException } from 'src/default/error/business.exception';
 import { UserPartnerType, UserRole } from 'src/default/common/enums/user-type.enum';
 import { ApprovalStatus, ApprovalType } from 'src/default/common/enums/approvals.enum';
-import { User } from '../auth/entities/users.entity';
 
 @Injectable()
 export class OnboardingService {
+  private BASIC_INFO_FIELDS = {
+    required: ['username', 'partnerType'],
+    optional: ['email', 'whatsappNumber'],
+  };
+
   constructor(
     private readonly userRepository: UserRepository,
     private readonly userStoreInfoRepository: UserStoreInfoRepository,
@@ -30,13 +36,7 @@ export class OnboardingService {
     const user = await this.userRepository.findById(userId);
 
     if (!user) {
-      throw new BusinessException(
-        ERROR_CODES.USER.USER_NOT_FOUND || {
-          code: 'USER_404',
-          message: 'User not found',
-          statusCode: 404,
-        }
-      );
+      throw new BusinessException(ERROR_CODES.USER.USER_NOT_FOUND);
     }
 
     // Check email uniqueness
@@ -44,20 +44,9 @@ export class OnboardingService {
       const existingUserWithEmail = await this.userRepository.findByEmail(dto.email);
 
       if (existingUserWithEmail && Number(existingUserWithEmail.id) !== userId) {
-        throw new BusinessException({
-          code: 'AUTH_009',
-          message: 'Email address already in use',
-          statusCode: 400,
-        });
+        throw new BusinessException(ERROR_CODES.ONBOARD.EMAIL_ALREADY_USED);
       }
     }
-
-    // Resolve whatsapp number: default to mobile if not provided
-    // let whatsappNumber = dto.whatsappNumber;
-
-    // if (!whatsappNumber) {
-    //   whatsappNumber = user.mobile;
-    // }
 
     // Check whatsapp uniqueness
     if (dto.whatsappNumber) {
@@ -66,11 +55,7 @@ export class OnboardingService {
       });
 
       if (existingUserWithWhatsapp && Number(existingUserWithWhatsapp.id) !== userId) {
-        throw new BusinessException({
-          code: 'AUTH_010',
-          message: 'WhatsApp number already in use',
-          statusCode: 400,
-        });
+        throw new BusinessException(ERROR_CODES.ONBOARD.WHATSAPP_NUMBER_ALREADY_USED);
       }
     }
 
@@ -91,34 +76,69 @@ export class OnboardingService {
 
   async saveStoreInfo(userId: number, dto: SaveStoreInfoDto) {
     const user = await this.userRepository.findById(userId);
+
     if (!user) {
-      throw new BusinessException(
-        ERROR_CODES.USER.USER_NOT_FOUND || {
-          code: 'USER_404',
-          message: 'User not found',
-          statusCode: 404,
-        }
-      );
+      throw new BusinessException(ERROR_CODES.USER.USER_NOT_FOUND);
+    }
+
+    const userStoreStatus = await this.getStatus(user.id);
+
+    if (userStoreStatus.storeInfoComplete) {
+      throw new BusinessException(ERROR_CODES.ONBOARD.INCOMPLETE_STORE_INFO);
     }
 
     // Check if store info already exists
     let storeInfo = await this.userStoreInfoRepository.findOne({ user: { id: userId } });
 
+    /**
+     * If store info exists only update the incoming fields from body
+     */
     if (storeInfo) {
-      await this.userStoreInfoRepository.updateById(storeInfo.id, {
-        lat: dto.lat,
-        lng: dto.lng,
-        address1: dto.address1,
-        address2: dto.address2 || null,
-        pincode: dto.pincode,
-        city: dto.city,
-        state: dto.state,
-        storeFrontFacadeImageUrl: dto.storeFrontFacadeImageUrl,
-        storeDisplayImageUrl: dto.storeDisplayImageUrl,
-        addressProofType: dto.addressProofType,
-        addressProofImageUrl: dto.addressProofImageUrl || null,
-      });
+      if (dto.lat) {
+        storeInfo.lat = dto.lat;
+      }
+
+      if (dto.lng) {
+        storeInfo.lng = dto.lng;
+      }
+
+      if (dto.address1) {
+        storeInfo.address1 = dto.address1;
+      }
+
+      if (dto.address2) {
+        storeInfo.address2 = dto.address2;
+      }
+
+      if (dto.pincode) {
+        storeInfo.pincode = dto.pincode;
+      }
+
+      if (dto.city) {
+        storeInfo.city = dto.city;
+      }
+
+      if (dto.storeFrontFacadeImageUrl) {
+        storeInfo.storeFrontFacadeImageUrl = dto.storeFrontFacadeImageUrl;
+      }
+
+      if (dto.storeDisplayImageUrl) {
+        storeInfo.storeDisplayImageUrl = dto.storeDisplayImageUrl;
+      }
+
+      if (dto.addressProofType) {
+        storeInfo.addressProofType = dto.addressProofType;
+      }
+
+      if (dto.addressProofImageUrl) {
+        storeInfo.addressProofImageUrl = dto.addressProofImageUrl;
+      }
+
+      await this.userStoreInfoRepository.updateById(storeInfo.id, storeInfo);
     } else {
+      /**
+       * Create store info with the incoming fields if no store info provided
+       */
       storeInfo = await this.userStoreInfoRepository.save({
         user: { id: userId } as any,
         lat: dto.lat,
@@ -149,13 +169,7 @@ export class OnboardingService {
     const user = await this.userRepository.findOne({ id: userId }, ['storeInformation']);
 
     if (!user) {
-      throw new BusinessException(
-        ERROR_CODES.USER.USER_NOT_FOUND || {
-          code: 'USER_404',
-          message: 'User not found',
-          statusCode: 404,
-        }
-      );
+      throw new BusinessException(ERROR_CODES.USER.USER_NOT_FOUND);
     }
 
     const basicInfoComplete = !!(user.username && user.partnerType);
@@ -196,35 +210,19 @@ export class OnboardingService {
     const status = await this.getStatus(userId);
 
     if (!status.basicInfoComplete) {
-      throw new BusinessException({
-        code: 'ONBOARD_001',
-        message: 'Please complete your basic profile information first.',
-        statusCode: 400,
-      });
+      throw new BusinessException(ERROR_CODES.ONBOARD.INCOMPLETE_BASIC_INFO);
     }
 
     if (!status.panKycComplete) {
-      throw new BusinessException({
-        code: 'ONBOARD_002',
-        message: 'Please complete your PAN KYC verification first.',
-        statusCode: 400,
-      });
+      throw new BusinessException(ERROR_CODES.ONBOARD.INCOMPLETE_PAN_KYC);
     }
 
     if (status.partnerType === UserPartnerType.ENTITY) {
       if (!status.gstKycComplete) {
-        throw new BusinessException({
-          code: 'ONBOARD_003',
-          message: 'Please complete your GST KYC verification first.',
-          statusCode: 400,
-        });
+        throw new BusinessException(ERROR_CODES.ONBOARD.INCOMPLETE_GST_KYC);
       }
       if (!status.storeInfoComplete) {
-        throw new BusinessException({
-          code: 'ONBOARD_004',
-          message: 'Please fill your user store information first.',
-          statusCode: 400,
-        });
+        throw new BusinessException(ERROR_CODES.ONBOARD.INCOMPLETE_STORE_INFO);
       }
     }
 

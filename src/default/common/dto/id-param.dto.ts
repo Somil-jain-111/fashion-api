@@ -1,7 +1,7 @@
 // src/common/dto/id-param.dto.ts
 
-import { Type } from "class-transformer";
-import { IsInt, Min } from "class-validator";
+import { Type } from 'class-transformer';
+import { IsInt, Min } from 'class-validator';
 
 export class IdParamDto {
   @Type(() => Number)

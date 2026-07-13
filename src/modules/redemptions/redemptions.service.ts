@@ -1,13 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { KycStatus, KycType } from 'src/default/common/enums/kyc.enum';
 import { UserRole } from 'src/default/common/enums/user-type.enum';
+import { KycVerificationRepository } from 'src/modules/kyc/repository';
 import {
-  KycVerificationRepository,
   OrderRepository,
   PointHistoryRepository,
   RedemptionConfigRepository,
   ShippingDetailRepository,
-} from 'src/default/common/repositories';
+} from 'src/modules/redemptions/repository';
 import { CommonUtils } from 'src/default/common/utils/common.utils';
 import { BusinessException } from 'src/default/error/business.exception';
 import { ERROR_CODES } from 'src/default/error/error.code';

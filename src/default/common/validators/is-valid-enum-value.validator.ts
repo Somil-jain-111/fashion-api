@@ -1,18 +1,11 @@
 // src/common/validators/is-valid-enum-value.validator.ts
 
-import {
-  registerDecorator,
-  ValidationArguments,
-  ValidationOptions,
-} from "class-validator";
+import { registerDecorator, ValidationArguments, ValidationOptions } from 'class-validator';
 
-export function IsValidEnumValue(
-  enumObject: object,
-  validationOptions?: ValidationOptions,
-) {
+export function IsValidEnumValue(enumObject: object, validationOptions?: ValidationOptions) {
   return function (object: object, propertyName: string) {
     registerDecorator({
-      name: "IsValidEnumValue",
+      name: 'IsValidEnumValue',
       target: object.constructor,
       propertyName,
       constraints: [enumObject],
@@ -25,7 +18,7 @@ export function IsValidEnumValue(
 
         defaultMessage(args: ValidationArguments) {
           const [targetEnum] = args.constraints;
-          return `${args.property} must be one of: ${Object.values(targetEnum).join(", ")}`;
+          return `${args.property} must be one of: ${Object.values(targetEnum).join(', ')}`;
         },
       },
     });

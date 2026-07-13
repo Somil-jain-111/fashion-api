@@ -1,15 +1,11 @@
 // src/common/validators/is-valid-mobile.validator.ts
 
-import {
-  registerDecorator,
-  ValidationArguments,
-  ValidationOptions,
-} from "class-validator";
+import { registerDecorator, ValidationArguments, ValidationOptions } from 'class-validator';
 
 export function IsValidMobile(validationOptions?: ValidationOptions) {
   return function (object: object, propertyName: string) {
     registerDecorator({
-      name: "IsValidMobile",
+      name: 'IsValidMobile',
       target: object.constructor,
       propertyName,
       options: validationOptions,

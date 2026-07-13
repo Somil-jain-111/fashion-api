@@ -7,45 +7,44 @@ import {
   BaseEntity,
   ManyToOne,
   JoinColumn,
-} from "typeorm";
-import { User } from ".";
-import { TokenType } from "../../../default/common/enums/token-type.enum";
+} from 'typeorm';
+import { User } from '.';
+import { TokenType } from '../../../default/common/enums/token-type.enum';
 
-
-@Entity("revoked_tokens")
-@Index("IDX_REVOKED_TOKEN_HASH", ["token_hash"])
-@Index("IDX_REVOKED_TOKEN_USER_ID", ["user_id"])
-@Index("IDX_REVOKED_TOKEN_TYPE", ["token_type"])
-@Index("IDX_REVOKED_TOKEN_EXPIRES_AT", ["expires_at"])
+@Entity('revoked_tokens')
+@Index('IDX_REVOKED_TOKEN_HASH', ['token_hash'])
+@Index('IDX_REVOKED_TOKEN_USER_ID', ['user_id'])
+@Index('IDX_REVOKED_TOKEN_TYPE', ['token_type'])
+@Index('IDX_REVOKED_TOKEN_EXPIRES_AT', ['expires_at'])
 export class RevokedToken extends BaseEntity {
-  @PrimaryGeneratedColumn("increment", { type: "bigint" })
+  @PrimaryGeneratedColumn('increment', { type: 'bigint' })
   id!: string;
 
   /**
    * Store token hash, not plain token.
    */
-  @Column({ type: "varchar", length: 64 })
+  @Column({ type: 'varchar', length: 64 })
   token_hash!: string;
 
-  @Column({ type: "bigint", nullable: true })
+  @Column({ type: 'bigint', nullable: true })
   user_id?: number | null;
 
   @ManyToOne(() => User, (user) => user.revokedTokens, {
     nullable: true,
-    onDelete: "SET NULL",
+    onDelete: 'SET NULL',
   })
-  @JoinColumn({ name: "user_id" })
+  @JoinColumn({ name: 'user_id' })
   user?: User | null;
 
   @Column({
-    type: "enum",
+    type: 'enum',
     enum: TokenType,
   })
   token_type!: TokenType;
 
-  @Column({ type: "datetime" })
+  @Column({ type: 'datetime' })
   expires_at!: Date;
 
-  @CreateDateColumn({ type: "datetime" })
+  @CreateDateColumn({ type: 'datetime' })
   created_at!: Date;
 }

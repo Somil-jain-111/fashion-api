@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { AddressRepository, PincodeRepository } from 'src/default/common/repositories';
+import { AddressRepository, PincodeRepository } from 'src/modules/addresses/repository';
 import { ConsoleLogger } from 'src/default/logger/console/console.service';
 import { PincodeResponseDTO } from './dto/pincode-response.dto';
 import { BusinessException } from 'src/default/error/business.exception';

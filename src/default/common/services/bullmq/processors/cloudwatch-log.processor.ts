@@ -1,7 +1,7 @@
-import { Processor, WorkerHost } from "@nestjs/bullmq";
-import { Job } from "bullmq";
-import { BULLMQ_JOB, BULLMQ_QUEUE } from "../bullmq.constants";
-import { CloudwatchService } from "../../../../logger/cloudwatch/cloudwatch.service";
+import { Processor, WorkerHost } from '@nestjs/bullmq';
+import { Job } from 'bullmq';
+import { BULLMQ_JOB, BULLMQ_QUEUE } from '../bullmq.constants';
+import { CloudwatchService } from '../../../../logger/cloudwatch/cloudwatch.service';
 
 @Processor(BULLMQ_QUEUE.CLOUDWATCH_LOG)
 export class CloudwatchLogProcessor extends WorkerHost {

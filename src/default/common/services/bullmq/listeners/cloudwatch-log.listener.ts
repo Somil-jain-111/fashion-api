@@ -1,7 +1,7 @@
-import { Injectable } from "@nestjs/common";
-import { OnEvent } from "@nestjs/event-emitter";
-import { EventsType } from "../../../constants/events.option";
-import { BullmqService } from "../bullmq.service";
+import { Injectable } from '@nestjs/common';
+import { OnEvent } from '@nestjs/event-emitter';
+import { EventsType } from '../../../constants/events.option';
+import { BullmqService } from '../bullmq.service';
 
 @Injectable()
 export class CloudwatchLogListener {

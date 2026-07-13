@@ -44,7 +44,7 @@ export class GetProductResponseDTO {
     short_description: string,
     long_description: string,
     createdAt: string,
-    updatedAt: string,
+    updatedAt: string
   ) {
     this.projectProductId = projectProductId;
     this.productId = productId;

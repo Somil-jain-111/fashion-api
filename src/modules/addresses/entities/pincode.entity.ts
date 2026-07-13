@@ -9,31 +9,30 @@ import {
   JoinColumn,
   Index,
   Unique,
-} from "typeorm";
+} from 'typeorm';
 import { City } from '../../auth/entities';
 
-
-@Entity({ name: "pincodes" })
-@Index("idx_pincode_value", ["pincode"])
-@Index("idx_pincode_city", ["city"])
+@Entity({ name: 'pincodes' })
+@Index('idx_pincode_value', ['pincode'])
+@Index('idx_pincode_city', ['city'])
 /* 🔒 Prevent duplicate pincode inside same city */
-@Unique("uq_city_pincode", ["city", "pincode"])
+@Unique('uq_city_pincode', ['city', 'pincode'])
 export class Pincode extends BaseEntity {
-  @PrimaryGeneratedColumn("increment", { type: "bigint" })
+  @PrimaryGeneratedColumn('increment', { type: 'bigint' })
   id!: number;
 
   @ManyToOne(() => City, (c) => c.pincode)
-  @JoinColumn({ name: "city_id" })
+  @JoinColumn({ name: 'city_id' })
   city!: City;
 
-  @Column({ type: "varchar", length: 255, nullable: true })
+  @Column({ type: 'varchar', length: 255, nullable: true })
   pincode?: string;
 
-  @Column({ type: "tinyint", default: 1 })
+  @Column({ type: 'tinyint', default: 1 })
   status?: number;
-  @CreateDateColumn({ type: "datetime" })
+  @CreateDateColumn({ type: 'datetime' })
   created_at!: Date;
 
-  @UpdateDateColumn({ type: "datetime" })
+  @UpdateDateColumn({ type: 'datetime' })
   updated_at!: Date;
 }

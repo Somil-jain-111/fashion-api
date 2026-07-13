@@ -1,15 +1,11 @@
 // src/common/validators/is-strong-password.validator.ts
 
-import {
-  registerDecorator,
-  ValidationArguments,
-  ValidationOptions,
-} from "class-validator";
+import { registerDecorator, ValidationArguments, ValidationOptions } from 'class-validator';
 
 export function IsStrongPassword(validationOptions?: ValidationOptions) {
   return function (object: object, propertyName: string) {
     registerDecorator({
-      name: "IsStrongPassword",
+      name: 'IsStrongPassword',
       target: object.constructor,
       propertyName,
       options: validationOptions,
@@ -23,13 +19,7 @@ export function IsStrongPassword(validationOptions?: ValidationOptions) {
           const hasNumber = /\d/.test(value);
           const hasSpecialChar = /[@$!%*?&#^()[\]{}_\-+=]/.test(value);
 
-          return (
-            minLength &&
-            hasUppercase &&
-            hasLowercase &&
-            hasNumber &&
-            hasSpecialChar
-          );
+          return minLength && hasUppercase && hasLowercase && hasNumber && hasSpecialChar;
         },
 
         defaultMessage(args: ValidationArguments) {

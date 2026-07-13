@@ -9,7 +9,7 @@ import {
   OrderRepository,
   ShippingDetailRepository,
   VoucherRepository,
-} from 'src/default/common/repositories';
+} from 'src/modules/redemptions/repository';
 
 type HandleProviderResponseParams = {
   user: any;

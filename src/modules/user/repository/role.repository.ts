@@ -1,6 +1,6 @@
 import { DataSource, QueryRunner } from 'typeorm';
-import { BaseRepository } from './base.repository';
-import { UserRole } from '../enums/user-type.enum';
+import { BaseRepository } from 'src/default/common/repositories/base.repository';
+import { UserRole } from 'src/default/common/enums/user-type.enum';
 import { Roles } from 'src/modules/auth/entities';
 import { Injectable } from '@nestjs/common';
 

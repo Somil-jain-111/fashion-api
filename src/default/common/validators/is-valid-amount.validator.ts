@@ -1,21 +1,17 @@
 // src/common/validators/is-valid-amount.validator.ts
 
-import {
-  registerDecorator,
-  ValidationArguments,
-  ValidationOptions,
-} from "class-validator";
+import { registerDecorator, ValidationArguments, ValidationOptions } from 'class-validator';
 
 export function IsValidAmount(validationOptions?: ValidationOptions) {
   return function (object: object, propertyName: string) {
     registerDecorator({
-      name: "IsValidAmount",
+      name: 'IsValidAmount',
       target: object.constructor,
       propertyName,
       options: validationOptions,
       validator: {
         validate(value: number) {
-          if (typeof value !== "number") return false;
+          if (typeof value !== 'number') return false;
 
           return value > 0 && Number.isFinite(value);
         },

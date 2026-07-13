@@ -1,8 +1,8 @@
-import { Module } from "@nestjs/common";
-import { APP_FILTER, APP_INTERCEPTOR } from "@nestjs/core";
-import { ErrorHandlingService } from "./error.service";
-import { ErrorHandlingInterceptor } from "./error.interceptor";
-import { AllExceptionsFilter } from "./error.filter";
+import { Module } from '@nestjs/common';
+import { APP_FILTER, APP_INTERCEPTOR } from '@nestjs/core';
+import { ErrorHandlingService } from './error.service';
+import { ErrorHandlingInterceptor } from './error.interceptor';
+import { AllExceptionsFilter } from './error.filter';
 
 @Module({
   providers: [

@@ -1,4 +1,4 @@
-import { OTP_LENGTH } from "src/modules/auth/constants/auth.constants";
+import { OTP_LENGTH } from 'src/modules/auth/constants/auth.constants';
 
 export class OtpHelper {
   static generateOtp(length = OTP_LENGTH): string {
@@ -8,9 +8,7 @@ export class OtpHelper {
     return Math.floor(min + Math.random() * (max - min + 1)).toString();
   }
 
-  static maskMobile(
-    mobile: string | number | bigint | null | undefined,
-  ): string | null {
+  static maskMobile(mobile: string | number | bigint | null | undefined): string | null {
     if (!mobile) {
       return null;
     }
@@ -23,7 +21,7 @@ export class OtpHelper {
 
     const firstTwo = mobileString.slice(0, 2);
     const lastTwo = mobileString.slice(-2);
-    const masked = "*".repeat(mobileString.length - 4);
+    const masked = '*'.repeat(mobileString.length - 4);
 
     return `${firstTwo}${masked}${lastTwo}`;
   }

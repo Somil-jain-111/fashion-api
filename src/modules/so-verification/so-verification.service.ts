@@ -1,11 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { BusinessException } from 'src/default/error/business.exception';
 import { ERROR_CODES } from 'src/default/error/error.code';
-import {
-  UserRepository,
-  ApprovalRepository,
-  DynamicConfigRepository,
-} from 'src/default/common/repositories';
+
 import { ApprovalsService } from '../approvals/approvals.service';
 import { SoVerifyOutletDto, SoRejectOutletDto } from './dto/so-verify.dto';
 import {
@@ -15,6 +11,9 @@ import {
 import { ApprovalStatus, ApprovalType } from 'src/default/common/enums/approvals.enum';
 import { UserStatus } from '../auth/constants/auth.constants';
 import { SoVerificationRepository } from './so-verification.repository';
+import { ApprovalRepository } from '../approvals/repository';
+import { DynamicConfigRepository } from '../dynamic-config/repository';
+import { UserRepository } from '../user/repository';
 
 // Default radius in meters. Overridden by ApplicationConfig if set.
 const DEFAULT_GEOFENCE_RADIUS_METERS = 200;

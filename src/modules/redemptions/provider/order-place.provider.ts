@@ -27,9 +27,7 @@ export type OrderPlaceProviderResult = {
 export class OrderPlaceProvider {
   constructor(private readonly configService: AppConfigService) {}
 
-  async placeOrder(
-    data: OrderPlaceProviderInput,
-  ): Promise<OrderPlaceProviderResult> {
+  async placeOrder(data: OrderPlaceProviderInput): Promise<OrderPlaceProviderResult> {
     const tag = 'OrderPlaceProvider.placeOrder';
 
     const endpoint = 'orders/orderPlaced';
@@ -84,8 +82,7 @@ export class OrderPlaceProvider {
         message: error.message || 'Unknown error',
       };
 
-      const statusCode =
-        error.response?.status || HttpStatus.INTERNAL_SERVER_ERROR;
+      const statusCode = error.response?.status || HttpStatus.INTERNAL_SERVER_ERROR;
 
       ConsoleLogger.error('ORDER_PLACE_PROVIDER_ERROR', error?.stack, {
         tag,

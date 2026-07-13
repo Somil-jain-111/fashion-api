@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 
 import { BusinessException } from 'src/default/error/business.exception';
 import { ERROR_CODES } from 'src/default/error/error.code';
-import { RolesRepository, UserRepository } from 'src/default/common/repositories';
+import { RolesRepository, UserRepository } from 'src/modules/user/repository';
 import { UserStatus } from 'src/modules/auth/constants/auth.constants';
 import { UserAuthValidator } from 'src/modules/auth/validators/user-auth.validator';
 import { SendOtpDto } from 'src/modules/auth/dto/send-otp.dto';
@@ -21,7 +21,7 @@ export class UserValidator {
 
     if (!user) {
       if (createUser) {
-        let role = await this.roleRepository.findByName(dto.role);
+        const role = await this.roleRepository.findByName(dto.role);
 
         if (!role) {
           throw new BusinessException(ERROR_CODES.AUTH.INVALID_ROLE);

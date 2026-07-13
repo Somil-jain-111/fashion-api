@@ -23,7 +23,10 @@ export class PaymentVerificationController {
   }
 
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updatePaymentVerificationDto: UpdatePaymentVerificationDto) {
+  update(
+    @Param('id') id: string,
+    @Body() updatePaymentVerificationDto: UpdatePaymentVerificationDto
+  ) {
     return this.paymentVerificationService.update(+id, updatePaymentVerificationDto);
   }
 
