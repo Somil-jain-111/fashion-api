@@ -28,10 +28,10 @@ export class InvoiceEntity extends BaseEntity {
   @Column({ type: 'bigint', unsigned: true })
   user_id!: string;
 
-  @ManyToOne(() => User, (user) => user.invoice, {
-    nullable: false,
-    onDelete: 'CASCADE',
-  })
+  // @ManyToOne(() => User, (user) => user.invoice, {
+  //   nullable: false,
+  //   onDelete: 'CASCADE',
+  // })
   @JoinColumn({ name: 'user_id' })
   user!: User;
 

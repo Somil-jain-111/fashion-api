@@ -23,7 +23,7 @@ export class OnboardingService {
     private readonly userStoreInfoRepository: UserStoreInfoRepository,
     private readonly approvalRepository: ApprovalRepository,
     private readonly kycVerificationRepository: KycVerificationRepository,
-    private readonly roleRepository: RolesRepository
+    private readonly roleRepository: RolesRepository,
   ) {}
 
   async saveBasicInfo(userId: number, dto: SaveBasicInfoDto) {

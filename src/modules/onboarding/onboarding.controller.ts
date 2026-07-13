@@ -10,12 +10,15 @@ import { ResponseMessage } from 'src/default/common/decorators/response-message.
 import { IdempotencyInterceptor } from 'src/default/common/interceptors/idempotency-check.interceptor';
 import { NoCache } from 'src/default/cache/cache.decorator';
 import { DataSanitizer } from 'src/default/common/utils/sanitize.utils';
+import { SoVerificationService } from '../so-verification/so-verification.service';
 
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles([UserRole.RETAILER])
 @Controller('onboarding')
 export class OnboardingController {
-  constructor(private readonly onboardingService: OnboardingService) {}
+  constructor(private readonly onboardingService: OnboardingService,
+            private readonly soVerificationService:SoVerificationService
+  ) {}
 
   @NoCache()
   @Put('basic-info')
@@ -53,4 +56,12 @@ export class OnboardingController {
     const response = await this.onboardingService.submitProfile(userId);
     return DataSanitizer.sanitizeData(response);
   }
+
+
+  @Roles([UserRole.RETAILER])
+@Get('status')
+async getOnboardingStatus(@Req() req: any) {
+  const response = await this.soVerificationService.getOnboardingStatus(Number(req.user.id));
+  return DataSanitizer.sanitizeData(response);
+}
 }
