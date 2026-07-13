@@ -5,7 +5,6 @@ type MessageParams = Record<string, string | number>;
 
 export class BusinessException extends HttpException {
   constructor(error: ErrorCodeValue, params?: MessageParams, data: unknown = null) {
-    console.log('sssssss', error);
     const message = BusinessException.formatMessage(error.message, params);
 
     super(

@@ -12,7 +12,7 @@ export abstract class BaseEntity {
 
   @Column({
     type: 'boolean',
-    default: false,
+    default: true,
   })
   active: boolean;
 
