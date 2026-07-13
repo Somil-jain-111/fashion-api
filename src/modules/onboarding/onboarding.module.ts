@@ -9,10 +9,7 @@ import { IdempotencyService } from 'src/default/idempotency/idempotency.service'
 @Module({
   imports: [AuthModule, KycModule, RedisModule],
   controllers: [OnboardingController],
-  providers: [
-    OnboardingService,
-    IdempotencyService,
-  ],
+  providers: [OnboardingService, IdempotencyService],
   exports: [OnboardingService],
 })
 export class OnboardingModule {}

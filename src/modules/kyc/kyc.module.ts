@@ -1,4 +1,4 @@
-import { Global, Module } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
 import { KycService } from './kyc.service';
@@ -11,10 +11,12 @@ import { ConfigModule } from 'src/default/config/config.module';
 import { AuthModule } from '../auth/auth.module';
 import { KycVerificationEntity } from './entities/kyc-verification.entity';
 import { KycVerificationLogEntity } from './entities/kyc-verification-logs.entity';
+import { ApiResponseEntity } from './entities/api-response.entity';
 import { KYCController } from './kyc.controller';
 import {
   KycVerificationLogRepository,
   KycVerificationRepository,
+  ApiResponseRepository,
 } from 'src/modules/kyc/repository';
 import { NameMatchProvider } from './provider/name-matching.provider';
 import { IdempotencyService } from 'src/default/idempotency/idempotency.service';
@@ -22,7 +24,7 @@ import { RedisModule } from 'src/default/databases/redis/redis.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([KycVerificationEntity, KycVerificationLogEntity]),
+    TypeOrmModule.forFeature([KycVerificationEntity, KycVerificationLogEntity, ApiResponseEntity]),
 
     ConfigModule,
 
@@ -41,6 +43,7 @@ import { RedisModule } from 'src/default/databases/redis/redis.module';
 
     KycVerificationRepository,
     KycVerificationLogRepository,
+    ApiResponseRepository,
 
     NameMatchProvider,
     PanProvider,
@@ -49,6 +52,11 @@ import { RedisModule } from 'src/default/databases/redis/redis.module';
     IdempotencyService,
   ],
 
-  exports: [KycService, KycVerificationRepository, KycVerificationLogRepository],
+  exports: [
+    KycService,
+    KycVerificationRepository,
+    KycVerificationLogRepository,
+    ApiResponseRepository,
+  ],
 })
 export class KycModule {}

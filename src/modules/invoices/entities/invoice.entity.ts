@@ -10,12 +10,12 @@ import {
   OneToMany,
   PrimaryGeneratedColumn,
 } from 'typeorm';
-import { User, InvoiceItemEntity, InvoiceAssortmentEntity } from 'src/modules/auth/entities';
+import { User, InvoiceItemEntity, InvoiceAssortmentEntity } from '../../auth/entities';
 import { InvoiceScanStatus, InvoiceStatus } from '../enum/invoice.enum';
 
 @Entity({ name: 'invoices' })
 @Index('uq_invoice_no_master_id', ['invoice_no', 'master_id'], { unique: true })
-@Index('idx_invoice_user_id', ['user_id'])
+@Index('idx_invoice_user_id', ['user'])
 @Index('idx_invoice_party_code', ['party_code'])
 @Index('idx_invoice_master_id', ['master_id'])
 @Index('idx_invoice_date', ['invoice_date'])
@@ -24,9 +24,6 @@ import { InvoiceScanStatus, InvoiceStatus } from '../enum/invoice.enum';
 export class InvoiceEntity extends BaseEntity {
   @PrimaryGeneratedColumn({ type: 'bigint', unsigned: true })
   id: string;
-
-  @Column({ type: 'bigint', unsigned: true })
-  user_id!: string;
 
   @ManyToOne(() => User, (user) => user.invoice, {
     nullable: false,

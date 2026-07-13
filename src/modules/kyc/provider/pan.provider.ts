@@ -8,6 +8,8 @@ import { BusinessException } from 'src/default/error/business.exception';
 import { ERROR_CODES } from 'src/default/error/error.code';
 import { ConsoleLogger } from 'src/default/logger/console/console.service';
 
+import { ApiResponseRepository } from 'src/modules/kyc/repository';
+
 type PanVerifyInput = {
   panCard: string;
   transactionId: string;
@@ -24,7 +26,20 @@ export type PanVerifyResult = {
 
 @Injectable()
 export class PanProvider {
-  constructor(private readonly configService: AppConfigService) {}
+  constructor(
+    private readonly configService: AppConfigService,
+    private readonly apiResponseRepository: ApiResponseRepository
+  ) {}
+
+  maskPanNumber(pan: string): string {
+    const cleanedPan = pan.replace(/\s+/g, '').toUpperCase();
+
+    if (cleanedPan.length !== 10) {
+      throw new Error('Invalid PAN number length');
+    }
+
+    return 'XXXXXX' + cleanedPan.slice(6);
+  }
 
   async verifyPan(data: PanVerifyInput): Promise<PanVerifyResult> {
     const pan = data.panCard.toUpperCase();
@@ -35,9 +50,7 @@ export class PanProvider {
       transaction_id: data.transactionId,
     };
 
-    const isLive =
-      this.configService.get('NODE_ENV') === 'production' ||
-      this.configService.get('NODE_ENV') === 'qa';
+    const isLive = this.configService.isProduction();
 
     const baseUrl = isLive
       ? this.configService.get('Rewards_API_Base_Url_Live')
@@ -67,6 +80,16 @@ export class PanProvider {
     try {
       const response = await axios.request(requestConfig);
 
+      await this.apiResponseRepository.saveResponse({
+        type: 'PAN',
+        requestUrl: requestConfig.url || '',
+        requestPayload: {
+          payload,
+          headers: requestConfig.headers,
+        },
+        responsePayload: response.data,
+      });
+
       return {
         success: Boolean(response.data?.status),
         requestConfig,
@@ -90,6 +113,16 @@ export class PanProvider {
           statusCode,
           errorResponse,
         },
+      });
+
+      await this.apiResponseRepository.saveResponse({
+        type: 'PAN',
+        requestUrl: requestConfig.url || '',
+        requestPayload: {
+          payload,
+          headers: requestConfig.headers,
+        },
+        responsePayload: errorResponse,
       });
 
       return {

@@ -8,6 +8,8 @@ import { BusinessException } from 'src/default/error/business.exception';
 import { ERROR_CODES } from 'src/default/error/error.code';
 import { ConsoleLogger } from 'src/default/logger/console/console.service';
 
+import { ApiResponseRepository } from 'src/modules/kyc/repository';
+
 type GenerateAadhaarOtpInput = {
   aadhaarNumber: string;
   transactionId: string;
@@ -30,7 +32,10 @@ type VerifyAadhaarOtpInput = {
 
 @Injectable()
 export class AadhaarProvider {
-  constructor(private readonly configService: AppConfigService) {}
+  constructor(
+    private readonly configService: AppConfigService,
+    private readonly apiResponseRepository: ApiResponseRepository
+  ) {}
 
   async generateOtp(data: GenerateAadhaarOtpInput): Promise<KycProviderResult> {
     const payload = {
@@ -69,6 +74,16 @@ export class AadhaarProvider {
     try {
       const response = await axios.request(requestConfig);
 
+      await this.apiResponseRepository.saveResponse({
+        type: 'AADHAAR',
+        requestUrl: requestConfig.url || '',
+        requestPayload: {
+          payload,
+          headers: requestConfig.headers,
+        },
+        responsePayload: response.data,
+      });
+
       return {
         success: Boolean(response.data?.status),
         requestConfig,
@@ -92,6 +107,16 @@ export class AadhaarProvider {
           statusCode,
           errorData,
         },
+      });
+
+      await this.apiResponseRepository.saveResponse({
+        type: 'AADHAAR',
+        requestUrl: requestConfig.url || '',
+        requestPayload: {
+          payload,
+          headers: requestConfig.headers,
+        },
+        responsePayload: errorData,
       });
 
       return {
@@ -140,6 +165,16 @@ export class AadhaarProvider {
     try {
       const response = await axios.request(requestConfig);
 
+      await this.apiResponseRepository.saveResponse({
+        type: 'AADHAAR',
+        requestUrl: requestConfig.url || '',
+        requestPayload: {
+          payload,
+          headers: requestConfig.headers,
+        },
+        responsePayload: response.data,
+      });
+
       return {
         success: Boolean(response.data?.status),
         requestConfig,
@@ -163,6 +198,16 @@ export class AadhaarProvider {
           statusCode,
           errorData,
         },
+      });
+
+      await this.apiResponseRepository.saveResponse({
+        type: 'AADHAAR',
+        requestUrl: requestConfig.url || '',
+        requestPayload: {
+          payload,
+          headers: requestConfig.headers,
+        },
+        responsePayload: errorData,
       });
 
       return {

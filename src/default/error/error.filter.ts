@@ -13,8 +13,8 @@ type HttpExceptionResponse = {
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
   catch(exception: unknown, host: ArgumentsHost): void {
-    console.log('ALL EXCEPTIONS FILTER CALLED');
-    console.log('EXCEPTION:', exception);
+    // console.log('ALL EXCEPTIONS FILTER CALLED');
+    // console.log('EXCEPTION:', exception);
 
     const ctx = host.switchToHttp();
     const response = ctx.getResponse();

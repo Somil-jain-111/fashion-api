@@ -9,6 +9,18 @@ import { UserStatus } from '../constants/auth.constants';
 export class UserAuthValidator {
   constructor(private readonly userRepository: UserRepository) {}
 
+  async getAllowedUserById(userId: number): Promise<User> {
+    const user = await this.userRepository.findById(userId);
+
+    if (!user) {
+      throw new BusinessException(ERROR_CODES.USER.USER_NOT_FOUND);
+    }
+
+    this.validateUserStatus(user.status);
+
+    return user;
+  }
+
   async validateActiveUserByMobile(mobile: string): Promise<User> {
     const user = await this.userRepository.findByMobile(mobile);
 
