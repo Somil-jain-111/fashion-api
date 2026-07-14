@@ -21,3 +21,9 @@ export enum ApprovalType {
   ORDER = 'order',
   INVOICE = 'invoice',
 }
+
+export enum ApprovalAction {
+  APPROVE = 'approve',
+  REJECT = 'reject',
+  BLOCK = 'block',
+}

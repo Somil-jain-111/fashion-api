@@ -19,6 +19,7 @@ import { IdempotencyInterceptor } from 'src/default/common/interceptors/idempote
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
+  @NoCache()
   @Post('send-otp')
   @ResponseMessage('OTP sent successfully')
   async sendOtp(@Body() dto: SendOtpDto) {
@@ -26,29 +27,34 @@ export class AuthController {
     return DataSanitizer.sanitizeData(response);
   }
 
+  @NoCache()
   @Post('verify-otp')
   @ResponseMessage('OTP verified successfully')
   async verifyOtp(@Body() dto: VerifyOtpDto, @Req() req: any) {
     return await this.authService.verifyOtp(dto, req);
   }
 
+  @NoCache()
   @Post('login')
   async login(@Body() dto: LoginDto, @Req() req: any) {
     return await this.authService.login(dto, req);
   }
 
+  @NoCache()
   @Post('refresh-token')
   @ResponseMessage('Token refreshed successfully')
   async refreshToken(@Body() dto: RefreshTokenDto) {
     return await this.authService.refreshToken(dto);
   }
 
+  @NoCache()
   @Post('forgot-password')
   @ResponseMessage('Password reset token sent successfully')
   async forgotPassword(@Body() dto: ForgotPasswordDto) {
     return await this.authService.forgotPassword(dto);
   }
 
+  @NoCache()
   @Post('reset-password')
   resetPassword(@Body() dto: ResetPasswordDto) {
     return this.authService.resetPassword(dto);
@@ -68,6 +74,7 @@ export class AuthController {
     return DataSanitizer.sanitizeData(response);
   }
 
+  @NoCache()
   @UseGuards(JwtAuthGuard)
   @Get('profile')
   async profile(@Req() req: any) {

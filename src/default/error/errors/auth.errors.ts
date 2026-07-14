@@ -128,4 +128,10 @@ export const AUTH_ERRORS = {
     message: 'Invalid Mobile provided!',
     statusCode: 400,
   },
+
+  EMAIL_REQUIRED: {
+    code: 'AUTH_025',
+    message: 'Email is required',
+    statusCode: 400,
+  },
 } as const;
