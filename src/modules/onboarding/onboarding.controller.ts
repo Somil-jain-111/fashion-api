@@ -17,8 +17,8 @@ import { SoVerificationService } from '../so-verification/so-verification.servic
 @Controller('onboarding')
 export class OnboardingController {
   constructor(private readonly onboardingService: OnboardingService,
-            private readonly soVerificationService:SoVerificationService
-  ) {}
+    private readonly soVerificationService: SoVerificationService
+  ) { }
 
   @NoCache()
   @Put('basic-info')
@@ -57,11 +57,11 @@ export class OnboardingController {
     return DataSanitizer.sanitizeData(response);
   }
 
-
-  @Roles([UserRole.RETAILER])
-@Get('status')
-async getOnboardingStatus(@Req() req: any) {
-  const response = await this.soVerificationService.getOnboardingStatus(Number(req.user.id));
-  return DataSanitizer.sanitizeData(response);
-}
+  //   @Roles([UserRole.RETAILER])
+  //   @NoCache()
+  // @Get('status')
+  // async getOnboardingStatus(@Req() req: any) {
+  //   const response = await this.soVerificationService.getOnboardingStatus(Number(req.user.id));
+  //   return DataSanitizer.sanitizeData(response);
+  // }
 }

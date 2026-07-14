@@ -7,6 +7,7 @@ import { Roles } from 'src/default/common/decorators/roles.decorator';
 import { ResponseMessage } from 'src/default/common/decorators/response-message.decorator';
 import { DataSanitizer } from 'src/default/common/utils/sanitize.utils';
 import { UserRole } from 'src/default/common/enums/user-type.enum';
+import { NoCache } from 'src/default/cache/cache.decorator';
 
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('so')
@@ -17,12 +18,25 @@ export class SoVerificationController {
    * SO dashboard — analytics + pending outlets list
    * GET /so/queue
    */
-  @Roles([UserRole.SALESPERSON, UserRole.SUPERADMIN])
-  @Get('queue')
-  async getQueue(@Req() req: any) {
-    const response = await this.soVerificationService.getQueue(Number(req.user.id));
-    return DataSanitizer.sanitizeData(response);
-  }
+@Roles([UserRole.SALESPERSON, UserRole.SUPERADMIN])
+@NoCache()
+@Get('queue')
+async getQueue(
+  @Req() req: any,
+  @Query('lat') lat?: string,
+  @Query('lng') lng?: string,
+  @Query('status') status?: string,
+) {
+  const soLat = lat !== undefined ? parseFloat(lat) : undefined;
+  const soLng = lng !== undefined ? parseFloat(lng) : undefined;
+  const response = await this.soVerificationService.getQueue(
+    Number(req.user.id),
+    soLat,
+    soLng,
+    status,
+  );
+  return DataSanitizer.sanitizeData(response);
+}
 
   /**
    * Outlet detail page — retailer info + store info + previous verification

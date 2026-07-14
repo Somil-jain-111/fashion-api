@@ -165,46 +165,136 @@ export class OnboardingService {
     };
   }
 
-  async getStatus(userId: number) {
-    const user = await this.userRepository.findOne({ id: userId }, ['storeInformation']);
+  // async getStatus(userId: number) {
+  //   const user = await this.userRepository.findOne({ id: userId }, ['storeInformation']);
 
-    if (!user) {
-      throw new BusinessException(ERROR_CODES.USER.USER_NOT_FOUND);
-    }
+  //   if (!user) {
+  //     throw new BusinessException(ERROR_CODES.USER.USER_NOT_FOUND);
+  //   }
 
-    const basicInfoComplete = !!(user.username && user.partnerType);
+  //   const basicInfoComplete = !!(user.username && user.partnerType);
 
-    const panKyc = await this.kycVerificationRepository.findVerifiedByUserIdAndType(
+  //   const panKyc = await this.kycVerificationRepository.findVerifiedByUserIdAndType(
+  //     userId,
+  //     KycType.PAN
+  //   );
+  //   const panKycComplete = !!panKyc;
+
+  //   let gstKycComplete = false;
+  //   let storeInfoComplete = false;
+
+  //   if (user.partnerType === UserPartnerType.ENTITY) {
+  //     const gstKyc = await this.kycVerificationRepository.findVerifiedByUserIdAndType(
+  //       userId,
+  //       KycType.GST
+  //     );
+  //     gstKycComplete = !!gstKyc;
+  //     storeInfoComplete = !!user.storeInformation;
+  //   } else {
+  //     // For individual, GST KYC and store info are not mandatory by flow description
+  //     gstKycComplete = true;
+  //     storeInfoComplete = true;
+  //   }
+
+  //   return {
+  //     partnerType: user.partnerType,
+  //     basicInfoComplete,
+  //     panKycComplete,
+  //     gstKycComplete,
+  //     storeInfoComplete,
+  //     overallStatus: user.status,
+  //   };
+  // }
+
+async getStatus(userId: number) {
+  const user = await this.userRepository.findOne({ id: userId }, ['storeInformation']);
+
+  if (!user) {
+    throw new BusinessException(ERROR_CODES.USER.USER_NOT_FOUND);
+  }
+
+  const basicInfoComplete = !!(user.username && user.partnerType);
+
+  const panKyc = await this.kycVerificationRepository.findVerifiedByUserIdAndType(
+    userId,
+    KycType.PAN
+  );
+  const panKycComplete = !!panKyc;
+
+  let gstKycComplete = false;
+  let storeInfoComplete = false;
+
+  if (user.partnerType === UserPartnerType.ENTITY) {
+    const gstKyc = await this.kycVerificationRepository.findVerifiedByUserIdAndType(
       userId,
-      KycType.PAN
+      KycType.GST
     );
-    const panKycComplete = !!panKyc;
+    gstKycComplete = !!gstKyc;
+    storeInfoComplete = !!user.storeInformation;
+  } else {
+    gstKycComplete = true;
+    storeInfoComplete = true;
+  }
 
-    let gstKycComplete = false;
-    let storeInfoComplete = false;
+  // ---- Approval & routing info (merged from SO flow) ----
+const approvals = await this.approvalRepository.findByUserId(userId, ApprovalType.PROFILE);
 
-    if (user.partnerType === UserPartnerType.ENTITY) {
-      const gstKyc = await this.kycVerificationRepository.findVerifiedByUserIdAndType(
-        userId,
-        KycType.GST
-      );
-      gstKycComplete = !!gstKyc;
-      storeInfoComplete = !!user.storeInformation;
-    } else {
-      // For individual, GST KYC and store info are not mandatory by flow description
-      gstKycComplete = true;
-      storeInfoComplete = true;
-    }
+  const activeApproval = approvals[0] ?? null;
 
-    return {
-      partnerType: user.partnerType,
-      basicInfoComplete,
-      panKycComplete,
-      gstKycComplete,
-      storeInfoComplete,
-      overallStatus: user.status,
+  let currentRejection: {
+    rejectedBy: string;
+    reason: string;
+    rejectedAt: Date | null;
+  } | null = null;
+
+  if (activeApproval?.status === ApprovalStatus.REJECTED) {
+    currentRejection = {
+      rejectedBy:
+        activeApproval.level === 1 ? 'L1'
+        : activeApproval.level === 2 ? 'L2'
+        : 'Sales Officer',
+      reason: activeApproval.remarks ?? 'Your profile was rejected.',
+      rejectedAt: activeApproval.approved_at,
     };
   }
+
+  const currentStep = this.resolveCurrentStep(user, activeApproval);
+
+  return {
+    userId,
+    partnerType: user.partnerType,
+    basicInfoComplete,
+    panKycComplete,
+    gstKycComplete,
+    storeInfoComplete,
+    overallStatus: user.status,
+    // ---- New routing & approval fields ----
+    currentStep,
+    approvalStatus: activeApproval?.status ?? null,
+    approvalLevel: activeApproval?.level ?? null,
+    isSubmitted: !!activeApproval,
+    currentRejection,
+  };
+}
+
+
+private resolveCurrentStep(user: any, activeApproval: any): string {
+  // Check user status first — it's the source of truth
+  if (user.status === UserStatus.ACTIVE) return 'ACTIVE';
+  if (user.status === UserStatus.BLOCKED) return 'BLOCKED';
+
+  if (!activeApproval) {
+    if (!user.username || !user.partnerType) return 'BASIC_INFO';
+    if (!user.storeInformation) return 'STORE_INFO';
+    return 'SUBMIT';
+  }
+
+  if (activeApproval.level === 1) return 'PENDING_L1_REVIEW';
+  if (activeApproval.level === 2) return 'PENDING_L2_REVIEW';
+  if (activeApproval.level === 3) return 'PENDING_SO_VISIT';
+
+  return 'UNKNOWN';
+}
 
   async submitProfile(userId: number) {
     const status = await this.getStatus(userId);

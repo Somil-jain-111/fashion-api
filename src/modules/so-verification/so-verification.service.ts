@@ -30,7 +30,7 @@ export class SoVerificationService {
     private readonly soVerificationRepository: SoVerificationRepository,
     private readonly dynamicConfigRepository: DynamicConfigRepository,
     private readonly approvalsService: ApprovalsService,
-  ) {}
+  ) { }
 
   // ─────────────────────────────────────────────
   // Geo-fence helpers
@@ -100,7 +100,7 @@ export class SoVerificationService {
    * Returns the SO's queue — all level-3 PENDING approvals assigned to them.
    * Groups counts for the dashboard analytics (total, completed, pending, rejected).
    */
-  async getQueue(soUserId: number) {
+  async getQueue(soUserId: number, soLat?: number, soLng?: number, statusFilter?: string) {
     const allAssigned = await this.approvalRepository.findMany({
       where: {
         assignedTo: { id: soUserId } as any,
@@ -115,6 +115,62 @@ export class SoVerificationService {
     const rejected = allAssigned.filter((a) => a.status === ApprovalStatus.REJECTED);
     const blocked = allAssigned.filter((a) => a.status === ApprovalStatus.BLOCKED);
 
+    // ---- Route map — filter by status if provided, else return all ----
+    const routeMapSource = statusFilter
+      ? allAssigned.filter((a) => a.status === statusFilter)
+      : allAssigned;
+
+    const routeMap = routeMapSource.map((approval) => ({
+      approvalId: approval.id,
+      retailerUserId: approval.user.id,
+      storeName: approval.user.storeInformation?.address1 ?? null,
+      storeLat: approval.user.storeInformation?.lat ?? null,
+      storeLng: approval.user.storeInformation?.lng ?? null,
+      storeCity: approval.user.storeInformation?.city ?? null,
+      storePincode: approval.user.storeInformation?.pincode ?? null,
+      storeInfoMissing: !approval.user.storeInformation,
+      approvalStatus: approval.status,
+    }));
+
+    // ---- Pending outlets ----
+    const pendingOutlets = pending.map((approval) => ({
+      approvalId: approval.id,
+      retailerUserId: approval.user.id,
+      storeName: approval.user.storeInformation?.address1 ?? null,
+      storeLat: approval.user.storeInformation?.lat ?? null,
+      storeLng: approval.user.storeInformation?.lng ?? null,
+      storeCity: approval.user.storeInformation?.city ?? null,
+      storePincode: approval.user.storeInformation?.pincode ?? null,
+      storeInfoMissing: !approval.user.storeInformation,
+    }));
+
+    // ---- Nearby retailers — pending only, sorted by distance ----
+    let nearbyRetailers: any[] | null = null;
+
+    if (soLat !== undefined && soLng !== undefined) {
+      nearbyRetailers = pending
+        .filter((a) => a.user.storeInformation?.lat && a.user.storeInformation?.lng)
+        .map((approval) => {
+          const store = approval.user.storeInformation!;
+          const distanceMeters = this.calculateDistanceMeters(
+            soLat, soLng,
+            Number(store.lat), Number(store.lng),
+          );
+          return {
+            approvalId: approval.id,
+            retailerUserId: approval.user.id,
+            storeName: store.address1 ?? null,
+            storeLat: store.lat,
+            storeLng: store.lng,
+            storeCity: store.city ?? null,
+            storePincode: store.pincode ?? null,
+            distanceMeters: Math.round(distanceMeters),
+            distanceLabel: this.formatDistance(distanceMeters),
+          };
+        })
+        .sort((a, b) => a.distanceMeters - b.distanceMeters);
+    }
+
     return {
       analytics: {
         totalAssigned: allAssigned.length,
@@ -123,19 +179,16 @@ export class SoVerificationService {
         rejected: rejected.length,
         blocked: blocked.length,
       },
-      // Pending items are what the SO needs to act on
-      pendingOutlets: pending.map((approval) => ({
-        approvalId: approval.id,
-        retailerUserId: approval.user.id,
-        storeName: approval.user.storeInformation?.address1 ?? null,
-        storeLat: approval.user.storeInformation?.lat ?? null,
-        storeLng: approval.user.storeInformation?.lng ?? null,
-        storeCity: approval.user.storeInformation?.city ?? null,
-        storePincode: approval.user.storeInformation?.pincode ?? null,
-      })),
+      routeMap,
+      pendingOutlets,
+      nearbyRetailers,
     };
   }
 
+  private formatDistance(meters: number): string {
+    if (meters < 1000) return `${Math.round(meters)}m away`;
+    return `${(meters / 1000).toFixed(1)}km away`;
+  }
   // ─────────────────────────────────────────────
   // Retailer outlet detail (for SO's "View details" screen)
   // ─────────────────────────────────────────────
@@ -286,7 +339,7 @@ export class SoVerificationService {
       newStatus: UserStatus.ACTIVE,
       geoTag: { lat: dto.geoLat, lng: dto.geoLng },
       distanceFromStoreMeters: Math.round(distanceMeters),
-      verifiedAt: new Date(),
+      verifiedAt: new Date().toISOString(),
     };
   }
 
@@ -329,18 +382,22 @@ export class SoVerificationService {
 
     // ── Delegate to existing approval service (level 3 reject → back to L2) ──
     const rejectionLabel = this.getRejectionLabel(dto.rejectionReason);
-    await this.approvalsService.handleApprovalAction(
-      soUserId,
-      approvalId,
-      'reject',
-      `Rejected by SO — Reason: ${rejectionLabel}${dto.remarks ? `. Remarks: ${dto.remarks}` : ''}`,
-    );
+    await this.approvalRepository.updateById(approval.id, {
+      status: ApprovalStatus.REJECTED,
+      approved_by: { id: soUserId } as any,
+      approved_at: new Date(),
+      remarks: `Rejected by SO — Reason: ${rejectionLabel}${dto.remarks ? `. Remarks: ${dto.remarks}` : ''}`,
+    });
+
+    await this.userRepository.updateById(approval.user.id, {
+      status: UserStatus.BLOCKED,
+    });
 
     return {
       message: 'Outlet rejected successfully',
       rejectionReason: dto.rejectionReason,
-      newStatus: UserStatus.IN_APPROVAL,
-      rejectedAt: new Date(),
+      newStatus: UserStatus.BLOCKED,  // was IN_APPROVAL
+      rejectedAt: new Date().toISOString(),
     };
   }
 
@@ -365,11 +422,12 @@ export class SoVerificationService {
       throw new BusinessException(ERROR_CODES.USER.USER_NOT_FOUND);
     }
 
-    // Find the most recent active (PENDING or REJECTED) approval for this user
-    const approvals = await this.approvalRepository.findMany({
-      where: { user: { id: retailerUserId } as any, approval_type: ApprovalType.PROFILE },
-      order: { createdAt: 'DESC' } as any,
-    });
+    const approvals = await this.approvalRepository
+      .createQueryBuilder('approval')
+      .where('approval.user_id = :userId', { userId: retailerUserId })
+      .andWhere('approval.approval_type = :type', { type: ApprovalType.PROFILE })
+      .orderBy('approval.created_at', 'DESC')
+      .getMany();
 
     const activeApproval = approvals[0] ?? null;
 
@@ -378,7 +436,7 @@ export class SoVerificationService {
       rejectedBy: string;
       reason: string;
       remarks?: string;
-      rejectedAt: Date | null;
+      rejectedAt: string | null;
     } | null = null;
 
     if (activeApproval?.status === ApprovalStatus.REJECTED) {
@@ -389,7 +447,7 @@ export class SoVerificationService {
         rejectedBy: activeApproval.level === 1 ? 'L1' : activeApproval.level === 2 ? 'L2' : 'Sales Officer',
         reason: activeApproval.remarks ?? 'Your profile was rejected. Please review and resubmit.',
         remarks: soEvidence?.remarks,
-        rejectedAt: activeApproval.approved_at,
+        rejectedAt: activeApproval.approved_at.toISOString(),
       };
     }
 
@@ -397,6 +455,7 @@ export class SoVerificationService {
     const currentStep = this.resolveCurrentStep(user, activeApproval);
 
     return {
+      retailerUserId,
       currentStep,
       userStatus: user.status,
       approvalStatus: activeApproval?.status ?? null,
@@ -412,29 +471,25 @@ export class SoVerificationService {
   // ─────────────────────────────────────────────
 
   private resolveCurrentStep(user: any, activeApproval: any): string {
-    // If no submission yet, find what's missing
     if (!activeApproval) {
       if (!user.username || !user.partnerType) return 'BASIC_INFO';
-      if (!user.panKycVerified) return 'PAN';
-      if (user.partnerType === 'entity' && !user.gstKycVerified) return 'GST';
       if (!user.storeInformation) return 'STORE_INFO';
-      return 'SUBMIT'; // all done, ready to submit
+      return 'SUBMIT';
     }
+    if (activeApproval.status === ApprovalStatus.REJECTED) return 'BLOCKED';
+    if (activeApproval.status === ApprovalStatus.APPROVED && activeApproval.level === 3) return 'ACTIVE';
 
-    // If rejected — send back to start so they review all info
-    if (activeApproval.status === ApprovalStatus.REJECTED) {
-      return 'BASIC_INFO';
-    }
+    // Pending at each level
+    if (activeApproval.level === 1) return 'PENDING_L1_REVIEW';
+    if (activeApproval.level === 2) return 'PENDING_L2_REVIEW';
+    if (activeApproval.level === 3) return 'PENDING_SO_VISIT';
 
-    // If pending or approved, show status screen
-    return 'APPROVAL_STATUS';
+    return 'UNKNOWN';
   }
 
   private resolveCompletedSteps(user: any): string[] {
     const steps: string[] = [];
     if (user.username && user.partnerType) steps.push('BASIC_INFO');
-    if (user.panKycVerified) steps.push('PAN');
-    if (user.gstKycVerified) steps.push('GST');
     if (user.storeInformation) steps.push('STORE_INFO');
     return steps;
   }
