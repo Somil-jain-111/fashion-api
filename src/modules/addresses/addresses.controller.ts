@@ -29,7 +29,7 @@ import { ResponseMessage } from 'src/default/common/decorators/response-message.
 @UseInterceptors(IdempotencyInterceptor)
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles([UserRole.RETAILER])
-@Controller('addresses')
+@Controller('address')
 export class AddressesController {
   constructor(private readonly addressesService: AddressesService) {}
 

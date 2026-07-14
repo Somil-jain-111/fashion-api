@@ -26,12 +26,12 @@ import { OrderStatus } from '../enum/order-status.enum';
 @Index('idx_order_user', ['user'])
 @Index('idx_order_status', ['status'])
 @Index('idx_order_created', ['created_at'])
-@Index('idx_order_number', ['order_number'], { unique: true })
+@Index('idx_order_number', ['order_number'])
 export class Order extends BaseEntity {
   @PrimaryGeneratedColumn('increment', { type: 'bigint' })
   id!: string;
 
-  @Column({ type: 'varchar', length: 100, nullable: false })
+  @Column({ type: 'varchar', length: 100, nullable: true })
   order_number!: string;
 
   @Column({ type: 'float', default: 0 })

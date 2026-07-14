@@ -1,6 +1,6 @@
 import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
 
-export class CreateOrderSummaryDto {
+export class PlaceOrderDto {
   @IsNotEmpty()
   @IsString()
   productId: string;

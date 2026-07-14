@@ -3,7 +3,6 @@ import { RedemptionsService } from './redemptions.service';
 import { RedemptionsController } from './redemptions.controller';
 import {
   OrderRepository,
-  RedemptionConfigRepository,
   PointHistoryRepository,
   ShippingDetailRepository,
   VoucherRepository,
@@ -21,13 +20,20 @@ import { AuthModule } from '../auth/auth.module';
 import { KycModule } from '../kyc/kyc.module';
 import { AddressesModule } from '../addresses/addresses.module';
 import { RewardsModule } from '../rewards/rewards.module';
+import { DynamicConfigModule } from '../dynamic-config/dynamic-config.module';
 
 @Module({
-  imports: [RedisModule, AuthModule, KycModule, AddressesModule, RewardsModule],
+  imports: [
+    RedisModule,
+    AuthModule,
+    KycModule,
+    AddressesModule,
+    RewardsModule,
+    DynamicConfigModule,
+  ],
   controllers: [RedemptionsController],
   providers: [
     RedemptionsService,
-    RedemptionConfigRepository,
     TransactionService,
     OrderRepository,
     PointHistoryRepository,

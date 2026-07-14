@@ -18,6 +18,27 @@ export class UserRoleConfig extends BaseEntity {
   redemptionOptions?: Record<string, any>;
 
   @Column({
+    type: 'boolean',
+    default: true,
+    name: 'physical_redemption_enabled',
+  })
+  physicalRedemptionEnabled!: boolean;
+
+  @Column({
+    type: 'boolean',
+    default: true,
+    name: 'digital_redemption_enabled',
+  })
+  digitalRedemptionEnabled!: boolean;
+
+  @Column({
+    type: 'boolean',
+    default: true,
+    name: 'dbt_enabled',
+  })
+  dbtEnabled!: boolean;
+
+  @Column({
     type: 'json',
     nullable: true,
     name: 'redemption_limits',
