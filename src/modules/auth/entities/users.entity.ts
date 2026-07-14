@@ -21,8 +21,8 @@ import {
   Address,
   Order,
   PointHistory,
-  InvoiceEntity,
   Approval,
+  InvoiceEntity,
 } from '.';
 import { Salutation, UserPartnerType } from '../../../default/common/enums/user-type.enum';
 import { UserStatus } from '../constants/auth.constants';
@@ -175,8 +175,10 @@ export class User extends BaseEntity {
   @OneToMany(() => PointHistory, (PointHistory) => PointHistory.user)
   pointHistories?: PointHistory[];
 
-  @OneToMany(() => InvoiceEntity, (invoiceEntity) => invoiceEntity.user)
-  invoice?: InvoiceEntity[];
   @OneToMany(() => Approval, (approval) => approval.user, { nullable: true })
   approvals?: Approval[];
+
+  @OneToMany(() => InvoiceEntity, (invoice) => invoice.user)
+invoices?: InvoiceEntity[];
 }
+ 
