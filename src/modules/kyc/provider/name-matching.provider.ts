@@ -33,9 +33,8 @@ export class NameMatchProvider {
       name_2: data.apiUserName,
     };
 
-    const isLive =
-      this.configService.get('NODE_ENV') === 'production' ||
-      this.configService.get('NODE_ENV') === 'qa';
+    // const isLive = this.configService.isProduction();
+    const isLive = true;
 
     const baseUrl = isLive
       ? this.configService.get('Rewards_API_Base_Url_Live')

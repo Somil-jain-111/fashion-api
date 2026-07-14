@@ -104,7 +104,6 @@ export class AuthService {
     this.validateLoginPayload(dto);
 
     const user = await this.userRepository.findByMobileOrEmail({
-      mobile: dto.mobile,
       email: dto.email,
     });
 
@@ -268,8 +267,8 @@ export class AuthService {
   }
 
   private validateLoginPayload(dto: LoginDto): void {
-    if (!dto.mobile && !dto.email) {
-      throw new BusinessException(ERROR_CODES.AUTH.MOBILE_OR_EMAIL_REQUIRED);
+    if (!dto.email) {
+      throw new BusinessException(ERROR_CODES.AUTH.EMAIL_REQUIRED);
     }
   }
 

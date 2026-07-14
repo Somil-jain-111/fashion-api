@@ -2,7 +2,6 @@ import { Injectable } from '@nestjs/common';
 import { VerifyPanDto } from './dto/verify-pan.dto';
 import { VerifyGstDto } from './dto/verify-gst.dto';
 import { GstProvider } from './provider/gst.provider';
-import { User } from '../auth/entities/users.entity';
 import { ConsoleLogger } from 'src/default/logger/console/console.service';
 import {
   KycVerificationLogRepository,
@@ -261,7 +260,6 @@ export class KycService {
     );
 
     if (!otpLog) {
-      console.log('ssssssssssss');
       throw new BusinessException(ERROR_CODES.KYC.AADHAAR_OTP_EXPIRED);
     }
 
@@ -381,7 +379,7 @@ export class KycService {
       },
     });
 
-    const user = await this.userAuthValidator.validateActiveUserById(userId);
+    const user = await this.userAuthValidator.getAllowedUserById(userId);
 
     if (!user.username) {
       throw new BusinessException(ERROR_CODES.KYC.USER_PROFILE_NAME_REQUIRED);
@@ -445,7 +443,7 @@ export class KycService {
 
     const nameMatchResult = await this.nameMatchProvider.matchName({
       userName: panApiData?.full_name,
-      apiUserName: user.username,
+      apiUserName: user?.username,
       transactionId: await ReferenceIdUtil.generateKycReferenceId('NAME_MATCH'),
     });
 
@@ -482,6 +480,7 @@ export class KycService {
       documentNumber: encryptedPan,
       verifiedName: encryptedUserName,
       provider: 'REWARDS_API',
+      maskedDocumentNumber: this.panProvider.maskPanNumber(pan),
       providerRequest: panProviderResult.requestPayload,
       providerResponse: encryptedApiData,
       metadata: {
@@ -589,6 +588,7 @@ export class KycService {
       type: KycType.GST,
       referenceId: transactionId,
       documentNumber: encryptedGst,
+      maskedDocumentNumber: this.gstProvider.maskGstNumber(gst),
       verifiedName: this.encryptKycData(
         gstApiData.trade_name || gstApiData.legal_name || user.username
       ),
