@@ -26,7 +26,6 @@ import { AuditModule } from './modules/audit/audit.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { KycModule } from './modules/kyc/kyc.module';
 import { JourneyIdMiddleware } from './default/common/middleware/journey-id.middleware';
-import { OrdersModule } from './modules/orders/orders.module';
 import { InvoicesModule } from './modules/invoices/invoices.module';
 import { RewardsModule } from './modules/rewards/rewards.module';
 import { RedemptionsModule } from './modules/redemptions/redemptions.module';
@@ -69,7 +68,6 @@ import { DynamicConfigModule } from './modules/dynamic-config/dynamic-config.mod
     AuditModule,
     AuthModule,
     KycModule,
-    OrdersModule,
     InvoicesModule,
     RewardsModule,
     RedemptionsModule,

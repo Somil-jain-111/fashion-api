@@ -1,8 +1,6 @@
-// src/modules/redemptions/dto/confirm-order.dto.ts
-
 import { IsNotEmpty, IsString, Length } from 'class-validator';
 
-export class ConfirmOrderDto {
+export class VerifyOrderDto {
   @IsNotEmpty()
   @IsString()
   orderId: string;

@@ -3,12 +3,10 @@ import {
   Get,
   Post,
   Body,
-  Patch,
-  Param,
-  Delete,
   Req,
   UseInterceptors,
   UseGuards,
+  Query,
 } from '@nestjs/common';
 import { RedemptionsService } from './redemptions.service';
 import { DataSanitizer } from 'src/default/common/utils/sanitize.utils';
@@ -17,42 +15,51 @@ import { JwtAuthGuard } from 'src/default/common/guards/jwt-auth.guard';
 import { RolesGuard } from 'src/default/common/guards/roles.guard';
 import { Roles } from 'src/default/common/decorators/roles.decorator';
 import { UserRole } from 'src/default/common/enums/user-type.enum';
-import { CreateOrderSummaryDto } from './dto/create-order-summary.dto';
+import { PlaceOrderDto } from './dto/place-order.dto';
 import { NoCache } from 'src/default/cache/cache.decorator';
 import { ResponseMessage } from 'src/default/common/decorators/response-message.decorator';
-import { SendRedemptionOtpDto } from './dto/send-redemption-otp.dto';
-import { ConfirmOrderDto } from './dto/confirm-order.dto';
+import { VerifyOrderDto } from './dto/verify-order.dto';
+import { GetOrdersQueryDto } from './dto/get-orders-query.dto';
+import { ResendOtpDto } from './dto/resend-otp.dto';
 
-@NoCache()
-@UseInterceptors(IdempotencyInterceptor)
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles([UserRole.RETAILER])
 @Controller('redemptions')
 export class RedemptionsController {
   constructor(private readonly redemptionsService: RedemptionsService) {}
 
-  @Post('order-summary')
-  async createOrderSummary(@Req() req: any, @Body() body: CreateOrderSummaryDto) {
-    const response = await this.redemptionsService.createOrderSummary(
-      req.user.id,
-      body,
-      UserRole.RETAILER
-    );
+  @NoCache()
+  @UseInterceptors(IdempotencyInterceptor)
+  @Post('place-order')
+  @ResponseMessage('Order placed successfully. OTP has been sent.')
+  async placeOrder(@Req() req: any, @Body() body: PlaceOrderDto) {
+    const response = await this.redemptionsService.placeOrder(req.user.id, body);
 
     return DataSanitizer.sanitizeData(response);
   }
 
-  @Post('otp/send')
-  @ResponseMessage('Redemption OTP sent successfully')
-  async sendRedemptionOtp(@Req() req: any, @Body() dto: SendRedemptionOtpDto) {
-    const response = await this.redemptionsService.sendRedemptionOtp(req.user.id, dto);
+  @NoCache()
+  @UseInterceptors(IdempotencyInterceptor)
+  @Post('verify-order')
+  @ResponseMessage('Redemption OTP verified and order placed successfully')
+  async verifyOrder(@Req() req: any, @Body() dto: VerifyOrderDto) {
+    const response = await this.redemptionsService.verifyOrder(req.user.id, dto);
     return DataSanitizer.sanitizeData(response);
   }
 
-  @Post('otp/verify')
-  @ResponseMessage('Redemption OTP verified successfully')
-  async confirmOrder(@Req() req: any, @Body() dto: ConfirmOrderDto) {
-    const response = await this.redemptionsService.confirmOrder(req.user.id, dto);
+  @NoCache()
+  @Get('orders')
+  @ResponseMessage('Orders fetched successfully')
+  async getOrders(@Req() req: any, @Query() query: GetOrdersQueryDto) {
+    const response = await this.redemptionsService.getOrders(req.user.id, query);
+    return DataSanitizer.sanitizeData(response);
+  }
+
+  @NoCache()
+  @Post('resend-otp')
+  @ResponseMessage('OTP resent successfully')
+  async resendOtp(@Req() req: any, @Body() dto: ResendOtpDto) {
+    const response = await this.redemptionsService.resendOtp(req.user.id, dto);
     return DataSanitizer.sanitizeData(response);
   }
 }

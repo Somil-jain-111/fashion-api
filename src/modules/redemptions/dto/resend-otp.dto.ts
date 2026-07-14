@@ -1,6 +1,6 @@
 import { IsNotEmpty, IsString } from 'class-validator';
 
-export class SendRedemptionOtpDto {
+export class ResendOtpDto {
   @IsNotEmpty()
   @IsString()
   orderId: string;

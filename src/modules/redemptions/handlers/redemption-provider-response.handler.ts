@@ -7,9 +7,10 @@ import { TransactionService } from 'src/default/databases/transaction';
 import { OrderStatus, ShippingStatus } from '../enum/order-status.enum';
 import {
   OrderRepository,
-  ShippingDetailRepository,
   VoucherRepository,
+  ShippingDetailRepository,
 } from 'src/modules/redemptions/repository';
+import { QueryRunner } from 'typeorm';
 
 type HandleProviderResponseParams = {
   user: any;
@@ -27,12 +28,12 @@ export class RedemptionProviderResponseHandler {
     private readonly voucherRepository: VoucherRepository
   ) {}
 
-  async handle(params: HandleProviderResponseParams) {
+  async handle(params: HandleProviderResponseParams, queryRunner?: QueryRunner) {
     const { user, order, shippingDetail, providerResponse } = params;
 
     let couponResponse: any = null;
 
-    await this.transactionUtils.execute(async () => {
+    const callback = async (queryRunner: QueryRunner) => {
       /**
        * Duplicate transaction
        */
@@ -52,7 +53,8 @@ export class RedemptionProviderResponseHandler {
               providerResponse?.message ||
               providerResponse?.data?.message ||
               'Provider order failed',
-          }
+          },
+          queryRunner
         );
 
         return;
@@ -71,14 +73,16 @@ export class RedemptionProviderResponseHandler {
           {
             order_number: providerResponse.data?.order_number || '',
             status: OrderStatus.PLACED,
-          }
+          },
+          queryRunner
         );
 
         await this.shippingDetailRepository.update(
           { id: shippingDetail.id },
           {
             delivery_status: ShippingStatus.PLACED,
-          }
+          },
+          queryRunner
         );
 
         return;
@@ -93,27 +97,24 @@ export class RedemptionProviderResponseHandler {
           {
             order_number: providerResponse.data?.order_number || '',
             status: OrderStatus.PLACED,
-          }
-        );
-
-        await this.shippingDetailRepository.update(
-          { id: shippingDetail.id },
-          {
-            delivery_status: ShippingStatus.DELIVERED,
-          }
+          },
+          queryRunner
         );
 
         const coupon = providerResponse.data?.coupon_Codes?.[0];
 
         if (coupon) {
-          const voucherObj = this.voucherRepository.create({
-            coupon_code: coupon.coupon_code,
-            v_pin: coupon.v_pin,
-            expiry_date: coupon.expiry_date,
-            order: { id: order.id } as any,
-          });
+          const voucherObj = this.voucherRepository.create(
+            {
+              coupon_code: coupon.coupon_code,
+              v_pin: coupon.v_pin,
+              expiry_date: coupon.expiry_date,
+              order: { id: order.id } as any,
+            },
+            queryRunner
+          );
 
-          const savedVoucher = await this.voucherRepository.save(voucherObj);
+          const savedVoucher = await this.voucherRepository.save(voucherObj, queryRunner);
 
           couponResponse = {
             coupon_code: savedVoucher.coupon_code,
@@ -122,7 +123,14 @@ export class RedemptionProviderResponseHandler {
           };
         }
       }
-    });
+    };
+
+    if (queryRunner) {
+      await callback(queryRunner);
+      return couponResponse;
+    }
+
+    await this.transactionUtils.runInTransaction(callback);
 
     return couponResponse;
   }

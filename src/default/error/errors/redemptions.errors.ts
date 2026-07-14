@@ -4,4 +4,10 @@ export const REDEMPTIONS_ERRORS = {
     message: 'Rewards products catalogue id not found',
     statusCode: 404,
   },
+
+  REDEMPTION_ERROR: {
+    code: 'RE_002',
+    message: 'Redemption failed, please try again later.',
+    statusCode: 500,
+  },
 } as const;

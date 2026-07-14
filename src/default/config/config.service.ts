@@ -19,6 +19,10 @@ export class AppConfigService {
     return this.getNodeEnv() === 'production';
   }
 
+  isQa(): boolean {
+    return this.getNodeEnv() === 'qa';
+  }
+
   isDevelopment(): boolean {
     return this.getNodeEnv() === 'development';
   }
@@ -45,6 +49,10 @@ export class AppConfigService {
 
   getNonProdOtp(): number {
     return Number(this.configService.get<number>('DEV_OTP', 8899));
+  }
+
+  getNonProdRewardsOtp(): number {
+    return Number(this.configService.get<number>('DEV_REWARDS_OTP', 222222));
   }
 
   get<T = any>(key: string, defaultValue?: T): T {
