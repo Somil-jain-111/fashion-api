@@ -28,6 +28,19 @@ export class GstProvider {
     private readonly apiResponseRepository: ApiResponseRepository
   ) {}
 
+  maskGstNumber(gstNumber: string) {
+    const cleanedGst = gstNumber.replace(/\s+/g, '').toUpperCase();
+
+    if (cleanedGst.length !== 15) {
+      throw new Error('Invalid GSTIN number length. Must be exactly 15 characters.');
+    }
+
+    const stateCode = cleanedGst.slice(0, 2); // First 2 digits (State)
+    const lastThree = cleanedGst.slice(12); // Last 3 digits (Entity & Check sum)
+
+    return `${stateCode}XXXXXXXXXX${lastThree}`;
+  }
+
   async verifyGst(data: GstVerifyInput): Promise<GstVerifyResult> {
     const gst = data.gstNumber.toUpperCase();
 

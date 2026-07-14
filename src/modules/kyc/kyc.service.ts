@@ -569,8 +569,6 @@ export class KycService {
       failureReason: gstProviderResult.success ? null : gstProviderResult.message,
     });
 
-    console.log(gstProviderResult)
-
     if (!gstProviderResult.success) {
       const message = gstProviderResult.message || 'GST verification failed';
       throw new BusinessException(ERROR_CODES.KYC.GST_VERIFICATION_FAILED, {
@@ -590,6 +588,7 @@ export class KycService {
       type: KycType.GST,
       referenceId: transactionId,
       documentNumber: encryptedGst,
+      maskedDocumentNumber: this.gstProvider.maskGstNumber(gst),
       verifiedName: this.encryptKycData(
         gstApiData.trade_name || gstApiData.legal_name || user.username
       ),
