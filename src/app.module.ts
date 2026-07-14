@@ -41,6 +41,7 @@ import { PaymentVerificationModule } from './modules/payment-verification/paymen
 import { PayoutModule } from './modules/payout/payout.module';
 import { OnboardingModule } from './modules/onboarding/onboarding.module';
 import { S3Module } from './default/common/services/s3/s3.module';
+import { DynamicConfigModule } from './modules/dynamic-config/dynamic-config.module';
 
 @Module({
   imports: [
@@ -83,6 +84,7 @@ import { S3Module } from './default/common/services/s3/s3.module';
     PayoutModule,
     OnboardingModule,
     S3Module,
+    DynamicConfigModule,
   ],
   providers: [
     {

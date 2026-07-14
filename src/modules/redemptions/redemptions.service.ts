@@ -5,9 +5,9 @@ import { KycVerificationRepository } from 'src/modules/kyc/repository';
 import {
   OrderRepository,
   PointHistoryRepository,
-  RedemptionConfigRepository,
   ShippingDetailRepository,
 } from 'src/modules/redemptions/repository';
+import { DynamicConfigRepository } from 'src/modules/dynamic-config/repository';
 import { CommonUtils } from 'src/default/common/utils/common.utils';
 import { BusinessException } from 'src/default/error/business.exception';
 import { ERROR_CODES } from 'src/default/error/error.code';
@@ -32,7 +32,7 @@ import { DataSource } from 'typeorm';
 @Injectable()
 export class RedemptionsService {
   constructor(
-    private redemptionConfigRepository: RedemptionConfigRepository,
+    private dynamicConfigRepository: DynamicConfigRepository,
     private kycVerificationRepository: KycVerificationRepository,
     private pointHistoryRepository: PointHistoryRepository,
     private addressesService: AddressesService,
@@ -69,11 +69,9 @@ export class RedemptionsService {
       /**
        * 2. Validate redemption config
        */
-      const config = await this.redemptionConfigRepository.findOne({
-        user_role: userRole,
-      });
+      const config = await this.dynamicConfigRepository.getUserConfigByUserRole(userRole);
 
-      if (!config || !config.redemption_enabled) {
+      if (!config || !config.redemptionEnabled) {
         throw new BusinessException(ERROR_CODES.REWARDS.REDEMPTION_DISABLED);
       }
 
@@ -126,11 +124,11 @@ export class RedemptionsService {
       /**
        * 5. Validate redemption type config
        */
-      if (isPhysical && !config.physical_redemption_enabled) {
+      if (isPhysical && !config.physicalRedemptionEnabled) {
         throw new BusinessException(ERROR_CODES.REWARDS.PHYSICAL_REDEMPTION_DISABLED);
       }
 
-      if (isDigital && !config.digital_redemption_enabled) {
+      if (isDigital && !config.digitalRedemptionEnabled) {
         throw new BusinessException(ERROR_CODES.REWARDS.DIGITAL_REDEMPTION_DISABLED);
       }
 
