@@ -46,7 +46,27 @@ export class AppConfigService {
   getNonProdOtp(): number {
     return Number(this.configService.get<number>('DEV_OTP', 8899));
   }
+
   get<T = any>(key: string, defaultValue?: T): T {
     return this.configService.get<T>(key, defaultValue);
+  }
+
+  /**
+   *
+   * @returns Rewards Configurations
+   */
+
+  getRewardsUrl() {
+    return this.get(this.isProduction() ? 'Rewards_API_Base_Url_Live' : 'Rewards_API_Base_Url_Dev');
+  }
+
+  getRewardsPermanentToken() {
+    return this.get(
+      this.isProduction() ? 'Rewards_API_Permanent_Token_Live' : 'Rewards_API_Permanent_Token_Dev'
+    );
+  }
+
+  getRewardsProductsCatalogueId() {
+    return this.get(this.isProduction() ? 'Rewards_Catalogue_id_Live' : 'Rewards_Catalogue_id_Dev');
   }
 }

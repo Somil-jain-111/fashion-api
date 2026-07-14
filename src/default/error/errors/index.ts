@@ -22,3 +22,4 @@ export * from './address.errors';
 export * from './otp.errors';
 export * from './approval.errors';
 export * from './onboarding.error';
+export * from './redemptions.errors';

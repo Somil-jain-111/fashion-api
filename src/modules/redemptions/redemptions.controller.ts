@@ -41,6 +41,7 @@ export class RedemptionsController {
 
     return DataSanitizer.sanitizeData(response);
   }
+
   @Post('otp/send')
   @ResponseMessage('Redemption OTP sent successfully')
   async sendRedemptionOtp(@Req() req: any, @Body() dto: SendRedemptionOtpDto) {
