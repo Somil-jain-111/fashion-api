@@ -132,6 +132,9 @@ export class DynamicConfigService {
     const configData: Partial<UserRoleConfig> = {
       userRole: dto.userRole,
       redemptionEnabled: isRedemptionEnabled,
+      physicalRedemptionEnabled: dto.redemptionOptions?.physical ?? false,
+      digitalRedemptionEnabled: dto.redemptionOptions?.digital ?? false,
+      dbtEnabled: dto.redemptionOptions?.dbt ?? false,
       redemptionOptions: dto.redemptionOptions
         ? {
             physical: dto.redemptionOptions.physical ?? false,
@@ -223,6 +226,16 @@ export class DynamicConfigService {
         ...(existing.redemptionOptions || {}),
         ...dto.redemptionOptions,
       };
+
+      if (dto.redemptionOptions.physical !== undefined) {
+        existing.physicalRedemptionEnabled = dto.redemptionOptions.physical;
+      }
+      if (dto.redemptionOptions.digital !== undefined) {
+        existing.digitalRedemptionEnabled = dto.redemptionOptions.digital;
+      }
+      if (dto.redemptionOptions.dbt !== undefined) {
+        existing.dbtEnabled = dto.redemptionOptions.dbt;
+      }
     }
 
     if (dto.redemptionLimits !== undefined) {

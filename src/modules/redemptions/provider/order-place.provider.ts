@@ -7,6 +7,7 @@ import { QueryRunner } from 'typeorm';
 import { AppConfigService } from 'src/default/config/config.service';
 import { CommonUtils } from 'src/default/common/utils/common.utils';
 import { ConsoleLogger } from 'src/default/logger/console/console.service';
+import { ApiResponseRepository } from 'src/modules/kyc/repository';
 
 export type OrderPlaceProviderInput = {
   userId: bigint | number | string;
@@ -25,25 +26,16 @@ export type OrderPlaceProviderResult = {
 
 @Injectable()
 export class OrderPlaceProvider {
-  constructor(private readonly configService: AppConfigService) {}
+  constructor(private readonly appConfigService: AppConfigService) {}
 
   async placeOrder(data: OrderPlaceProviderInput): Promise<OrderPlaceProviderResult> {
     const tag = 'OrderPlaceProvider.placeOrder';
 
     const endpoint = 'orders/orderPlaced';
-    const type = 'orders/orderPlaced';
 
-    const isLive =
-      this.configService.get('NODE_ENV') === 'production' ||
-      this.configService.get('NODE_ENV') === 'qa';
+    const baseUrl = this.appConfigService.getRewardsUrl();
 
-    const baseUrl = isLive
-      ? this.configService.get('Rewards_API_Base_Url_Live')
-      : this.configService.get('Rewards_API_Base_Url_Dev');
-
-    const permanentToken = isLive
-      ? this.configService.get('Rewards_API_Permanent_Token_Live')
-      : this.configService.get('Rewards_API_Permanent_Token_Dev');
+    const permanentToken = this.appConfigService.getRewardsPermanentToken();
 
     const requestConfig: AxiosRequestConfig = {
       method: 'post',
@@ -92,6 +84,7 @@ export class OrderPlaceProvider {
           errorData,
         },
       });
+
       return {
         success: false,
         requestConfig,

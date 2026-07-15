@@ -23,6 +23,7 @@ import {
   OTP_ERRORS,
   APPROVAL_ERRORS,
   ONBOARD_ERRORS,
+  REDEMPTIONS_ERRORS,
 } from './errors';
 
 export type ErrorCodeValue = {
@@ -56,6 +57,7 @@ export const ERROR_CODES = {
   OTP: OTP_ERRORS,
   APPROVAL: APPROVAL_ERRORS,
   ONBOARD: ONBOARD_ERRORS,
+  REDEMPTIONS: REDEMPTIONS_ERRORS,
 } as const;
 
 export type ErrorCodeGroups = typeof ERROR_CODES;

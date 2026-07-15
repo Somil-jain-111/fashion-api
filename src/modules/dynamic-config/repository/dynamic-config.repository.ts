@@ -1,28 +1,28 @@
-import { DataSource, Repository } from 'typeorm';
+import { Repository } from 'typeorm';
 import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
 //
 import { UserRole } from 'src/default/common/enums/user-type.enum';
-import { ConfigLog } from 'src/modules/dynamic-config/entities/config-logs.entity';
-import { ApplicationConfig, UserRoleConfig } from '../../../modules/dynamic-config/entities';
+import { ApplicationConfig, UserRoleConfig, ConfigLog } from '../entities';
 
 @Injectable()
 export class DynamicConfigRepository {
-  protected userRoleConfigRepo: Repository<UserRoleConfig>;
-  protected applicationConfigRepo: Repository<ApplicationConfig>;
-  protected configLogsRepo: Repository<ConfigLog>;
+  constructor(
+    @InjectRepository(UserRoleConfig)
+    private readonly userRoleConfigRepo: Repository<UserRoleConfig>,
 
-  constructor(private readonly dataSource: DataSource) {
-    this.userRoleConfigRepo = this.dataSource.getRepository(UserRoleConfig);
-    this.applicationConfigRepo = this.dataSource.getRepository(ApplicationConfig);
-    this.configLogsRepo = this.dataSource.getRepository(ConfigLog);
-  }
+    @InjectRepository(ApplicationConfig)
+    private readonly applicationConfigRepo: Repository<ApplicationConfig>,
+
+    @InjectRepository(ConfigLog)
+    private readonly configLogsRepo: Repository<ConfigLog>
+  ) {}
 
   /**
    *
    * @UserRoleConfig methods
    *
    */
-
   async createUserRoleConfig(config: UserRoleConfig) {
     const createdConfig = this.userRoleConfigRepo.create(config);
 

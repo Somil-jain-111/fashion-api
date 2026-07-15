@@ -1,5 +1,4 @@
 import { Injectable } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import axios, { AxiosRequestConfig } from 'axios';
 
 import { ConsoleLogger } from 'src/default/logger/console/console.service';
@@ -8,27 +7,20 @@ import { ERROR_CODES } from 'src/default/error/error.code';
 
 import { GetProductQueryDTO } from '../interfaces/fetch-catalogue-products.input';
 import { ProductProviderResult } from '../interfaces/product-provider-result.interface';
+import { AppConfigService } from 'src/default/config/config.service';
+import { ApiResponseRepository } from 'src/modules/kyc/repository';
 
 @Injectable()
 export class ProductProvider {
-  constructor(private readonly configService: ConfigService) {}
+  constructor(
+    private readonly appConfigService: AppConfigService,
+    private readonly apiResponseRepository: ApiResponseRepository
+  ) {}
 
   private getRewardsApiConfig() {
-    const isLive =
-      this.configService.get('NODE_ENV') === 'production' ||
-      this.configService.get('NODE_ENV') === 'qa';
-
-    const baseUrl = isLive
-      ? this.configService.get('Rewards_API_Base_Url_Live')
-      : this.configService.get('Rewards_API_Base_Url_Dev');
-
-    const catalogueId = isLive
-      ? this.configService.get('Rewards_API_Catalogue_Id_Live')
-      : this.configService.get('Rewards_API_Catalogue_Id_Dev');
-
-    const permanentToken = isLive
-      ? this.configService.get('Rewards_API_Permanent_Token_Live')
-      : this.configService.get('Rewards_API_Permanent_Token_Dev');
+    const baseUrl = this.appConfigService.getRewardsUrl();
+    const catalogueId = this.appConfigService.getRewardsProductsCatalogueId();
+    const permanentToken = this.appConfigService.getRewardsPermanentToken();
 
     if (!baseUrl) {
       throw new BusinessException(ERROR_CODES.REWARDS.REWARDS_BASE_URL_MISSING);
@@ -113,6 +105,13 @@ export class ProductProvider {
         },
       });
 
+      await this.apiResponseRepository.saveResponse({
+        type: 'rewards_products',
+        requestUrl: requestConfig.url,
+        requestPayload: requestConfig,
+        responsePayload: { ...errorData, responseMessage: error?.message },
+      });
+
       return {
         success: false,
         requestConfig,
@@ -123,6 +122,7 @@ export class ProductProvider {
       };
     }
   }
+
   async fetchCatalogueCategories(): Promise<ProductProviderResult> {
     const tag = 'ProductProvider.fetchCatalogueCategories';
 

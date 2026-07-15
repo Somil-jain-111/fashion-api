@@ -1,19 +1,16 @@
 // src/modules/redemptions/builders/redemption-provider-payload.builder.ts
 
 import { Injectable } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
+import { AppConfigService } from 'src/default/config/config.service';
 import { BusinessException } from 'src/default/error/business.exception';
 import { ERROR_CODES } from 'src/default/error/error.code';
 
 @Injectable()
 export class RedemptionProviderPayloadBuilder {
-  constructor(private readonly configService: ConfigService) {}
+  constructor(private readonly appConfigService: AppConfigService) {}
 
   build(user: any, order: any, shippingDetail?: any) {
-    const catalogueId =
-      this.configService.get('NODE_ENV') === 'production'
-        ? this.configService.get('REWARDS_CATALOGUE_ID_LIVE')
-        : this.configService.get('REWARDS_CATALOGUE_ID_DEV');
+    const catalogueId = this.appConfigService.getRewardsProductsCatalogueId();
 
     if (!catalogueId) {
       throw new BusinessException(ERROR_CODES.REWARDS.CATALOGUE_ID_NOT_FOUND);

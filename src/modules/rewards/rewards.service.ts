@@ -14,7 +14,10 @@ export class RewardsService {
     private userAuthValidator: UserAuthValidator
   ) {}
 
-  async getAllProducts(userId: number, filters: GetProductQueryDTO) {
+  async getAllProducts(
+    userId: number,
+    filters: GetProductQueryDTO
+  ): Promise<{ product: GetProductResponseDTO[]; pagination: Record<string, any> }> {
     const tag = 'RedemptionService.getAllProducts';
 
     const page = filters.page || 1;

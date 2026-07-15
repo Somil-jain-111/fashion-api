@@ -14,7 +14,6 @@ export * from '../../redemptions/entities/order-status-history.entity';
 export * from '../../redemptions/entities/order.entity';
 export * from '../../redemptions/entities/shipping-details.entity';
 export * from '../../redemptions/entities/voucher.entity';
-export * from '../../redemptions/entities/redemption-config.entity';
 export * from '../../invoices/entities/invoice-assortment.entity';
 export * from '../../invoices/entities/invoice-item.entity';
 export * from '../../invoices/entities/invoice-pair-detail.entity';

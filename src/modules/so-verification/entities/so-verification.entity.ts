@@ -1,7 +1,6 @@
-import { BaseEntity } from 'src/default/common/entities';
-import { Approval, User } from 'src/modules/auth/entities';
+import { BaseEntity } from '../../../default/common/entities';
+import { Approval, User } from '../../auth/entities';
 import { Column, Entity, ManyToOne, JoinColumn } from 'typeorm';
-
 
 export enum SoRejectionReason {
   OUTLET_PERMANENTLY_CLOSED = 'outlet_permanently_closed',
@@ -60,7 +59,13 @@ export class SoVerificationEvidence extends BaseEntity {
   geoCapturedAt?: Date;
 
   // Stored for audit — how far the SO was from the store when they submitted
-  @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true, name: 'distance_from_store_meters' })
+  @Column({
+    type: 'decimal',
+    precision: 10,
+    scale: 2,
+    nullable: true,
+    name: 'distance_from_store_meters',
+  })
   distanceFromStoreMeters?: number;
 
   // ---- Rejection fields ----

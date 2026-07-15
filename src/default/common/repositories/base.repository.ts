@@ -3,6 +3,7 @@ import {
   FindManyOptions,
   FindOneOptions,
   FindOptionsWhere,
+  QueryRunner,
   Repository,
   SelectQueryBuilder,
 } from 'typeorm';
@@ -14,12 +15,20 @@ export class BaseRepository<T extends object> {
     return this.repository;
   }
 
-  create(data: DeepPartial<T>): T {
+  create(data: DeepPartial<T>, queryRunner?: QueryRunner): T {
+    if (queryRunner) {
+      return queryRunner.manager.create(this.repository.target, data);
+    }
     return this.repository.create(data);
   }
 
-  async save(data: DeepPartial<T>): Promise<T> {
-    const entity = this.repository.create(data);
+  async save(data: DeepPartial<T>, queryRunner?: QueryRunner): Promise<T> {
+    const entity = this.create(data, queryRunner);
+
+    if (queryRunner) {
+      return await queryRunner.manager.save(this.repository.target, entity);
+    }
+
     return await this.repository.save(entity);
   }
 
@@ -43,11 +52,12 @@ export class BaseRepository<T extends object> {
     return await this.repository.find(options);
   }
 
-  async findById(id: string | number | bigint): Promise<T | null> {
+  async findById(id: string | number | bigint, relations?: string[]): Promise<T | null> {
     return await this.repository.findOne({
       where: {
         id,
       } as unknown as FindOptionsWhere<T>,
+      relations,
     });
   }
   async findByIdWithRole(id: string | number | bigint): Promise<T | null> {
@@ -87,7 +97,11 @@ export class BaseRepository<T extends object> {
     return this.repository.createQueryBuilder(alias);
   }
 
-  async update(where: any, data: any) {
+  async update(where: any, data: any, queryRunner?: QueryRunner) {
+    if (queryRunner) {
+      return queryRunner.manager.update(this.repository.target, where, data);
+    }
+
     return this.repository.update(where, data);
   }
 }

@@ -26,7 +26,6 @@ import { AuditModule } from './modules/audit/audit.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { KycModule } from './modules/kyc/kyc.module';
 import { JourneyIdMiddleware } from './default/common/middleware/journey-id.middleware';
-import { OrdersModule } from './modules/orders/orders.module';
 import { InvoicesModule } from './modules/invoices/invoices.module';
 import { RewardsModule } from './modules/rewards/rewards.module';
 import { RedemptionsModule } from './modules/redemptions/redemptions.module';
@@ -43,6 +42,7 @@ import { PayoutModule } from './modules/payout/payout.module';
 import { OnboardingModule } from './modules/onboarding/onboarding.module';
 import { SoVerificationModule } from './modules/so-verification/so-verification.module';
 import { S3Module } from './default/common/services/s3/s3.module';
+import { DynamicConfigModule } from './modules/dynamic-config/dynamic-config.module';
 
 @Module({
   imports: [
@@ -70,7 +70,6 @@ import { S3Module } from './default/common/services/s3/s3.module';
     AuditModule,
     AuthModule,
     KycModule,
-    OrdersModule,
     InvoicesModule,
     RewardsModule,
     RedemptionsModule,
@@ -87,6 +86,7 @@ import { S3Module } from './default/common/services/s3/s3.module';
     OnboardingModule,
     SoVerificationModule,
     S3Module,
+    DynamicConfigModule,
   ],
   providers: [
     {
