@@ -11,7 +11,7 @@ import {
 
 import { Order } from '../../auth/entities';
 import { ShippingStatus } from '../enum/order-status.enum';
-import { BaseEntity } from 'src/default/common/entities';
+import { BaseEntity } from '../../../default/common/entities';
 
 @Entity({ name: 'shipping_details' })
 @Index('idx_shipping_order', ['order'])

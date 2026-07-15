@@ -38,7 +38,9 @@ import { AddressesModule } from './modules/addresses/addresses.module';
 import { PublicModule } from './modules/public/public.module';
 import { PaymentVerificationModule } from './modules/payment-verification/payment-verification.module';
 import { PayoutModule } from './modules/payout/payout.module';
+// import { OnboardingApprovalModule } from './modules/onboarding-approval/onboarding-approval.module';
 import { OnboardingModule } from './modules/onboarding/onboarding.module';
+import { SoVerificationModule } from './modules/so-verification/so-verification.module';
 import { S3Module } from './default/common/services/s3/s3.module';
 import { DynamicConfigModule } from './modules/dynamic-config/dynamic-config.module';
 
@@ -80,7 +82,9 @@ import { DynamicConfigModule } from './modules/dynamic-config/dynamic-config.mod
     PublicModule,
     PaymentVerificationModule,
     PayoutModule,
+    // OnboardingApprovalModule,
     OnboardingModule,
+    SoVerificationModule,
     S3Module,
     DynamicConfigModule,
   ],

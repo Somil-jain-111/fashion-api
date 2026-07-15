@@ -25,7 +25,7 @@ export class InvoiceEntity extends BaseEntity {
   @PrimaryGeneratedColumn({ type: 'bigint', unsigned: true })
   id: string;
 
-  @ManyToOne(() => User, (user) => user.invoice, {
+  @ManyToOne(() => User, (user) => user.invoices, {
     nullable: false,
     onDelete: 'CASCADE',
   })
