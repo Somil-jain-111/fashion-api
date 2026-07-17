@@ -1,0 +1,345 @@
+[
+  {
+    "id": 1,
+    "categoryId": 1,
+    "subCategoryId": 102,
+    "name": "DRIPP Off White Men's Sneakers",
+    "thumbnail": "/images/products/1/thumb.jpg",
+    "images": [
+      "/images/products/1/1.jpg",
+      "/images/products/1/2.jpg",
+      "/images/products/1/3.jpg",
+      "/images/products/1/4.jpg"
+    ],
+    "description": "Premium casual sneakers with lightweight sole.",
+    "price": 1659,
+    "mrp": 3499,
+    "discount": 53,
+    "badge": "53% OFF",
+    "isWishlist": false,
+    "rating": 4.6,
+    "colors": [
+      { "name": "Off White", "code": "#F5E8D0" },
+      { "name": "Black", "code": "#000000" },
+      { "name": "Grey", "code": "#BDBDBD" }
+    ],
+    "sizes": [6, 7, 8, 9, 10, 11],
+    "cartons": [
+      { "articles": 6, "sizes": [6, 7, 8, 9, 10, 11] },
+      { "articles": 12, "sizes": [6, 7, 8, 9, 10, 11] },
+      { "articles": 24, "sizes": [6, 7, 8, 9, 10, 11] }
+    ]
+  },
+  {
+    "id": 2,
+    "categoryId": 1,
+    "subCategoryId": 101,
+    "name": "CAMP KARL Blue Running Shoes",
+    "thumbnail": "/images/products/2/thumb.jpg",
+    "images": [
+      "/images/products/2/1.jpg",
+      "/images/products/2/2.jpg"
+    ],
+    "description": "Comfortable running shoes.",
+    "price": 999,
+    "mrp": 1599,
+    "discount": 38,
+    "badge": "38% OFF",
+    "isWishlist": true,
+    "rating": 4.3,
+    "colors": [
+      { "name": "Blue", "code": "#1565C0" },
+      { "name": "Navy", "code": "#0D47A1" }
+    ],
+    "sizes": [6, 7, 8, 9, 10],
+    "cartons": [
+      { "articles": 6, "sizes": [6, 7, 8, 9, 10] }
+    ]
+  },
+  {
+    "id": 3,
+    "categoryId": 1,
+    "subCategoryId": 101,
+    "name": "AIR MAX Running Shoes",
+    "thumbnail": "/images/products/3/thumb.jpg",
+    "images": [
+      "/images/products/3/1.jpg"
+    ],
+    "description": "Breathable mesh running shoes.",
+    "price": 1499,
+    "mrp": 2499,
+    "discount": 40,
+    "badge": "40% OFF",
+    "isWishlist": false,
+    "rating": 4.7,
+    "colors": [
+      { "name": "Black", "code": "#000000" }
+    ],
+    "sizes": [7, 8, 9, 10],
+    "cartons": [
+      { "articles": 12, "sizes": [7, 8, 9, 10] }
+    ]
+  },
+  {
+    "id": 4,
+    "categoryId": 1,
+    "subCategoryId": 103,
+    "name": "Premium Leather Loafers",
+    "thumbnail": "/images/products/4/thumb.jpg",
+    "images": [
+      "/images/products/4/1.jpg"
+    ],
+    "description": "Office wear loafers.",
+    "price": 1899,
+    "mrp": 2999,
+    "discount": 37,
+    "badge": "37% OFF",
+    "isWishlist": false,
+    "rating": 4.4,
+    "colors": [
+      { "name": "Brown", "code": "#8D6E63" }
+    ],
+    "sizes": [7, 8, 9, 10, 11],
+    "cartons": [
+      { "articles": 6, "sizes": [7, 8, 9, 10, 11] }
+    ]
+  },
+  {
+    "id": 5,
+    "categoryId": 1,
+    "subCategoryId": 104,
+    "name": "Adventure Boots",
+    "thumbnail": "/images/products/5/thumb.jpg",
+    "images": [
+      "/images/products/5/1.jpg"
+    ],
+    "description": "Outdoor trekking boots.",
+    "price": 2499,
+    "mrp": 3999,
+    "discount": 38,
+    "badge": "38% OFF",
+    "isWishlist": false,
+    "rating": 4.5,
+    "colors": [
+      { "name": "Tan", "code": "#C19A6B" }
+    ],
+    "sizes": [8, 9, 10, 11],
+    "cartons": [
+      { "articles": 12, "sizes": [8, 9, 10, 11] }
+    ]
+  },
+  {
+    "id": 6,
+    "categoryId": 2,
+    "subCategoryId": 106,
+    "name": "Women's Pencil Heels",
+    "thumbnail": "/images/products/6/thumb.jpg",
+    "images": [
+      "/images/products/6/1.jpg"
+    ],
+    "description": "Elegant party heels.",
+    "price": 1399,
+    "mrp": 2199,
+    "discount": 36,
+    "badge": "36% OFF",
+    "isWishlist": false,
+    "rating": 4.2,
+    "colors": [
+      { "name": "Red", "code": "#D32F2F" }
+    ],
+    "sizes": [4, 5, 6, 7, 8],
+    "cartons": [
+      { "articles": 6, "sizes": [4, 5, 6, 7, 8] }
+    ]
+  },
+  {
+    "id": 7,
+    "categoryId": 2,
+    "subCategoryId": 107,
+    "name": "Women's Ballet Flats",
+    "thumbnail": "/images/products/7/thumb.jpg",
+    "images": [
+      "/images/products/7/1.jpg"
+    ],
+    "description": "Daily wear flats.",
+    "price": 899,
+    "mrp": 1499,
+    "discount": 40,
+    "badge": "40% OFF",
+    "isWishlist": false,
+    "rating": 4.3,
+    "colors": [
+      { "name": "Pink", "code": "#F48FB1" }
+    ],
+    "sizes": [4, 5, 6, 7]
+  },
+  {
+    "id": 8,
+    "categoryId": 2,
+    "subCategoryId": 108,
+    "name": "Women's Sneakers",
+    "thumbnail": "/images/products/8/thumb.jpg",
+    "images": [
+      "/images/products/8/1.jpg"
+    ],
+    "description": "Lightweight sneakers.",
+    "price": 1499,
+    "mrp": 2499,
+    "discount": 40,
+    "badge": "40% OFF",
+    "isWishlist": true,
+    "rating": 4.5,
+    "colors": [
+      { "name": "White", "code": "#FFFFFF" }
+    ],
+    "sizes": [5, 6, 7, 8]
+  },
+  {
+    "id": 9,
+    "categoryId": 3,
+    "subCategoryId": 109,
+    "name": "Kids School Shoes",
+    "thumbnail": "/images/products/9/thumb.jpg",
+    "images": [
+      "/images/products/9/1.jpg"
+    ],
+    "description": "Comfortable school shoes.",
+    "price": 799,
+    "mrp": 1299,
+    "discount": 38,
+    "badge": "38% OFF",
+    "isWishlist": false,
+    "rating": 4.1,
+    "colors": [
+      { "name": "Black", "code": "#000000" }
+    ],
+    "sizes": [1, 2, 3, 4, 5]
+  },
+  {
+    "id": 10,
+    "categoryId": 3,
+    "subCategoryId": 110,
+    "name": "Kids Sports Shoes",
+    "thumbnail": "/images/products/10/thumb.jpg",
+    "images": [
+      "/images/products/10/1.jpg"
+    ],
+    "description": "Sports shoes for kids.",
+    "price": 999,
+    "mrp": 1599,
+    "discount": 38,
+    "badge": "38% OFF",
+    "isWishlist": false,
+    "rating": 4.5,
+    "colors": [
+      { "name": "Blue", "code": "#1976D2" }
+    ],
+    "sizes": [1, 2, 3, 4, 5]
+  },
+  {
+    "id": 11,
+    "categoryId": 4,
+    "subCategoryId": 111,
+    "name": "Baby Soft Shoes",
+    "thumbnail": "/images/products/11/thumb.jpg",
+    "images": [
+      "/images/products/11/1.jpg"
+    ],
+    "description": "Soft sole baby shoes.",
+    "price": 499,
+    "mrp": 799,
+    "discount": 38,
+    "badge": "38% OFF",
+    "isWishlist": false,
+    "rating": 4.6,
+    "colors": [
+      { "name": "Yellow", "code": "#FDD835" }
+    ],
+    "sizes": [0, 1, 2]
+  },
+  {
+    "id": 12,
+    "categoryId": 5,
+    "subCategoryId": 112,
+    "name": "Cricket Spikes",
+    "thumbnail": "/images/products/12/thumb.jpg",
+    "images": [
+      "/images/products/12/1.jpg"
+    ],
+    "description": "Professional cricket shoes.",
+    "price": 2599,
+    "mrp": 3999,
+    "discount": 35,
+    "badge": "35% OFF",
+    "isWishlist": false,
+    "rating": 4.8,
+    "colors": [
+      { "name": "White", "code": "#FFFFFF" }
+    ],
+    "sizes": [7, 8, 9, 10]
+  },
+  {
+    "id": 13,
+    "categoryId": 6,
+    "subCategoryId": 114,
+    "name": "Canvas Casual Shoes",
+    "thumbnail": "/images/products/13/thumb.jpg",
+    "images": [
+      "/images/products/13/1.jpg"
+    ],
+    "description": "Classic canvas shoes.",
+    "price": 899,
+    "mrp": 1499,
+    "discount": 40,
+    "badge": "40% OFF",
+    "isWishlist": false,
+    "rating": 4.4,
+    "colors": [
+      { "name": "Grey", "code": "#9E9E9E" }
+    ],
+    "sizes": [6, 7, 8, 9]
+  },
+  {
+    "id": 14,
+    "categoryId": 7,
+    "subCategoryId": 115,
+    "name": "Formal Leather Shoes",
+    "thumbnail": "/images/products/14/thumb.jpg",
+    "images": [
+      "/images/products/14/1.jpg"
+    ],
+    "description": "Office formal shoes.",
+    "price": 2299,
+    "mrp": 3499,
+    "discount": 34,
+    "badge": "34% OFF",
+    "isWishlist": false,
+    "rating": 4.6,
+    "colors": [
+      { "name": "Black", "code": "#000000" }
+    ],
+    "sizes": [7, 8, 9, 10, 11]
+  },
+  {
+    "id": 15,
+    "categoryId": 10,
+    "subCategoryId": 118,
+    "name": "Premium Cotton Socks",
+    "thumbnail": "/images/products/15/thumb.jpg",
+    "images": [
+      "/images/products/15/1.jpg"
+    ],
+    "description": "Soft cotton ankle socks.",
+    "price": 299,
+    "mrp": 499,
+    "discount": 40,
+    "badge": "40% OFF",
+    "isWishlist": false,
+    "rating": 4.5,
+    "colors": [
+      { "name": "White", "code": "#FFFFFF" },
+      { "name": "Black", "code": "#000000" }
+    ],
+    "sizes": ["Free Size"]
+  }
+]
