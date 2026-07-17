@@ -1,2 +1,14 @@
 export * from './login-histories.repository';
 export * from './revoked_token.repository';
+export * from './base.repository';
+export * from './users.repository';
+export * from './roles.repository';
+export * from './revoked_token.repository';
+export * from '../../kyc/repository/kyc-verification.repository';
+export * from '../../kyc/repository/kyc-verification-log.repository';
+export * from '../../cms/announcement/repository/announcement.repository';
+export * from '../../cms/app-version/repository/app-version.repository';
+export * from '../../cms/banner/repository/banner.repository';
+export * from '../../cms/cms-page/repository/cms-page.repository';
+export * from '../../cms/faq/repository/faq.repository';
+// export * from '../../user/repository/point-history.repository';

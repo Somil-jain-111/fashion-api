@@ -25,6 +25,11 @@ import {
   ONBOARD_ERRORS,
   REDEMPTIONS_ERRORS,
 } from './errors';
+import { ANNOUNCEMENT_ERRORS } from './errors/announcement.errors';
+import { APP_VERSION_ERRORS } from './errors/app_version.errors';
+import { BANNER_ERRORS } from './errors/banner.errors';
+import { CMS_PAGE_ERRORS } from './errors/cms-page.errors';
+import { FAQ_ERRORS } from './errors/faq.errors';
 
 export type ErrorCodeValue = {
   code: string;
@@ -58,6 +63,11 @@ export const ERROR_CODES = {
   APPROVAL: APPROVAL_ERRORS,
   ONBOARD: ONBOARD_ERRORS,
   REDEMPTIONS: REDEMPTIONS_ERRORS,
+  ANNOUNCEMENT: ANNOUNCEMENT_ERRORS,
+  APP_VERSION: APP_VERSION_ERRORS,
+  BANNER: BANNER_ERRORS,
+  CMS_PAGE: CMS_PAGE_ERRORS,
+  FAQ: FAQ_ERRORS,
 } as const;
 
 export type ErrorCodeGroups = typeof ERROR_CODES;
