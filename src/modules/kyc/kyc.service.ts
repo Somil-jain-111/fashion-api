@@ -42,14 +42,14 @@ export class KycService {
   ) {}
   // src/modules/kyc/service/kyc.service.ts
 
-  private encryptKycData(value: any): any {
+  encryptKycData(value: any): any {
     const secretKey = this.configService.get('KYC_ENCRYPTION_SECRET_KEY');
     const fixedIv = this.configService.get('KYC_ENCRYPTION_FIXED_IV');
 
     return KycEncryptionHelper.encrypt(value, secretKey, fixedIv);
   }
 
-  private decryptKycData(value: any): any {
+  decryptKycData(value: any): any {
     const secretKey = this.configService.get('KYC_ENCRYPTION_SECRET_KEY');
     const fixedIv = this.configService.get('KYC_ENCRYPTION_FIXED_IV');
 

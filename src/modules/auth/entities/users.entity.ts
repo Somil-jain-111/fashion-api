@@ -28,6 +28,7 @@ import { Salutation, UserPartnerType } from '../../../default/common/enums/user-
 import { UserStatus } from '../constants/auth.constants';
 import { BaseEntity } from '../../../default/common/entities';
 import { UserStoreInfo } from './user-store-info.entity';
+import { BankAccount } from '../../payment/entities';
 @Entity('users')
 @Unique('UQ_MOBILE', ['mobile'])
 @Unique('UQ_WHATSAPP', ['whatsappNumber'])
@@ -179,6 +180,8 @@ export class User extends BaseEntity {
   approvals?: Approval[];
 
   @OneToMany(() => InvoiceEntity, (invoice) => invoice.user)
-invoices?: InvoiceEntity[];
+  invoices?: InvoiceEntity[];
+
+  @OneToMany(() => BankAccount, (bankAccount) => bankAccount.user)
+  bankAccounts?: BankAccount[];
 }
- 
