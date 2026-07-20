@@ -1,9 +1,5 @@
 export class PaginationHelper {
-  static paginate<T>(
-    data: T[],
-    page = 1,
-    pageSize = 10,
-  ) {
+  static paginate<T>(data: T[], page = 1, pageSize = 10) {
     const totalItems = data.length;
 
     const totalPages = Math.ceil(totalItems / pageSize);

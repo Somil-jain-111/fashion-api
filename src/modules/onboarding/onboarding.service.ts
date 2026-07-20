@@ -4,7 +4,7 @@ import {
   UserRepository,
   RolesRepository,
   UserStoreInfoRepository,
-} from 'src/modules/user/repository';
+} from 'src/modules/auth/repository';
 import { ApprovalRepository } from 'src/modules/approvals/repository';
 import { KycVerificationRepository } from 'src/modules/kyc/repository';
 import { User } from '../auth/entities/users.entity';

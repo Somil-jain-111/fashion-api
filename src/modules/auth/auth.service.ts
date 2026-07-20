@@ -9,7 +9,7 @@ import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { LoginHistoriesRepository } from 'src/modules/auth/repository';
-import { UserRepository } from 'src/modules/user/repository';
+import { UserRepository } from 'src/modules/auth/repository';
 import { OtpHelper } from 'src/default/common/helper/otp.helper';
 import { DateHelper } from 'src/default/common/helper/date.helper';
 import { UserAuthValidator } from './validators/user-auth.validator';

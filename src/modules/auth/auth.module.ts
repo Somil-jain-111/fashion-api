@@ -12,7 +12,7 @@ import { IdempotencyService } from 'src/default/idempotency/idempotency.service'
 import { RedisModule } from 'src/default/databases/redis/redis.module';
 
 import { LoginHistoriesRepository, RevokedTokenRepository } from './repository';
-import { UserRepository, RolesRepository, UserStoreInfoRepository } from '../user/repository';
+import { UserRepository, RolesRepository, UserStoreInfoRepository } from '../auth/repository';
 import { AddressesModule } from '../addresses/addresses.module';
 import { ApprovalRepository } from '../approvals/repository';
 

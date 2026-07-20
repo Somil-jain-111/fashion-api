@@ -1,26 +1,221 @@
 import { Injectable } from '@nestjs/common';
+import { QueryRunner } from 'typeorm';
+
+import { CartItemRepository, CartRepository } from 'src/modules/cart/repository';
+import { CartCalculationHelper } from 'src/modules/cart/helper/cart-calculation.helper';
+import { BusinessException } from 'src/default/error/business.exception';
+import { ERROR_CODES } from 'src/default/error/error.code';
+import { ConsoleLogger } from 'src/default/logger/console/console.service';
+import { TransactionService } from 'src/default/databases/transaction';
 import { CreateOrderPlacementDto } from './dto/create-order-placement.dto';
-import { UpdateOrderPlacementDto } from './dto/update-order-placement.dto';
+import { OrderPlacementResponseDto } from './dto/order-placement-response.dto';
+import { OrderPlacementItem } from './entities/order-placement-item.entity';
+import { OrderPlacement } from './entities/order-placement.entity';
+import { OrderPlacementSource, OrderPlacementStatus } from './enum/order-placement.enum';
+import { OrderPlacementHelper } from './helper/order-placement.helper';
+import { OrderPlacementItemRepository, OrderPlacementRepository } from './repository';
 
 @Injectable()
 export class OrderPlacementService {
-  create(createOrderPlacementDto: CreateOrderPlacementDto) {
-    return 'This action adds a new orderPlacement';
+  constructor(
+    private readonly transactionService: TransactionService,
+    private readonly orderPlacementRepository: OrderPlacementRepository,
+    private readonly orderPlacementItemRepository: OrderPlacementItemRepository,
+    private readonly cartRepository: CartRepository,
+    private readonly cartItemRepository: CartItemRepository
+  ) {}
+
+  async placeOrder(
+    userId: string | number,
+    dto: CreateOrderPlacementDto
+  ): Promise<OrderPlacementResponseDto> {
+    const tag = 'OrderPlacementService.placeOrder';
+
+    ConsoleLogger.log('ORDER_PLACEMENT_START', {
+      tag,
+      data: { userId, source: dto.source, distributorId: dto.distributorId },
+    });
+
+    const order = await this.transactionService.runInTransaction(async (queryRunner) => {
+      const orderItems = await this.resolveOrderItems(userId, dto, queryRunner);
+
+      if (!orderItems.length) {
+        throw new BusinessException(ERROR_CODES.CART.CART_IS_EMPTY);
+      }
+
+      const summary = CartCalculationHelper.calculateSummary(
+        orderItems.map((item) => ({ ...item, isSelected: true })) as any
+      );
+
+      const createdOrder = await this.orderPlacementRepository.save(
+        {
+          orderNumber: await this.generateUniqueOrderNumber(queryRunner),
+          user_id: String(userId),
+          distributor_id: String(dto.distributorId),
+          source: dto.source,
+          status: OrderPlacementStatus.PLACED,
+          totalQuantity: summary.totalQuantity,
+          totalAmount: summary.totalAmount,
+          discountAmount: summary.discountAmount,
+          gstAmount: summary.gstAmount,
+          totalPayable: summary.totalPayable,
+        },
+        queryRunner
+      );
+
+      await this.orderPlacementItemRepository.saveManyWithTransaction(
+        orderItems.map((item) => ({
+          ...item,
+          order_id: Number(createdOrder.id),
+        })),
+        queryRunner
+      );
+
+      if (dto.source === OrderPlacementSource.CART) {
+        const cart = await this.cartRepository.findActiveByUserAndDistributor(
+          userId,
+          dto.distributorId,
+          queryRunner
+        );
+
+        if (cart) {
+          await this.cartItemRepository.deleteByCartId(cart.id, queryRunner);
+          await this.cartRepository.deleteByIdWithTransaction(cart.id, queryRunner);
+        }
+      }
+
+      const freshOrder = await this.orderPlacementRepository.findByIdAndUser(
+        Number(createdOrder.id),
+        userId,
+        queryRunner
+      );
+
+      return freshOrder || createdOrder;
+    });
+
+    ConsoleLogger.log('ORDER_PLACEMENT_SUCCESS', {
+      tag,
+      data: { userId, orderId: order.id, orderNumber: order.orderNumber },
+    });
+
+    return this.toResponse(order);
   }
 
-  findAll() {
-    return `This action returns all orderPlacement`;
+  async findOne(userId: string | number, orderId: string): Promise<OrderPlacementResponseDto> {
+    const order = await this.orderPlacementRepository.findByIdAndUser(Number(orderId), userId);
+
+    if (!order) {
+      throw new BusinessException(ERROR_CODES.ORDER.ORDER_NOT_FOUND);
+    }
+
+    return this.toResponse(order);
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} orderPlacement`;
+  private async resolveOrderItems(
+    userId: string | number,
+    dto: CreateOrderPlacementDto,
+    queryRunner: QueryRunner
+  ): Promise<Partial<OrderPlacementItem>[]> {
+    if (dto.source === OrderPlacementSource.BUY_NOW) {
+      if (!dto.buyNowItem) {
+        throw new BusinessException(ERROR_CODES.ORDER_ITEM.ORDER_ITEM_PRODUCT_REQUIRED);
+      }
+
+      return [
+        OrderPlacementHelper.buildOrderItem({
+          productId: dto.buyNowItem.productId,
+          color: dto.buyNowItem.color,
+          size: dto.buyNowItem.size,
+          cartonSize: dto.buyNowItem.cartonSize,
+          cartonQuantity: dto.buyNowItem.cartonQuantity ?? 1,
+        }),
+      ];
+    }
+
+    const cart = await this.cartRepository.findActiveByUserAndDistributor(
+      userId,
+      dto.distributorId,
+      queryRunner
+    );
+
+    if (!cart || !cart.items?.length) {
+      throw new BusinessException(ERROR_CODES.CART.CART_IS_EMPTY);
+    }
+
+    const selectedItems = cart.items.filter((item) => item.isSelected);
+
+    if (!selectedItems.length) {
+      throw new BusinessException(ERROR_CODES.CART.CART_IS_EMPTY);
+    }
+
+    return selectedItems.map((item) => {
+      const product = OrderPlacementHelper.getProductOrThrow(item.productId);
+
+      return {
+        productId: item.productId,
+        categoryId: item.categoryId,
+        subCategoryId: item.subCategoryId,
+        productName: product.name,
+        thumbnail: product.thumbnail || null,
+        color: item.color,
+        size: item.size,
+        cartonSize: item.cartonSize,
+        cartonQuantity: item.cartonQuantity,
+        totalArticles: item.totalArticles,
+        unitPrice: item.unitPrice,
+        mrp: item.mrp,
+        discount: item.discount,
+        totalAmount: item.totalAmount,
+      };
+    });
   }
 
-  update(id: number, updateOrderPlacementDto: UpdateOrderPlacementDto) {
-    return `This action updates a #${id} orderPlacement`;
+  private async generateUniqueOrderNumber(queryRunner: QueryRunner): Promise<string> {
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      const orderNumber = OrderPlacementHelper.generateOrderNumber();
+      const existing = await this.orderPlacementRepository.findByOrderNumber(
+        orderNumber,
+        queryRunner
+      );
+
+      if (!existing) {
+        return orderNumber;
+      }
+    }
+
+    throw new BusinessException(ERROR_CODES.ORDER.ORDER_CREATION_FAILED);
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} orderPlacement`;
+  private toResponse(order: OrderPlacement): OrderPlacementResponseDto {
+    return {
+      id: order.id?.toString(),
+      orderNumber: order.orderNumber,
+      userId: order.user_id?.toString(),
+      distributorId: order.distributor_id?.toString(),
+      source: order.source,
+      status: order.status,
+      totalQuantity: order.totalQuantity,
+      totalAmount: CartCalculationHelper.toMoney(order.totalAmount),
+      discountAmount: CartCalculationHelper.toMoney(order.discountAmount),
+      gstAmount: CartCalculationHelper.toMoney(order.gstAmount),
+      totalPayable: CartCalculationHelper.toMoney(order.totalPayable),
+      items: (order.items || []).map((item) => ({
+        id: item.id?.toString(),
+        productId: item.productId?.toString(),
+        categoryId: item.categoryId?.toString(),
+        subCategoryId: item.subCategoryId?.toString(),
+        productName: item.productName,
+        thumbnail: item.thumbnail,
+        color: item.color,
+        size: item.size,
+        cartonSize: item.cartonSize,
+        cartonQuantity: item.cartonQuantity,
+        totalArticles: item.totalArticles,
+        unitPrice: CartCalculationHelper.toMoney(item.unitPrice),
+        mrp: CartCalculationHelper.toMoney(item.mrp),
+        discount: CartCalculationHelper.toMoney(item.discount),
+        totalAmount: CartCalculationHelper.toMoney(item.totalAmount),
+      })),
+    };
   }
 }

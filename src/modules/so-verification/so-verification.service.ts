@@ -13,7 +13,7 @@ import { UserStatus } from '../auth/constants/auth.constants';
 import { SoVerificationRepository } from './so-verification.repository';
 import { ApprovalRepository } from '../approvals/repository';
 import { DynamicConfigRepository } from '../dynamic-config/repository';
-import { UserRepository } from '../user/repository';
+import { UserRepository } from '../auth/repository';
 
 // Default radius in meters. Overridden by ApplicationConfig if set.
 const DEFAULT_GEOFENCE_RADIUS_METERS = 200;

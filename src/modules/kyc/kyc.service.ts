@@ -22,7 +22,7 @@ import { AadhaarProvider } from './provider/aadhaar.provider';
 import { VerifyAadhaarOtpDto } from './dto/verify-aadhar-otp.dto';
 import { LocalStorageContextUtil } from 'src/default/common/utils/local-storage.util';
 import { ContextType } from 'src/default/common/constants/context.option';
-import { UserRepository } from '../user/repository';
+import { UserRepository } from '../auth/repository';
 import { UserPartnerType } from 'src/default/common/enums/user-type.enum';
 
 @Injectable()
