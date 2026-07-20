@@ -8,7 +8,14 @@ import { RolesRepository, UserRepository } from 'src/modules/auth/repository';
 
 @Module({
   controllers: [CmsPageController],
-  providers: [CmsPageService, CmsPageHelper, UserAuthValidator,CmsPageRepository,RolesRepository,UserRepository],
-  exports: [CmsPageService, CmsPageHelper]
+  providers: [
+    CmsPageService,
+    CmsPageHelper,
+    UserAuthValidator,
+    CmsPageRepository,
+    RolesRepository,
+    UserRepository,
+  ],
+  exports: [CmsPageService, CmsPageHelper],
 })
 export class CmsPageModule {}

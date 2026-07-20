@@ -54,8 +54,8 @@ export class CartService {
         if (!cart) {
           cart = await this.cartRepository.save(
             {
-              user_id: String(userId),
-              distributor_id: String(dto.distributorId),
+              user: { id: Number(userId) },
+              distributor: { id: Number(dto.distributorId) },
               is_active: true,
             },
             queryRunner
@@ -100,7 +100,7 @@ export class CartService {
         } else {
           await this.cartItemRepository.save(
             {
-              cart_id: cart.id,
+              cart: { id: cart.id },
               productId: product.id,
               categoryId: product.categoryId,
               subCategoryId: product.subCategoryId,
@@ -184,11 +184,11 @@ export class CartService {
 
     const cart = await this.cartRepository.findActiveByUserAndDistributor(
       userId,
-      item.cart.distributor_id
+      item.cart.distributor.id
     );
     await this.refreshCartSummary(cart!);
 
-    return this.getCart(userId, item.cart.distributor_id);
+    return this.getCart(userId, item.cart.distributor.id);
   }
 
   async removeItem(userId: string | number, itemId: string): Promise<CartResponseDto> {
@@ -198,7 +198,7 @@ export class CartService {
       throw new BusinessException(ERROR_CODES.CART.CART_ITEM_NOT_FOUND);
     }
 
-    const distributorId = item.cart.distributor_id;
+    const distributorId = item.cart.distributor.id;
     await this.cartItemRepository.deleteById(item.id);
 
     const cart = await this.cartRepository.findActiveByUserAndDistributor(userId, distributorId);
@@ -278,8 +278,8 @@ export class CartService {
 
     return {
       id: cart.id?.toString(),
-      userId: cart.user_id?.toString(),
-      distributorId: cart.distributor_id?.toString(),
+      userId: cart.user.id?.toString(),
+      distributorId: cart.distributor.id?.toString(),
       items: items.map((item) => this.toItemResponse(item)),
       summary: {
         totalQuantity: summary.totalQuantity,

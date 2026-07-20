@@ -1,10 +1,11 @@
 import { Column, Entity, Index, JoinColumn, ManyToOne } from 'typeorm';
 
-import { BaseEntity } from 'src/default/common/entities';
+import { BaseEntity } from '../../../default/common/entities';
 import { OrderPlacement } from './order-placement.entity';
 
 @Entity('order_placement_items')
-@Index(['order_id', 'productId'])
+@Index('idx_order_placement_items_order_id', ['order_id'])
+@Index('idx_order_placement_items_product_id', ['productId'])
 export class OrderPlacementItem extends BaseEntity {
   @Column({ type: 'bigint' })
   order_id!: number;

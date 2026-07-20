@@ -1,10 +1,7 @@
 import {
   Entity,
-  PrimaryGeneratedColumn,
   Column,
   Unique,
-  CreateDateColumn,
-  UpdateDateColumn,
   OneToMany,
   JoinColumn,
   ManyToOne,
@@ -179,6 +176,5 @@ export class User extends BaseEntity {
   approvals?: Approval[];
 
   @OneToMany(() => InvoiceEntity, (invoice) => invoice.user)
-invoices?: InvoiceEntity[];
+  invoices?: InvoiceEntity[];
 }
- 

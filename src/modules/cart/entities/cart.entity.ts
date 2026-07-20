@@ -1,17 +1,12 @@
-import { BaseEntity } from 'src/default/common/entities';
-import { User } from 'src/modules/auth/entities';
+import { BaseEntity } from '../../../default/common/entities';
+import { User } from '../../auth/entities';
 import { CartItem } from './cart-items.entity';
 import { Entity, Column, ManyToOne, JoinColumn, Index, OneToMany } from 'typeorm';
 
 @Entity('carts')
-@Index(['user_id', 'distributor_id'])
+@Index('idx_carts_user_id', ['user'])
+@Index('idx_carts_distributor_id', ['distributor'])
 export class Cart extends BaseEntity {
-  @Column({ type: 'bigint' })
-  user_id!: string;
-
-  @Column({ type: 'bigint' })
-  distributor_id!: string;
-
   @ManyToOne(() => User)
   @JoinColumn({ name: 'user_id' })
   user: User;

@@ -1,14 +1,11 @@
 import { Entity, Column, ManyToOne, JoinColumn, Index } from 'typeorm';
 
 import { Cart } from './cart.entity';
-import { BaseEntity } from 'src/default/common/entities';
+import { BaseEntity } from '../../../default/common/entities';
 
 @Entity('cart_items')
-@Index(['cart_id', 'productId'])
+@Index(['cart', 'productId'])
 export class CartItem extends BaseEntity {
-  @Column({ type: 'bigint' })
-  cart_id!: number;
-
   @ManyToOne(() => Cart, {
     onDelete: 'CASCADE',
   })

@@ -27,4 +27,3 @@ export * from '../../cms/cms-page/entities/cms-page.entity';
 export * from '../../cms/faq/entities/faq.entity';
 export * from '../../cart/entities/cart-items.entity';
 export * from '../../cart/entities/cart.entity';
-

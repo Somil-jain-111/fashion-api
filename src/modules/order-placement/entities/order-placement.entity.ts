@@ -1,13 +1,13 @@
 import { Column, Entity, Index, JoinColumn, ManyToOne, OneToMany } from 'typeorm';
 
-import { BaseEntity } from 'src/default/common/entities';
-import { User } from 'src/modules/auth/entities';
+import { BaseEntity } from '../../../default/common/entities';
+import { User } from '../../auth/entities';
 import { OrderPlacementSource, OrderPlacementStatus } from '../enum/order-placement.enum';
 import { OrderPlacementItem } from './order-placement-item.entity';
 
 @Entity('order_placements')
 @Index(['user_id', 'distributor_id'])
-@Index(['orderNumber'], { unique: true })
+@Index(['orderNumber'])
 export class OrderPlacement extends BaseEntity {
   @Column({ length: 40, unique: true })
   orderNumber: string;
