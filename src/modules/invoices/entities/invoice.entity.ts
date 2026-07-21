@@ -103,19 +103,6 @@ export class InvoiceEntity extends BaseEntity {
   @Column({ type: 'bigint', unsigned: true, nullable: true })
   updated_by: string;
 
-  @Column({
-    type: 'timestamp',
-    default: () => 'CURRENT_TIMESTAMP',
-  })
-  created_at: Date;
-
-  @Column({
-    type: 'timestamp',
-    default: () => 'CURRENT_TIMESTAMP',
-    onUpdate: 'CURRENT_TIMESTAMP',
-  })
-  updated_at: Date;
-
   @OneToMany(() => InvoiceItemEntity, (item) => item.invoice)
   items: InvoiceItemEntity[];
 

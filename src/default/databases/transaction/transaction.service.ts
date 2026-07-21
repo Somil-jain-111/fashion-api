@@ -59,7 +59,7 @@ export class TransactionService {
     try {
       const result = await callback(queryRunner);
 
-      await queryRunner.commitTransaction();
+      await queryRunner.rollbackTransaction();
 
       return result;
     } catch (error) {

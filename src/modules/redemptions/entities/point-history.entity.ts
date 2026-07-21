@@ -1,6 +1,7 @@
-import { Entity, Column, ManyToOne, JoinColumn, Index } from 'typeorm';
+import { Entity, Column, ManyToOne, JoinColumn, Index, OneToOne } from 'typeorm';
 //
 import { Order, User } from '../../auth/entities';
+import { Payout } from '../../payment/entities/payout.entity';
 import { RedemptionType } from '../enum/redemption-type.enum';
 import { PointStatusEnum } from '../enum/point-history-status.enum.';
 import { BaseEntity } from '../../../default/common/entities';
@@ -70,4 +71,8 @@ export class PointHistory extends BaseEntity {
   })
   @JoinColumn({ name: 'order_id' })
   order?: Order | null;
+
+  @OneToOne(() => Payout, (payout) => payout.pointHistory, { nullable: true })
+  @JoinColumn({ name: 'payout_id' })
+  payout?: Payout | null;
 }

@@ -3,6 +3,8 @@ export enum KycType {
   PAN = 'PAN',
   GST = 'GST',
   NAME_MATCH = 'NAME_MATCH',
+  BANK = 'BANK',
+  UPI = 'UPI',
 }
 
 export enum KycStatus {
@@ -18,4 +20,9 @@ export enum KycLogStatus {
   FAILED = 'FAILED',
   EXPIRED = 'EXPIRED',
   PROVIDER_ERROR = 'PROVIDER_ERROR',
+}
+
+export enum BeneficiaryType {
+  BANK = 'BANK',
+  UPI = 'UPI',
 }

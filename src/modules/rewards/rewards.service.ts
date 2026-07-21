@@ -6,12 +6,18 @@ import { BusinessException } from 'src/default/error/business.exception';
 import { UserAuthValidator } from '../auth/validators/user-auth.validator';
 import { GetProductQueryDTO } from './interfaces/fetch-catalogue-products.input';
 import { GetProductResponseDTO } from './dto/product-response.dto';
+import axios, { AxiosRequestConfig } from 'axios';
+import { AppConfigService } from 'src/default/config/config.service';
+import { ApiResponseRepository } from '../kyc/repository';
+import { CommonUtils } from 'src/default/common/utils/common.utils';
 
 @Injectable()
 export class RewardsService {
   constructor(
     private readonly productProvider: ProductProvider,
-    private userAuthValidator: UserAuthValidator
+    private userAuthValidator: UserAuthValidator,
+    private readonly appConfigService: AppConfigService,
+    private readonly apiResponseRepository: ApiResponseRepository
   ) {}
 
   async getAllProducts(
@@ -143,5 +149,115 @@ export class RewardsService {
     });
 
     return rewardResponse;
+  }
+
+  async payoutAmountBank(data: {
+    type: string;
+    name: string;
+    number: string;
+    account_number: string;
+    ifsc: string;
+    transactionId: string;
+    userId: bigint | number;
+    amount: number;
+  }): Promise<any> {
+    const tag = 'RewardsService.payoutAmountBank';
+
+    const hmacInput = {
+      type: data.type,
+      name: data.name,
+      email: 'almond@gmail.com',
+      number: String(data.number),
+      accountNumber: data.account_number,
+      ifscCode: data.ifsc,
+      amount: String(data.amount),
+      transaction_id: data.transactionId,
+      sku: 'BANK',
+    };
+
+    const baseUrl = this.appConfigService.getRewardsUrl();
+    const secretKey = this.appConfigService.getKycSecretKey();
+    const permanentToken = this.appConfigService.getRewardsPermanentToken();
+
+    if (!secretKey) {
+      throw new BusinessException(ERROR_CODES.KYC.KYC_SECRET_KEY_MISSING);
+    }
+
+    const hmac = await CommonUtils.generateSecretKey(hmacInput);
+
+    const payload = {
+      type: hmacInput.type,
+      name: hmacInput.name,
+      email: hmacInput.email,
+      msisdn: hmacInput.number,
+      accountNumber: hmacInput.accountNumber,
+      bankIfsc: hmacInput.ifscCode,
+      amount: hmacInput.amount,
+      transaction_id: hmacInput.transaction_id,
+      sku: hmacInput.sku,
+    };
+
+    const requestConfig: AxiosRequestConfig = {
+      method: 'post',
+      url: `${baseUrl}/gratification`,
+      headers: {
+        'x-hmac': hmac,
+        permanent_token: permanentToken,
+        'content-type': 'application/json',
+      },
+      data: payload,
+    };
+
+    ConsoleLogger.log('PAYOUT_AMOUNT_BANK_REQUEST', {
+      tag,
+      data: {
+        userId: String(data.userId),
+        url: requestConfig.url,
+        payload,
+      },
+    });
+
+    try {
+      const response = await axios.request(requestConfig);
+
+      await this.apiResponseRepository.saveResponse({
+        type: 'BANK_PAYOUT',
+        requestUrl: requestConfig.url || '',
+        requestPayload: {
+          payload,
+          headers: requestConfig.headers,
+        },
+        responsePayload: response.data,
+      });
+
+      return response.data;
+    } catch (error) {
+      console.log(error);
+      const errorData = error.response?.data || {
+        status: false,
+        message: error.message || 'Unknown error',
+      };
+
+      const statusCode = errorData?.data?.statuscode || error.response?.status || 400;
+
+      ConsoleLogger.error('PAYOUT_AMOUNT_BANK_ERROR', error?.stack, {
+        tag,
+        data: {
+          userId: String(data.userId),
+          statusCode,
+          errorData,
+          message: error?.message,
+        },
+      });
+
+      await this.apiResponseRepository.saveResponse({
+        type: 'BANK_PAYOUT_FAILED',
+        requestUrl: requestConfig.url || '',
+        requestPayload: requestConfig,
+        responsePayload: { ...errorData, responseMessage: error?.message },
+      });
+
+      throw new BusinessException(ERROR_CODES.PAYMENT.PAYMENT_FAILED);
+    }
   }
 }
