@@ -268,6 +268,7 @@ export class PaymentService {
     const config = await this.dynamicConfigRepository.getUserConfigByUserRole(
       payout.user.role.name
     );
+
     if (!config || !config.redemptionEnabled || !config.dbtEnabled) {
       throw new BadRequestException('Redemptions/payouts are currently disabled.');
     }
