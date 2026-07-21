@@ -163,6 +163,8 @@ export class RewardsService {
   }): Promise<any> {
     const tag = 'RewardsService.payoutAmountBank';
 
+    const sku = this.appConfigService.getBankPayoutSku();
+
     const hmacInput = {
       type: data.type,
       name: data.name,
@@ -172,7 +174,7 @@ export class RewardsService {
       ifscCode: data.ifsc,
       amount: String(data.amount),
       transaction_id: data.transactionId,
-      sku: 'BANK',
+      sku: sku,
     };
 
     const baseUrl = this.appConfigService.getRewardsUrl();

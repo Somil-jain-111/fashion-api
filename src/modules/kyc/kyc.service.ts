@@ -48,20 +48,20 @@ export class KycService {
     private gstProvider: GstProvider,
     private bankProvider: BankProvider,
     private upiProvider: UpiProvider,
-    private readonly configService: AppConfigService
+    private readonly appConfigService: AppConfigService
   ) {}
   // src/modules/kyc/service/kyc.service.ts
 
   encryptKycData(value: any): any {
-    const secretKey = this.configService.get('KYC_ENCRYPTION_SECRET_KEY');
-    const fixedIv = this.configService.get('KYC_ENCRYPTION_FIXED_IV');
+    const secretKey = this.appConfigService.get('KYC_ENCRYPTION_SECRET_KEY');
+    const fixedIv = this.appConfigService.get('KYC_ENCRYPTION_FIXED_IV');
 
     return KycEncryptionHelper.encrypt(value, secretKey, fixedIv);
   }
 
   decryptKycData(value: any): any {
-    const secretKey = this.configService.get('KYC_ENCRYPTION_SECRET_KEY');
-    const fixedIv = this.configService.get('KYC_ENCRYPTION_FIXED_IV');
+    const secretKey = this.appConfigService.get('KYC_ENCRYPTION_SECRET_KEY');
+    const fixedIv = this.appConfigService.get('KYC_ENCRYPTION_FIXED_IV');
 
     return KycEncryptionHelper.decrypt(value, secretKey, fixedIv);
   }
