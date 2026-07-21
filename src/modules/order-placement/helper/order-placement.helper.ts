@@ -1,4 +1,4 @@
-import * as products from 'src/modules/products/mock/products.json';
+import  products from 'src/modules/products/mock/products.json';
 import { BusinessException } from 'src/default/error/business.exception';
 import { ERROR_CODES } from 'src/default/error/error.code';
 import { CartCalculationHelper } from 'src/modules/cart/helper/cart-calculation.helper';
