@@ -23,7 +23,9 @@ export class CartItemRepository extends BaseRepository<CartItem> {
 
     return repo.findOne({
       where: {
-        cart_id: String(input.cartId),
+        cart: {
+          id: Number(input.cartId),
+        },
         productId: input.productId,
         color: input.color,
         size: input.size,
@@ -33,21 +35,25 @@ export class CartItemRepository extends BaseRepository<CartItem> {
   }
 
   async findByIdAndUser(itemId: string, userId: string | number): Promise<CartItem | null> {
-    return this.repository.findOne({
-      where: {
-        id: itemId,
-        cart: {
-          user_id: String(userId),
-          is_active: true,
-        },
-      } as any,
-      relations: ['cart', 'cart.items'],
-    });
+    return this.repository
+      .createQueryBuilder('item')
+      .leftJoinAndSelect('item.cart', 'cart')
+      .leftJoinAndSelect('cart.user', 'user')
+      .leftJoinAndSelect('cart.distributor', 'distributor')
+      .leftJoinAndSelect('cart.items', 'items')
+      .where('item.id = :itemId', { itemId })
+      .andWhere('cart.user_id = :userId', { userId })
+      .andWhere('cart.is_active = true')
+      .getOne();
   }
 
   async deleteByCartId(cartId: string | number, queryRunner?: QueryRunner): Promise<number> {
     const repo = queryRunner ? queryRunner.manager.getRepository(CartItem) : this.repository;
-    const result = await repo.delete({ cart_id: String(cartId) } as any);
+    const result = await repo
+      .createQueryBuilder()
+      .delete()
+      .where("cart_id = :cartId", { cartId })
+      .execute();
     return Number(result.affected ?? 0);
   }
 }

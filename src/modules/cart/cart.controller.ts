@@ -16,6 +16,7 @@ import { ClearCartQueryDto, GetCartQueryDto } from './dto/cart-query.dto';
 export class CartController {
   constructor(private readonly cartService: CartService) {}
 
+  @NoCache() 
   @Get()
   async getCart(@Req() req: any, @Query() query: GetCartQueryDto) {
     const response = await this.cartService.getCart(req.user.id, query.distributorId);
@@ -34,13 +35,15 @@ export class CartController {
     return DataSanitizer.sanitizeData(response);
   }
 
+  @NoCache()
   @Post('items/delete/:itemId')
   async removeItem(@Req() req: any, @Param('itemId') itemId: string) {
     const response = await this.cartService.removeItem(req.user.id, itemId);
     return DataSanitizer.sanitizeData(response);
   }
 
-  @Post('items/delete')
+  @NoCache()
+  @Post('items/clear-cart/delete')
   async clearCart(@Req() req: any, @Query() query: ClearCartQueryDto) {
     const response = await this.cartService.clearCart(req.user.id, query.distributorId);
     return DataSanitizer.sanitizeData(response);
