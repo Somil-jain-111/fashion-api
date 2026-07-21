@@ -36,8 +36,6 @@ import { VisitsModule } from './modules/visits/visits.module';
 import { ApprovalsModule } from './modules/approvals/approvals.module';
 import { AddressesModule } from './modules/addresses/addresses.module';
 import { PublicModule } from './modules/public/public.module';
-import { PaymentVerificationModule } from './modules/payment-verification/payment-verification.module';
-import { PayoutModule } from './modules/payout/payout.module';
 import { PaymentModule } from './modules/payment/payment.module';
 // import { OnboardingApprovalModule } from './modules/onboarding-approval/onboarding-approval.module';
 import { OnboardingModule } from './modules/onboarding/onboarding.module';
@@ -81,8 +79,6 @@ import { DynamicConfigModule } from './modules/dynamic-config/dynamic-config.mod
     ApprovalsModule,
     AddressesModule,
     PublicModule,
-    PaymentVerificationModule,
-    PayoutModule,
     PaymentModule,
     // OnboardingApprovalModule,
     OnboardingModule,
