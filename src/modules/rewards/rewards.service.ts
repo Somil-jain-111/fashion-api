@@ -166,7 +166,7 @@ export class RewardsService {
     const hmacInput = {
       type: data.type,
       name: data.name,
-      email: '',
+      email: 'almond@gmail.com',
       number: String(data.number),
       accountNumber: data.account_number,
       ifscCode: data.ifsc,
@@ -176,9 +176,8 @@ export class RewardsService {
     };
 
     const baseUrl = this.appConfigService.getRewardsUrl();
+    const secretKey = this.appConfigService.getKycSecretKey();
     const permanentToken = this.appConfigService.getRewardsPermanentToken();
-
-    const secretKey = this.appConfigService.get('KYC_SECRET_KEY');
 
     if (!secretKey) {
       throw new BusinessException(ERROR_CODES.KYC.KYC_SECRET_KEY_MISSING);
@@ -200,7 +199,7 @@ export class RewardsService {
 
     const requestConfig: AxiosRequestConfig = {
       method: 'post',
-      url: `${baseUrl}/gratification/payout`,
+      url: `${baseUrl}/gratification`,
       headers: {
         'x-hmac': hmac,
         permanent_token: permanentToken,
@@ -233,6 +232,7 @@ export class RewardsService {
 
       return response.data;
     } catch (error) {
+      console.log(error);
       const errorData = error.response?.data || {
         status: false,
         message: error.message || 'Unknown error',

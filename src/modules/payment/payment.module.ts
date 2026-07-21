@@ -2,8 +2,8 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { PaymentController } from './payment.controller';
 import { PaymentService } from './payment.service';
-import { Payout, BankAccount } from './entities';
-import { PayoutRepository, BankAccountRepository } from './repository';
+import { Payout } from './entities';
+import { PayoutRepository } from './repository';
 import { AuthModule } from '../auth/auth.module';
 import { KycModule } from '../kyc/kyc.module';
 import { DynamicConfigModule } from '../dynamic-config/dynamic-config.module';
@@ -12,10 +12,11 @@ import { RedisModule } from 'src/default/databases/redis/redis.module';
 import { IdempotencyModule } from 'src/default/idempotency/idempotency.module';
 import { PointHistoryRepository } from '../redemptions/repository';
 import { AppConfigService } from 'src/default/config/config.service';
+import { BeneficiaryRepository } from '../kyc/repository';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Payout, BankAccount]),
+    TypeOrmModule.forFeature([Payout]),
     AuthModule,
     KycModule,
     DynamicConfigModule,
@@ -27,10 +28,10 @@ import { AppConfigService } from 'src/default/config/config.service';
   providers: [
     PaymentService,
     PayoutRepository,
-    BankAccountRepository,
+    BeneficiaryRepository,
     PointHistoryRepository,
     AppConfigService,
   ],
-  exports: [PaymentService, PayoutRepository, BankAccountRepository],
+  exports: [PaymentService, PayoutRepository, BeneficiaryRepository],
 })
 export class PaymentModule {}

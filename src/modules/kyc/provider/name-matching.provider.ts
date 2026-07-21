@@ -23,7 +23,7 @@ type KycProviderResult = {
 
 @Injectable()
 export class NameMatchProvider {
-  constructor(private readonly configService: AppConfigService) {}
+  constructor(private readonly appConfigService: AppConfigService) {}
 
   async matchName(data: NameMatchInput): Promise<KycProviderResult> {
     const payload = {
@@ -37,14 +37,14 @@ export class NameMatchProvider {
     const isLive = true;
 
     const baseUrl = isLive
-      ? this.configService.get('Rewards_API_Base_Url_Live')
-      : this.configService.get('Rewards_API_Base_Url_Dev');
+      ? this.appConfigService.get('Rewards_API_Base_Url_Live')
+      : this.appConfigService.get('Rewards_API_Base_Url_Dev');
 
     const permanentToken = isLive
-      ? this.configService.get('Rewards_API_Permanent_Token_Live')
-      : this.configService.get('Rewards_API_Permanent_Token_Dev');
+      ? this.appConfigService.get('Rewards_API_Permanent_Token_Live')
+      : this.appConfigService.get('Rewards_API_Permanent_Token_Dev');
 
-    const secretKey = this.configService.get('KYC_SECRET_KEY');
+    const secretKey = this.appConfigService.getKycSecretKey();
 
     const requestConfig: AxiosRequestConfig = {
       method: 'post',

@@ -22,7 +22,12 @@ export class PaymentController {
   @Post('transaction')
   async payoutTransaction(@Req() request: any, @Body() dto: PayoutTransactionDto) {
     const userId = request.user.id;
-    const response = await this.paymentService.payoutTransaction(userId, dto.amount, dto.points);
+    const response = await this.paymentService.payoutTransaction(
+      userId,
+      dto.amount,
+      dto.points,
+      dto.beneId
+    );
     return DataSanitizer.sanitizeData(response);
   }
 

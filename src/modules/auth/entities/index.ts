@@ -4,6 +4,7 @@ export * from './login_history.entity';
 export * from './revoked_tokens.entity';
 export * from '../../kyc/entities/kyc-verification.entity';
 export * from '../../kyc/entities/kyc-verification-logs.entity';
+export * from '../../kyc/entities/beneficiary.entity';
 export * from '../../addresses/entities/address.entity';
 export * from '../../addresses/entities/city.entity';
 export * from '../../addresses/entities/pincode.entity';

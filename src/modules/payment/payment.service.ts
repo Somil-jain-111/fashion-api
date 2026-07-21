@@ -1,8 +1,7 @@
-import { Injectable, BadRequestException, InternalServerErrorException } from '@nestjs/common';
+import { Injectable, BadRequestException } from '@nestjs/common';
 import { PayoutRepository } from './repository/payout.repository';
-import { BankAccountRepository } from './repository/bank-account.repository';
 import { UserRepository } from 'src/modules/user/repository';
-import { KycVerificationRepository } from 'src/modules/kyc/repository';
+import { BeneficiaryRepository, KycVerificationRepository } from 'src/modules/kyc/repository';
 import { PointHistoryRepository } from 'src/modules/redemptions/repository';
 import { DynamicConfigRepository } from 'src/modules/dynamic-config/repository';
 import { TransactionService } from 'src/default/databases/transaction';
@@ -15,15 +14,13 @@ import { ConsoleLogger } from 'src/default/logger/console/console.service';
 import { KycStatus, KycType } from 'src/default/common/enums/kyc.enum';
 import { PointStatusEnum } from 'src/modules/redemptions/enum/point-history-status.enum.';
 import { RedemptionType } from 'src/modules/redemptions/enum/redemption-type.enum';
-import { PayoutStatus, Payout } from './entities/payout.entity';
-import { User } from 'src/modules/auth/entities';
-import { PointHistory } from 'src/modules/auth/entities';
+import { PayoutStatus } from './entities/payout.entity';
 
 @Injectable()
 export class PaymentService {
   constructor(
     private readonly payoutRepository: PayoutRepository,
-    private readonly bankAccountRepository: BankAccountRepository,
+    private readonly beneficiaryRepository: BeneficiaryRepository,
     private readonly userRepository: UserRepository,
     private readonly kycVerificationRepository: KycVerificationRepository,
     private readonly pointHistoryRepository: PointHistoryRepository,
@@ -35,7 +32,15 @@ export class PaymentService {
     private readonly rewardsService: RewardsService
   ) {}
 
-  async payoutTransaction(userId: number, amount: number, points: number) {
+  /**
+   * Places a DBT order
+   *
+   * @param userId
+   * @param amount
+   * @param points
+   * @returns
+   */
+  async payoutTransaction(userId: number, amount: number, points: number, beneId: number) {
     const lockKey = `user-payout-lock:${userId}`;
     const lockValue = `${Date.now()}-${Math.random()}`;
     let redisLockAcquired = false;
@@ -69,7 +74,8 @@ export class PaymentService {
       }
 
       // Fetch user's active bank account
-      const bankAccount = await this.bankAccountRepository.findBankAccountByUserId(userId);
+      const bankAccount = await this.beneficiaryRepository.findBankAccountByBeneId(userId, beneId);
+
       if (!bankAccount || bankAccount.status !== 1) {
         throw new BadRequestException(
           'Bank KYC / Bank Account details are not completed or verified.'
@@ -180,11 +186,14 @@ export class PaymentService {
 
       const transactionResult = await this.transactionUtils.runInTransaction(
         async (queryRunner) => {
-          const transaction_id = await CommonUtils.generateUniqueRefCode();
-          const plainOtp = Math.floor(1000 + Math.random() * 9000).toString();
-          const otpEncrypted = CommonUtils.encrypt(plainOtp);
-
           const isLive = this.appConfigService.isProduction() || this.appConfigService.isQa();
+
+          const transaction_id = await CommonUtils.generateUniqueRefCode();
+          const plainOtp = isLive
+            ? Math.floor(1000 + Math.random() * 9000).toString()
+            : this.appConfigService.getNonProdRewardsOtp();
+          const otpEncrypted = CommonUtils.encrypt(String(plainOtp));
+
           if (isLive) {
             const sms = await CommonUtils.sendSMS({
               mobile: user.mobile,
@@ -206,10 +215,10 @@ export class PaymentService {
               otp: otpEncrypted,
               otp_verified: 0,
               user: user,
-              bankAccount: bankAccount,
-              account_number: bankAccount.account_number,
-              ifsc_code: bankAccount.ifsc_internal,
-              bank_name: bankAccount.bank_name,
+              userBeneficiary: { id: bankAccount.id } as any,
+              account_number: bankAccount.accountNumber,
+              ifsc_code: bankAccount.ifsc,
+              bank_name: bankAccount.bankName,
             },
             queryRunner
           );
@@ -237,11 +246,19 @@ export class PaymentService {
     }
   }
 
+  /**
+   * Verifies a DBT Order
+   *
+   * @param userId
+   * @param transactionId
+   * @param otp
+   * @returns
+   */
   async verifyPayoutOtp(userId: number, transactionId: string, otp: string) {
     const payout = await this.payoutRepository.findLatestByTransactionId(
       transactionId,
       Number(userId),
-      ['user', 'user.role', 'bankAccount']
+      ['user', 'user.role', 'userBeneficiary']
     );
 
     if (!payout) {
@@ -285,13 +302,18 @@ export class PaymentService {
       }
     }
 
-    // OTP Expiry check (5 mins)
-    const diffMinutes = (Date.now() - new Date(payout.createdAt).getTime()) / (1000 * 60);
-    if (diffMinutes > 5 || diffMinutes < 0) {
-      throw new BadRequestException('OTP expired');
-    }
+    const realCreatedAtTime =
+      payout.createdAt.getTime() - payout.createdAt.getTimezoneOffset() * 60 * 1000;
 
-    const bankAccount = payout.bankAccount;
+    const ageMs = Date.now() - realCreatedAtTime;
+    const FIVE_MINUTES_MS = 5 * 60 * 1000;
+
+    // if (ageMs < 0 || ageMs > FIVE_MINUTES_MS) {
+    //   throw new BadRequestException('OTP expired');
+    // }
+
+    const bankAccount = payout.userBeneficiary;
+
     if (!bankAccount) {
       throw new BadRequestException('Bank account not found');
     }
@@ -314,19 +336,20 @@ export class PaymentService {
           await this.userRepository.save(user, queryRunner);
 
           // Point History entry
-          const pointHistory = await this.pointHistoryRepository.create({
-            user: { id: payout.user.id } as any,
-            description: `DBT Amount: ${payout.amount}`,
-            date: new Date(),
-            status: PointStatusEnum.redeem,
-            type: RedemptionType.BANK,
-            transaction_id: payout.transaction_id,
-            points: payout.points,
-            user_remaining_points: remainingPoints,
-            payout: payout,
-          } as any);
-
-          const savedPointHistory = await this.pointHistoryRepository.save(pointHistory, queryRunner);
+          const savedPointHistory = await this.pointHistoryRepository.save(
+            {
+              user: { id: payout.user.id } as any,
+              description: `DBT Amount: ${payout.amount}`,
+              date: new Date(),
+              status: PointStatusEnum.redeem,
+              type: RedemptionType.BANK,
+              transaction_id: payout.transaction_id,
+              points: payout.points,
+              user_remaining_points: remainingPoints,
+              payout: payout,
+            },
+            queryRunner
+          );
 
           payout.status = PayoutStatus.SUCCESS;
           payout.redeem_date = new Date().toISOString().split('T')[0];
@@ -341,12 +364,13 @@ export class PaymentService {
       );
 
       // Call API placement only if database transaction commits
-      const decryptedAccount = await this.kycService.decryptKycData(bankAccount.account_number);
-      const decryptedIfsc = await this.kycService.decryptKycData(bankAccount.ifsc_internal);
+      const decryptedAccount = await this.kycService.decryptKycData(bankAccount.accountNumber);
+      const decryptedIfsc = await this.kycService.decryptKycData(bankAccount.ifsc);
 
+      // Need to seperate this for UPI and BANK
       await this.rewardsService.payoutAmountBank({
         type: 'bank',
-        name: bankAccount.bank_holder_name_internal,
+        name: bankAccount.bankHolderName,
         number: String(payout.user.mobile),
         account_number: decryptedAccount,
         ifsc: decryptedIfsc,

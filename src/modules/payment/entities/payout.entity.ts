@@ -1,8 +1,7 @@
 import { Entity, Column, ManyToOne, JoinColumn, OneToOne } from 'typeorm';
 //
-import { User, PointHistory } from '../../auth/entities';
+import { User, PointHistory, UserBeneficiary } from '../../auth/entities';
 import { BaseEntity } from '../../../default/common/entities';
-import { BankAccount } from './bank-account.entity';
 
 export enum PayoutStatus {
   INITIATED = 'INITIATED',
@@ -15,26 +14,26 @@ export enum PayoutStatus {
 @Entity({ name: 'payouts' })
 export class Payout extends BaseEntity {
   @Column({ type: 'varchar', length: 100, name: 'transaction_id', unique: true, nullable: false })
-  transaction_id: string;
+  transaction_id!: string;
 
   @Column({ type: 'int', default: 0 })
-  points: number;
+  points!: number;
 
   @Column({ type: 'decimal', precision: 10, scale: 2, default: 0.0 })
-  amount: number;
+  amount!: number;
 
   @Column({
     type: 'enum',
     enum: PayoutStatus,
     default: PayoutStatus.INITIATED,
   })
-  status: PayoutStatus;
+  status!: PayoutStatus;
 
   @Column({ type: 'varchar', length: 255, nullable: true })
   otp?: string | null;
 
   @Column({ type: 'tinyint', default: 0, name: 'otp_verified' })
-  otp_verified: number;
+  otp_verified!: number;
 
   @Column({ type: 'varchar', length: 255, nullable: true, name: 'account_number' })
   account_number?: string | null;
@@ -50,13 +49,12 @@ export class Payout extends BaseEntity {
 
   @ManyToOne(() => User, { nullable: false })
   @JoinColumn({ name: 'user_id' })
-  user: User;
+  user!: User;
 
-  @ManyToOne(() => BankAccount, { nullable: false })
-  @JoinColumn({ name: 'bank_account_id' })
-  bankAccount: BankAccount;
+  @ManyToOne(() => UserBeneficiary, { nullable: false })
+  @JoinColumn({ name: 'beneficiary_id' })
+  userBeneficiary!: UserBeneficiary;
 
   @OneToOne(() => PointHistory, (pointHistory) => pointHistory.payout, { nullable: true })
   pointHistory?: PointHistory | null;
 }
-
