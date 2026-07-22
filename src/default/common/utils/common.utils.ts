@@ -299,6 +299,7 @@ export class CommonUtils {
 
     return hmac.digest('hex'); // return final hash
   }
+
   static async generateSecretKeyForVoucher(data: {
     type: string;
     name: string;

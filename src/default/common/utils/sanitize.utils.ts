@@ -34,26 +34,45 @@ export class DataSanitizer {
     additionalFields: string[] = [],
     overrideSensitiveFields?: string[]
   ): any {
+    if (data === null || data === undefined) {
+      return data;
+    }
+
     const sensitiveFields = overrideSensitiveFields
       ? overrideSensitiveFields
       : [...this.defaultSensitiveFields, ...additionalFields];
 
     if (Array.isArray(data)) {
       return data.map((item) => this.sanitizeData(item, additionalFields, overrideSensitiveFields));
-    } else if (typeof data === 'object' && data !== null) {
+    }
+
+    if (data instanceof Date) {
+      return data.toISOString();
+    }
+
+    if (typeof data === 'object') {
       const sanitized = this.removeSensitiveFields(data, sensitiveFields);
       return this.formatDateFieldsForResponse(sanitized);
     }
+
     return data;
   }
 
   private static removeSensitiveFields(obj: Record<string, any>, sensitiveFields: string[]): any {
-    const sanitizedObject = { ...obj };
+    if (obj === null || obj === undefined || obj instanceof Date) {
+      return obj;
+    }
 
-    for (const key in sanitizedObject) {
+    const sanitizedObject: Record<string, any> = { ...obj };
+
+    for (const key of Object.keys(sanitizedObject)) {
       if (sensitiveFields.includes(key)) {
         delete sanitizedObject[key];
-      } else if (typeof sanitizedObject[key] === 'object' && sanitizedObject[key] !== null) {
+      } else if (
+        typeof sanitizedObject[key] === 'object' &&
+        sanitizedObject[key] !== null &&
+        !(sanitizedObject[key] instanceof Date)
+      ) {
         sanitizedObject[key] = this.sanitizeData(sanitizedObject[key], [], sensitiveFields);
       }
     }
@@ -68,7 +87,7 @@ export class DataSanitizer {
    * @param customFields Additional field names to treat as date fields.
    */
   static formatDateFieldsForResponse(data: any, customFields: string[] = []): any {
-    if (!data) {
+    if (data === null || data === undefined) {
       return data;
     }
 
@@ -82,7 +101,7 @@ export class DataSanitizer {
       return data.toISOString();
     }
 
-    if (typeof data === 'object' && data !== null) {
+    if (typeof data === 'object') {
       const result: Record<string, any> = { ...data };
 
       for (const key of Object.keys(result)) {
@@ -98,7 +117,7 @@ export class DataSanitizer {
               result[key] = parsedDate.toISOString();
             }
           }
-        } else if (typeof val === 'object' && val !== null) {
+        } else if (typeof val === 'object' && val !== null && !(val instanceof Date)) {
           result[key] = this.formatDateFieldsForResponse(val, customFields);
         }
       }
