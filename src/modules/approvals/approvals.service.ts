@@ -7,6 +7,7 @@ import { UserStatus } from '../auth/constants/auth.constants';
 import { ApprovalStatus, ApprovalType } from 'src/default/common/enums/approvals.enum';
 import { UserRole } from 'src/default/common/enums/user-type.enum';
 import { User } from '../auth/entities/users.entity';
+import { CommonUtils } from 'src/default/common/utils/common.utils';
 
 @Injectable()
 export class ApprovalsService {
@@ -14,7 +15,7 @@ export class ApprovalsService {
     private readonly approvalRepository: ApprovalRepository,
     private readonly userRepository: UserRepository,
     private readonly roleRepository: RolesRepository
-  ) { }
+  ) {}
 
   async handleApprovalAction(
     approverId: number,
@@ -220,11 +221,9 @@ export class ApprovalsService {
     approverRole: UserRole,
     statusFilter?: string,
     page: number = 1,
-    limit: number = 10,
+    limit: number = 10
   ) {
-    const level = approverRole === UserRole.L1 ? 1
-      : approverRole === UserRole.L2 ? 2
-        : null;
+    const level = approverRole === UserRole.L1 ? 1 : approverRole === UserRole.L2 ? 2 : null;
 
     if (level === null && approverRole !== UserRole.SUPERADMIN) {
       throw new BusinessException(ERROR_CODES.APPROVAL.INVALID_LEVEL);
@@ -260,22 +259,20 @@ export class ApprovalsService {
       level: approval.level,
       status: approval.status,
       remarks: approval.remarks ?? null,
-      approvedAt: approval.approved_at
-        ? new Date(approval.approved_at).toISOString()
-        : null,
+      approvedAt: approval.approved_at ? new Date(approval.approved_at).toISOString() : null,
       assignedTo: approval.assignedTo
         ? {
-          id: approval.assignedTo.id,
-          name: approval.assignedTo.username ?? null,
-          mobile: approval.assignedTo.mobile ?? null,
-        }
+            id: approval.assignedTo.id,
+            name: approval.assignedTo.username ?? null,
+            mobile: approval.assignedTo.mobile ?? null,
+          }
         : null,
       approvedBy: approval.approved_by
         ? {
-          id: approval.approved_by.id,
-          name: approval.approved_by.username ?? null,
-          mobile: approval.approved_by.mobile ?? null,
-        }
+            id: approval.approved_by.id,
+            name: approval.approved_by.username ?? null,
+            mobile: approval.approved_by.mobile ?? null,
+          }
         : null,
       retailer: {
         id: approval.user.id,
@@ -286,32 +283,23 @@ export class ApprovalsService {
       },
       storeInfo: approval.user.storeInformation
         ? {
-          address: approval.user.storeInformation.address1,
-          city: approval.user.storeInformation.city,
-          pincode: approval.user.storeInformation.pincode,
-          lat: approval.user.storeInformation.lat,
-          lng: approval.user.storeInformation.lng,
-        }
+            address: approval.user.storeInformation.address1,
+            city: approval.user.storeInformation.city,
+            pincode: approval.user.storeInformation.pincode,
+            lat: approval.user.storeInformation.lat,
+            lng: approval.user.storeInformation.lng,
+          }
         : null,
     }));
 
     return {
       list,
-      pagination: {
-        total,
-        page,
-        limit,
-        totalPages: Math.ceil(total / limit),
-        hasNext: page < Math.ceil(total / limit),
-        hasPrev: page > 1,
-      },
+      pagination: CommonUtils.generatePaginationResponse(total, page, limit),
     };
   }
 
   async getApprovalAnalytics(approverId: number, approverRole: UserRole) {
-    const level = approverRole === UserRole.L1 ? 1
-      : approverRole === UserRole.L2 ? 2
-        : null;
+    const level = approverRole === UserRole.L1 ? 1 : approverRole === UserRole.L2 ? 2 : null;
 
     if (level === null && approverRole !== UserRole.SUPERADMIN) {
       throw new BusinessException(ERROR_CODES.APPROVAL.INVALID_LEVEL);
