@@ -2,6 +2,7 @@ export enum UserRole {
   RETAILER = 'retailer',
   DISTRIBUTOR = 'distributor',
   SALESPERSON = 'sales_person',
+  EMPLOYEE = 'employee',
   SUPERADMIN = 'super_admin',
   L1 = 'l1',
   L2 = 'l2',

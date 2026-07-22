@@ -1,4 +1,4 @@
-import { Body, Controller, Post, Req, UseGuards, UseInterceptors } from '@nestjs/common';
+import { Body, Controller, Get, Post, Req, UseGuards, UseInterceptors } from '@nestjs/common';
 import { SkipThrottle } from '@nestjs/throttler';
 
 import { KycService } from './kyc.service';
@@ -15,6 +15,7 @@ import { GenerateAadharOtpDto } from './dto/generate-aadhar.dto';
 import { VerifyAadhaarOtpDto, VerifyAadharOtpDto } from './dto/verify-aadhar-otp.dto';
 import { VerifyPanDto } from './dto/verify-pan.dto';
 import { VerifyGstDto } from './dto/verify-gst.dto';
+import { AddBeneficiaryDto } from './dto/add-beneficiary.dto';
 
 @NoCache()
 @SkipThrottle()
@@ -60,4 +61,23 @@ export class KYCController {
     const response = await this.kycService.verifyGst(userId, body);
     return DataSanitizer.sanitizeData(response);
   }
+
+  @Post('beneficiary')
+  @ResponseMessage(SUCCESS_MESSAGES.KYC.BENEFICIARY_ADDED)
+  async addBeneficiary(@Req() req: any, @Body() body: AddBeneficiaryDto) {
+    const userId = req.user.id;
+
+    const response = await this.kycService.addBeneficiary(userId, body);
+    return DataSanitizer.sanitizeData(response);
+  }
+
+  @Get('beneficiary')
+  @ResponseMessage(SUCCESS_MESSAGES.KYC.BENEFICIARIES_FETCHED)
+  async getUserBeneficiaries(@Req() req: any) {
+    const userId = req.user.id;
+
+    const response = await this.kycService.getUserBeneficiaries(userId);
+    return DataSanitizer.sanitizeData(response);
+  }
 }
+

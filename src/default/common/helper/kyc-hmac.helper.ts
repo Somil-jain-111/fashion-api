@@ -4,7 +4,7 @@ export class KycHmacHelper {
   static generateSecretKey(data: any, secretKey: string): string {
     const body: Record<string, any> = {};
 
-    const fields = ['type', 'id_number', 'transaction_id', 'otp', 'name_1', 'name_2'];
+    const fields = ['type', 'id_number', 'ifsc_code', 'transaction_id', 'otp', 'name_1', 'name_2'];
 
     for (const field of fields) {
       if (data?.result?.[field] !== undefined && data?.result?.[field] !== null) {

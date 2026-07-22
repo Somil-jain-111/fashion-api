@@ -77,4 +77,20 @@ export class AppConfigService {
   getRewardsProductsCatalogueId() {
     return this.get(this.isProduction() ? 'Rewards_Catalogue_id_Live' : 'Rewards_Catalogue_id_Dev');
   }
+
+  getKycSecretKey() {
+    return this.get('KYC_SECRET_KEY');
+  }
+
+  getBankPayoutSku() {
+    return this.get(
+      this.isProduction() ? 'Rewards_API_Bank_Payout_Sku_Live' : 'Rewards_API_Bank_Payout_Sku_Dev'
+    );
+  }
+
+  getUpiPayoutSku() {
+    return this.get(
+      this.isProduction() ? 'Rewards_API_Upi_Payout_Sku_Live' : 'Rewards_API_Upi_Payout_Sku_Dev'
+    );
+  }
 }

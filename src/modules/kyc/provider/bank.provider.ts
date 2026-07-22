@@ -7,12 +7,13 @@ import { ERROR_CODES } from 'src/default/error/error.code';
 import { ConsoleLogger } from 'src/default/logger/console/console.service';
 import { ApiResponseRepository } from 'src/modules/kyc/repository';
 
-type GstVerifyInput = {
-  gstNumber: string;
+export type BankVerifyInput = {
+  accountNumber: string;
+  ifsc: string;
   transactionId: string;
 };
 
-export type GstVerifyResult = {
+export type BankVerifyResult = {
   success: boolean;
   requestConfig: AxiosRequestConfig;
   requestPayload: Record<string, any>;
@@ -22,31 +23,17 @@ export type GstVerifyResult = {
 };
 
 @Injectable()
-export class GstProvider {
+export class BankProvider {
   constructor(
     private readonly appConfigService: AppConfigService,
     private readonly apiResponseRepository: ApiResponseRepository
   ) {}
 
-  maskGstNumber(gstNumber: string) {
-    const cleanedGst = gstNumber.replace(/\s+/g, '').toUpperCase();
-
-    if (cleanedGst.length !== 15) {
-      throw new Error('Invalid GSTIN number length. Must be exactly 15 characters.');
-    }
-
-    const stateCode = cleanedGst.slice(0, 2); // First 2 digits (State)
-    const lastThree = cleanedGst.slice(12); // Last 3 digits (Entity & Check sum)
-
-    return `${stateCode}XXXXXXXXXX${lastThree}`;
-  }
-
-  async verifyGst(data: GstVerifyInput): Promise<GstVerifyResult> {
-    const gst = data.gstNumber.toUpperCase();
-
+  async validateBankAccount(data: BankVerifyInput): Promise<BankVerifyResult> {
     const payload = {
-      type: 'kyc_gst',
-      id_number: gst,
+      type: 'kyc_bank',
+      id_number: data.accountNumber,
+      ifsc_code: data.ifsc,
       transaction_id: data.transactionId,
     };
 
@@ -70,10 +57,15 @@ export class GstProvider {
     };
 
     try {
+      ConsoleLogger.log(`Calling Bank verification | transactionId: ${data.transactionId}`, {
+        tag: 'BankProvider.validateBankAccount',
+        data: payload,
+      });
+
       const response = await axios.request(requestConfig);
 
       await this.apiResponseRepository.saveResponse({
-        type: 'GST',
+        type: 'BANK',
         requestUrl: requestConfig.url || '',
         requestPayload: {
           payload,
@@ -88,42 +80,36 @@ export class GstProvider {
         requestPayload: payload,
         responseData: response.data,
         statusCode: response.status,
-        message: response.data?.message || 'GST verification successful',
+        message: response.data?.message || 'Bank verification successful',
       };
-    } catch (error) {
-      const errorResponse = error.response?.data || {
-        status: false,
-        message: 'Unknown error',
-      };
+    } catch (error: any) {
+      console.log(error);
+      const responseData = error.response?.data || { status: false, message: 'Bank API failed' };
+      const statusCode = responseData?.data?.statuscode || error.response?.status || 500;
 
-      const statusCode = errorResponse?.data?.statuscode || error.response?.status || 400;
-
-      ConsoleLogger.error('GST_PROVIDER_ERROR', error?.stack, {
-        tag: 'GstProvider.verifyGst',
-        data: {
-          gst,
-          statusCode,
-          errorResponse,
-        },
-      });
+      ConsoleLogger.error(
+        `Error Bank verification | transactionId: ${data.transactionId}`,
+        error.stack,
+        'BankProvider.validateBankAccount'
+      );
 
       await this.apiResponseRepository.saveResponse({
-        type: 'GST',
+        type: 'BANK',
         requestUrl: requestConfig.url || '',
         requestPayload: {
           payload,
           headers: requestConfig.headers,
         },
-        responsePayload: errorResponse,
+        responsePayload: responseData,
       });
 
       return {
         success: false,
         requestConfig,
         requestPayload: payload,
-        responseData: errorResponse,
+        responseData,
         statusCode,
-        message: errorResponse.message || 'GST verification failed',
+        message: responseData?.message || error.message || 'Bank verification failed',
       };
     }
   }
