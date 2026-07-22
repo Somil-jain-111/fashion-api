@@ -32,18 +32,15 @@ export class ApprovalsController {
     return DataSanitizer.sanitizeData(response);
   }
 
-  @Roles([UserRole.L1, UserRole.L2, UserRole.SUPERADMIN])
+  @Roles([UserRole.L1, UserRole.L2, UserRole.SALESPERSON, UserRole.SUPERADMIN])
   @NoCache()
   @Get('queue')
   @ResponseMessage('Approval queue fetched successfully')
-  async getApprovalQueue(
-    @Req() req: any,
-    @Query('status') status?: string,
-  ) {
+  async getApprovalQueue(@Req() req: any, @Query('status') status?: string) {
     const response = await this.approvalsService.getApprovalQueue(
       Number(req.user.id),
       req.user.role as UserRole,
-      status,
+      status
     );
     return DataSanitizer.sanitizeData(response);
   }
