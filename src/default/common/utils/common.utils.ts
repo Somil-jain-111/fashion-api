@@ -6,7 +6,6 @@ import { AppConfigService } from 'src/default/config/config.service';
 import axios from 'axios';
 import { ConflictException } from '@nestjs/common';
 import { ConsoleLogger } from 'src/default/logger/console/console.service';
-import { OrderStatus } from '../enums/order-status.enum';
 
 export class CommonUtils {
   private static appConfigService: AppConfigService;
@@ -300,6 +299,7 @@ export class CommonUtils {
 
     return hmac.digest('hex'); // return final hash
   }
+
   static async generateSecretKeyForVoucher(data: {
     type: string;
     name: string;
@@ -337,5 +337,23 @@ export class CommonUtils {
 
     // ✅ Return final signature (hex format)
     return hmac.digest('hex');
+  }
+
+  static generatePaginationResponse(
+    total: number,
+    page: number,
+    limit: number
+  ): {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  } {
+    return {
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
   }
 }
