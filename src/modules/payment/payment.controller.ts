@@ -1,6 +1,22 @@
-import { Controller, Post, Body, UseInterceptors, UseGuards, Req } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  UseInterceptors,
+  UseGuards,
+  Req,
+  Query,
+  Get,
+} from '@nestjs/common';
+import { SkipThrottle } from '@nestjs/throttler';
+//
+import {
+  GetPaymentsQueryDto,
+  PayoutTransactionDto,
+  ResetTransactionOtpDto,
+  VerifyTransactionOtpDto,
+} from './dto';
 import { PaymentService } from './payment.service';
-import { PayoutTransactionDto, ResetTransactionOtpDto, VerifyTransactionOtpDto } from './dto';
 import { NoCache } from 'src/default/cache/cache.decorator';
 import { IdempotencyInterceptor } from 'src/default/common/interceptors/idempotency-check.interceptor';
 import { JwtAuthGuard } from 'src/default/common/guards/jwt-auth.guard';
@@ -52,6 +68,16 @@ export class PaymentController {
       body.transactionId,
       body.otp
     );
+    return DataSanitizer.sanitizeData(response);
+  }
+
+  @NoCache()
+  @SkipThrottle()
+  @ResponseMessage('Bank transfer verification and payout placed successfully.')
+  @Get('all')
+  async fetchPayouts(@Req() request: any, @Query() query: GetPaymentsQueryDto) {
+    const userId = request.user.id;
+    const response = await this.paymentService.fetchAllPayments(userId, query);
     return DataSanitizer.sanitizeData(response);
   }
 }
