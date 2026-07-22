@@ -12,7 +12,7 @@ import { NoCache } from 'src/default/cache/cache.decorator';
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('approvals')
 export class ApprovalsController {
-  constructor(private readonly approvalsService: ApprovalsService) {}
+  constructor(private readonly approvalsService: ApprovalsService) { }
 
   @Roles([UserRole.L1, UserRole.L2, UserRole.SALESPERSON, UserRole.SUPERADMIN])
   @Post(':id/action')
@@ -39,11 +39,27 @@ export class ApprovalsController {
   async getApprovalQueue(
     @Req() req: any,
     @Query('status') status?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
   ) {
     const response = await this.approvalsService.getApprovalQueue(
       Number(req.user.id),
       req.user.role as UserRole,
       status,
+      page ? Number(page) : 1,
+      limit ? Number(limit) : 10,
+    );
+    return DataSanitizer.sanitizeData(response);
+  }
+
+  @Roles([UserRole.L1, UserRole.L2, UserRole.SUPERADMIN])
+  @NoCache()
+  @Get('queue/analytics')
+  @ResponseMessage('Approval analytics fetched successfully')
+  async getApprovalAnalytics(@Req() req: any) {
+    const response = await this.approvalsService.getApprovalAnalytics(
+      Number(req.user.id),
+      req.user.role as UserRole,
     );
     return DataSanitizer.sanitizeData(response);
   }
