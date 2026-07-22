@@ -16,19 +16,11 @@ export class PayoutRepository extends BaseRepository<Payout> {
     relations: string[] = [],
     queryRunner?: QueryRunner
   ): Promise<Payout | null> {
-    const repo = queryRunner ? queryRunner.manager.getRepository(Payout) : this.repository;
+    const repo = this.getRepository(queryRunner);
+
     return await repo.findOne({
       where: { transaction_id: transactionId, user: { id: userId } },
       relations,
     });
-  }
-
-  async createPayout(
-    data: Partial<Payout> & { user: any },
-    queryRunner?: QueryRunner
-  ): Promise<Payout> {
-    const repo = queryRunner ? queryRunner.manager.getRepository(Payout) : this.repository;
-    const payout = repo.create(data);
-    return await repo.save(payout);
   }
 }

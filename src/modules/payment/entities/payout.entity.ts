@@ -32,8 +32,11 @@ export class Payout extends BaseEntity {
   @Column({ type: 'varchar', length: 255, nullable: true })
   otp?: string | null;
 
-  @Column({ type: 'tinyint', default: 0, name: 'otp_verified' })
+  @Column({ type: 'tinyint', default: 0 })
   otp_verified!: number;
+
+  @Column({ type: 'datetime', nullable: true })
+  otp_expiry?: Date | null;
 
   @Column({ type: 'varchar', length: 255, nullable: true, name: 'account_number' })
   account_number?: string | null;

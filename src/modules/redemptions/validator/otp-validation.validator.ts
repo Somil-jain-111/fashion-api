@@ -1,12 +1,14 @@
 // src/modules/redemptions/validators/redemption-otp.validator.ts
 
 import { Injectable } from '@nestjs/common';
+import { DateHelper } from 'src/default/common/helper/date.helper';
 import { BusinessException } from 'src/default/error/business.exception';
 import { ERROR_CODES } from 'src/default/error/error.code';
+import { Order } from '../entities/order.entity';
 
 @Injectable()
 export class RedemptionOtpValidator {
-  validate(order: any, otp: string): void {
+  validate(order: Order, otp: string): void {
     if (!otp) {
       throw new BusinessException(ERROR_CODES.OTP.OTP_REQUIRED);
     }
@@ -19,9 +21,7 @@ export class RedemptionOtpValidator {
       throw new BusinessException(ERROR_CODES.OTP.OTP_EXPIRED);
     }
 
-    const expiryTime = new Date(order.redemption_otp_expired_at).getTime();
-
-    if (expiryTime < Date.now()) {
+    if (DateHelper.isOtpExpired(order.redemption_otp_expired_at)) {
       throw new BusinessException(ERROR_CODES.OTP.OTP_EXPIRED);
     }
 
