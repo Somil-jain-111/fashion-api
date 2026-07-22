@@ -33,6 +33,24 @@ export class PaymentService {
   ) {}
 
   /**
+   * Helper to check if an OTP has expired (default: 5 minutes)
+   *
+   * @param date
+   * @param timeoutMinutes
+   * @returns boolean
+   */
+  private isOtpExpired(date: Date, timeoutMinutes = 5): boolean {
+    if (!date) {
+      return true;
+    }
+
+    const realTime = date.getTime() - date.getTimezoneOffset() * 60 * 1000;
+    const ageMs = Date.now() - realTime;
+    const FIVE_MINUTES_MS = timeoutMinutes * 60 * 1000;
+    return ageMs < 0 || ageMs > FIVE_MINUTES_MS;
+  }
+
+  /**
    * Places a DBT order
    *
    * @param userId
@@ -206,7 +224,7 @@ export class PaymentService {
             });
           }
 
-          await this.payoutRepository.createPayout(
+          await this.payoutRepository.save(
             {
               transaction_id,
               points: points,
@@ -244,6 +262,83 @@ export class PaymentService {
         }
       }
     }
+  }
+
+  /**
+   * Resends or generates new OTP for a DBT transaction
+   *
+   * @param userId
+   * @param transactionId
+   * @returns
+   */
+  async resetPayoutOtp(userId: number, transactionId: string) {
+    const payout = await this.payoutRepository.findLatestByTransactionId(
+      transactionId,
+      Number(userId),
+      ['user']
+    );
+
+    if (!payout) {
+      throw new BadRequestException('Transaction not found');
+    }
+
+    if (payout.status !== PayoutStatus.INITIATED) {
+      throw new BadRequestException('Transaction already processed');
+    }
+
+    const user = payout.user;
+    if (!user) {
+      throw new BadRequestException('User not found');
+    }
+
+    const isLive = this.appConfigService.isProduction() || this.appConfigService.isQa();
+    let plainOtp: string;
+
+    const otpDate = payout.updatedAt || payout.createdAt;
+    const expired = this.isOtpExpired(otpDate);
+
+    if (!expired && payout.otp) {
+      try {
+        plainOtp = CommonUtils.decrypt(payout.otp);
+      } catch (e) {
+        plainOtp = isLive
+          ? Math.floor(1000 + Math.random() * 9000).toString()
+          : this.appConfigService.getNonProdRewardsOtp()?.toString() || '9988';
+
+        payout.otp = CommonUtils.encrypt(String(plainOtp));
+
+        await this.payoutRepository.save(payout);
+      }
+    } else {
+      plainOtp = isLive
+        ? Math.floor(1000 + Math.random() * 9000).toString()
+        : this.appConfigService.getNonProdRewardsOtp()?.toString() || '9988';
+
+      const otpEncrypted = CommonUtils.encrypt(String(plainOtp));
+
+      payout.otp = otpEncrypted;
+
+      await this.payoutRepository.save(payout);
+    }
+
+    if (isLive) {
+      const sms = await CommonUtils.sendSMS({
+        mobile: user.mobile,
+        otp: plainOtp,
+      });
+
+      ConsoleLogger.log('OTP sent successfully for DBT reset.', {
+        tag: 'PaymentService.resetPayoutOtp',
+        data: sms,
+      });
+    }
+
+    return {
+      success: true,
+      requiresOtp: true,
+      transaction_id: payout.transaction_id,
+      message: 'OTP sent successfully',
+    };
   }
 
   /**
@@ -303,15 +398,9 @@ export class PaymentService {
       }
     }
 
-    const realCreatedAtTime =
-      payout.createdAt.getTime() - payout.createdAt.getTimezoneOffset() * 60 * 1000;
-
-    const ageMs = Date.now() - realCreatedAtTime;
-    const FIVE_MINUTES_MS = 5 * 60 * 1000;
-
-    // if (ageMs < 0 || ageMs > FIVE_MINUTES_MS) {
-    //   throw new BadRequestException('OTP expired');
-    // }
+    if (this.isOtpExpired(payout.updatedAt || payout.createdAt)) {
+      throw new BadRequestException('OTP expired');
+    }
 
     const bankAccount = payout.userBeneficiary;
 

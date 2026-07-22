@@ -17,15 +17,13 @@ export class BaseRepository<T extends object> {
   }
 
   create(data: DeepPartial<T>, queryRunner?: QueryRunner): T {
-    const repo = this.getRepository();
+    const repo = this.getRepository(queryRunner);
 
     return repo.create(data);
   }
 
   async save(data: DeepPartial<T>, queryRunner?: QueryRunner): Promise<T> {
-    const repo = queryRunner
-      ? queryRunner.manager.getRepository(this.repository.target)
-      : this.repository;
+    const repo = this.getRepository(queryRunner);
 
     const entity = this.create(data, queryRunner);
 
@@ -69,9 +67,7 @@ export class BaseRepository<T extends object> {
     data: Partial<T>,
     queryRunner?: QueryRunner
   ): Promise<boolean> {
-    const repo = queryRunner
-      ? queryRunner.manager.getRepository(this.repository.target)
-      : this.repository;
+    const repo = this.getRepository(queryRunner);
 
     const result = await repo.update(
       {
@@ -88,43 +84,33 @@ export class BaseRepository<T extends object> {
     data: Partial<T>,
     queryRunner?: QueryRunner
   ): Promise<boolean> {
-    const repo = queryRunner
-      ? queryRunner.manager.getRepository(this.repository.target)
-      : this.repository;
+    const repo = this.getRepository(queryRunner);
 
     const result = await repo.update(where, data as any);
     return Number(result.affected) > 0;
   }
 
   async deleteById(id: string | number | bigint, queryRunner?: QueryRunner): Promise<boolean> {
-    const repo = queryRunner
-      ? queryRunner.manager.getRepository(this.repository.target)
-      : this.repository;
+    const repo = this.getRepository(queryRunner);
 
     const result = await repo.delete(id as any);
     return Number(result.affected) > 0;
   }
 
   async count(options?: FindManyOptions<T>, queryRunner?: QueryRunner): Promise<number> {
-    const repo = queryRunner
-      ? queryRunner.manager.getRepository(this.repository.target)
-      : this.repository;
+    const repo = this.getRepository(queryRunner);
 
     return await repo.count(options);
   }
 
   createQueryBuilder(alias: string, queryRunner?: QueryRunner): SelectQueryBuilder<T> {
-    const repo = queryRunner
-      ? queryRunner.manager.getRepository(this.repository.target)
-      : this.repository;
+    const repo = this.getRepository(queryRunner);
 
     return repo.createQueryBuilder(alias);
   }
 
   async update(where: any, data: any, queryRunner?: QueryRunner) {
-    const repo = queryRunner
-      ? queryRunner.manager.getRepository(this.repository.target)
-      : this.repository;
+    const repo = this.getRepository(queryRunner);
 
     return repo.update(where, data);
   }

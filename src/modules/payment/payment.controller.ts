@@ -1,6 +1,6 @@
 import { Controller, Post, Body, UseInterceptors, UseGuards, Req } from '@nestjs/common';
 import { PaymentService } from './payment.service';
-import { PayoutTransactionDto, VerifyTransactionOtpDto } from './dto';
+import { PayoutTransactionDto, ResetTransactionOtpDto, VerifyTransactionOtpDto } from './dto';
 import { NoCache } from 'src/default/cache/cache.decorator';
 import { IdempotencyInterceptor } from 'src/default/common/interceptors/idempotency-check.interceptor';
 import { JwtAuthGuard } from 'src/default/common/guards/jwt-auth.guard';
@@ -28,6 +28,16 @@ export class PaymentController {
       dto.points,
       dto.beneId
     );
+    return DataSanitizer.sanitizeData(response);
+  }
+
+  @NoCache()
+  @UseInterceptors(IdempotencyInterceptor)
+  @ResponseMessage('Bank transfer OTP sent successfully.')
+  @Post('reset-otp')
+  async resetPayoutOtp(@Req() request: any, @Body() body: ResetTransactionOtpDto) {
+    const userId = request.user.id;
+    const response = await this.paymentService.resetPayoutOtp(userId, body.transactionId);
     return DataSanitizer.sanitizeData(response);
   }
 

@@ -1,4 +1,4 @@
-import { IsIn, IsInt, IsNotEmpty, IsNumber, IsPositive, Max, Min } from 'class-validator';
+import { IsInt, IsNotEmpty, IsNumber, IsPositive, Max, Min } from 'class-validator';
 
 export class PayoutTransactionDto {
   @IsNotEmpty()
