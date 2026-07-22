@@ -8,6 +8,7 @@ import { UserRole } from 'src/default/common/enums/user-type.enum';
 import { ResponseMessage } from 'src/default/common/decorators/response-message.decorator';
 import { DataSanitizer } from 'src/default/common/utils/sanitize.utils';
 import { NoCache } from 'src/default/cache/cache.decorator';
+import { ApprovalStatus } from 'src/default/common/enums/approvals.enum';
 
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('approvals')
@@ -32,13 +33,13 @@ export class ApprovalsController {
     return DataSanitizer.sanitizeData(response);
   }
 
-  @Roles([UserRole.L1, UserRole.L2, UserRole.SUPERADMIN])
+  @Roles([UserRole.L1, UserRole.L2,UserRole.SALESPERSON, UserRole.SUPERADMIN])
   @NoCache()
   @Get('queue')
   @ResponseMessage('Approval queue fetched successfully')
   async getApprovalQueue(
     @Req() req: any,
-    @Query('status') status?: string,
+    @Query('status') status?: ApprovalStatus,
     @Query('page') page?: string,
     @Query('limit') limit?: string,
   ) {

@@ -46,6 +46,7 @@ import { CmsModule } from './modules/cms/cms.module';
 import { OrderPlacementModule } from './modules/order-placement/order-placement.module';
 import { ProductsModule } from './modules/products/products.module';
 import { CartModule } from './modules/cart/cart.module';
+import { EmployeeModule } from './modules/employee/employee.module';
 
 @Module({
   imports: [
@@ -93,6 +94,7 @@ import { CartModule } from './modules/cart/cart.module';
     OrderPlacementModule,
     ProductsModule,
     CartModule,
+    EmployeeModule
   ],
   providers: [
     {

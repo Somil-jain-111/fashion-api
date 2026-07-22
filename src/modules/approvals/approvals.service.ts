@@ -4,7 +4,7 @@ import { UserRepository, RolesRepository } from 'src/modules/auth/repository';
 import { BusinessException } from 'src/default/error/business.exception';
 import { ERROR_CODES } from 'src/default/error/error.code';
 import { UserStatus } from '../auth/constants/auth.constants';
-import { ApprovalStatus, ApprovalType } from 'src/default/common/enums/approvals.enum';
+import { ApprovalAction, ApprovalStatus, ApprovalType } from 'src/default/common/enums/approvals.enum';
 import { UserRole } from 'src/default/common/enums/user-type.enum';
 import { User } from '../auth/entities/users.entity';
 import { CommonUtils } from 'src/default/common/utils/common.utils';
@@ -20,7 +20,7 @@ export class ApprovalsService {
   async handleApprovalAction(
     approverId: number,
     approvalId: number,
-    action: 'approve' | 'reject' | 'block',
+    action: ApprovalAction,
     remarks?: string
   ) {
     const approver = await this.userRepository.findOne({ id: approverId }, ['role']);
@@ -219,7 +219,7 @@ export class ApprovalsService {
   async getApprovalQueue(
     approverId: number,
     approverRole: UserRole,
-    statusFilter?: string,
+    statusFilter?: ApprovalStatus,
     page: number = 1,
     limit: number = 10
   ) {
@@ -244,7 +244,7 @@ export class ApprovalsService {
         .andWhere('approval.level = :level', { level });
     }
 
-    if (statusFilter && statusFilter !== 'all') {
+    if (statusFilter) {
       listQuery.andWhere('approval.status = :status', { status: statusFilter });
     }
 
