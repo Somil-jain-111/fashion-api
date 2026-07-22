@@ -219,18 +219,23 @@ export class RewardsService {
       },
     });
 
+    await this.apiResponseRepository.saveResponse({
+      type: 'BANK_PAYOUT',
+      transactionId: data.transactionId,
+      requestUrl: requestConfig.url || '',
+      requestPayload: {
+        payload,
+        headers: requestConfig.headers,
+      },
+    });
+
     try {
       const response = await axios.request(requestConfig);
 
-      await this.apiResponseRepository.saveResponse({
-        type: 'BANK_PAYOUT',
-        requestUrl: requestConfig.url || '',
-        requestPayload: {
-          payload,
-          headers: requestConfig.headers,
-        },
-        responsePayload: response.data,
-      });
+      await this.apiResponseRepository.updateResponseByTransactionId(
+        data.transactionId,
+        response.data
+      );
 
       return response.data;
     } catch (error) {
@@ -252,12 +257,10 @@ export class RewardsService {
         },
       });
 
-      await this.apiResponseRepository.saveResponse({
-        type: 'BANK_PAYOUT_FAILED',
-        requestUrl: requestConfig.url || '',
-        requestPayload: requestConfig,
-        responsePayload: { ...errorData, responseMessage: error?.message },
-      });
+      await this.apiResponseRepository.updateResponseByTransactionId(
+        data.transactionId,
+        { ...errorData, responseMessage: error?.message }
+      );
 
       throw new BusinessException(ERROR_CODES.PAYMENT.PAYMENT_FAILED);
     }

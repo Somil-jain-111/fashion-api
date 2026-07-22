@@ -54,6 +54,16 @@ export class UpiProvider {
       data: payload,
     };
 
+    await this.apiResponseRepository.saveResponse({
+      type: 'UPI',
+      transactionId: data.transactionId,
+      requestUrl: requestConfig.url || '',
+      requestPayload: {
+        payload,
+        headers: requestConfig.headers,
+      },
+    });
+
     try {
       ConsoleLogger.log(`Calling UPI verification | transactionId: ${data.transactionId}`, {
         tag: 'UpiProvider.validateUpi',
@@ -62,15 +72,10 @@ export class UpiProvider {
 
       const response = await axios.request(requestConfig);
 
-      await this.apiResponseRepository.saveResponse({
-        type: 'UPI',
-        requestUrl: requestConfig.url || '',
-        requestPayload: {
-          payload,
-          headers: requestConfig.headers,
-        },
-        responsePayload: response.data,
-      });
+      await this.apiResponseRepository.updateResponseByTransactionId(
+        data.transactionId,
+        response.data
+      );
 
       return {
         success: Boolean(response.data?.status),
@@ -81,8 +86,6 @@ export class UpiProvider {
         message: response.data?.message || 'UPI verification successful',
       };
     } catch (error: any) {
-      console.log(error);
-      
       const responseData = error.response?.data || { status: false, message: 'UPI API failed' };
       const statusCode = responseData?.data?.statuscode || error.response?.status || 500;
 
@@ -92,15 +95,10 @@ export class UpiProvider {
         'UpiProvider.validateUpi'
       );
 
-      await this.apiResponseRepository.saveResponse({
-        type: 'UPI',
-        requestUrl: requestConfig.url || '',
-        requestPayload: {
-          payload,
-          headers: requestConfig.headers,
-        },
-        responsePayload: responseData,
-      });
+      await this.apiResponseRepository.updateResponseByTransactionId(
+        data.transactionId,
+        responseData
+      );
 
       return {
         success: false,
