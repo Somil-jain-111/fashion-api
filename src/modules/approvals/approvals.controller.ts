@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Param, Req, UseGuards } from '@nestjs/common';
+import { Controller, Post, Body, Param, Req, UseGuards, Get, Query } from '@nestjs/common';
 import { ApprovalsService } from './approvals.service';
 import { ApprovalActionDto } from './dto/approval-action.dto';
 import { JwtAuthGuard } from 'src/default/common/guards/jwt-auth.guard';
@@ -7,6 +7,7 @@ import { Roles } from 'src/default/common/decorators/roles.decorator';
 import { UserRole } from 'src/default/common/enums/user-type.enum';
 import { ResponseMessage } from 'src/default/common/decorators/response-message.decorator';
 import { DataSanitizer } from 'src/default/common/utils/sanitize.utils';
+import { NoCache } from 'src/default/cache/cache.decorator';
 
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('approvals')
@@ -27,6 +28,22 @@ export class ApprovalsController {
       Number(id),
       dto.action,
       dto.remarks
+    );
+    return DataSanitizer.sanitizeData(response);
+  }
+
+  @Roles([UserRole.L1, UserRole.L2, UserRole.SUPERADMIN])
+  @NoCache()
+  @Get('queue')
+  @ResponseMessage('Approval queue fetched successfully')
+  async getApprovalQueue(
+    @Req() req: any,
+    @Query('status') status?: string,
+  ) {
+    const response = await this.approvalsService.getApprovalQueue(
+      Number(req.user.id),
+      req.user.role as UserRole,
+      status,
     );
     return DataSanitizer.sanitizeData(response);
   }
