@@ -33,7 +33,7 @@ type VerifyAadhaarOtpInput = {
 @Injectable()
 export class AadhaarProvider {
   constructor(
-    private readonly configService: AppConfigService,
+    private readonly appConfigService: AppConfigService,
     private readonly apiResponseRepository: ApiResponseRepository
   ) {}
 
@@ -44,23 +44,14 @@ export class AadhaarProvider {
       transaction_id: data.transactionId,
     };
 
-    const isLive =
-      this.configService.get('NODE_ENV') === 'production' ||
-      this.configService.get('NODE_ENV') === 'qa';
-
-    const baseUrl = isLive
-      ? this.configService.get('Rewards_API_Base_Url_Live')
-      : this.configService.get('Rewards_API_Base_Url_Dev');
-
-    const permanentToken = isLive
-      ? this.configService.get('Rewards_API_Permanent_Token_Live')
-      : this.configService.get('Rewards_API_Permanent_Token_Dev');
-
-    const secretKey = this.configService.get('KYC_SECRET_KEY');
+    const baseUrl = this.appConfigService.getRewardsUrl();
+    const secretKey = this.appConfigService.getKycSecretKey();
+    const permanentToken = this.appConfigService.getRewardsPermanentToken();
 
     if (!secretKey) {
       throw new BusinessException(ERROR_CODES.KYC.KYC_SECRET_KEY_MISSING);
     }
+
     const requestConfig: AxiosRequestConfig = {
       method: 'post',
       url: `${baseUrl}/gratification/kyc`,
@@ -71,18 +62,24 @@ export class AadhaarProvider {
       },
       data: payload,
     };
+
+    await this.apiResponseRepository.saveResponse({
+      type: 'AADHAAR',
+      transactionId: data.transactionId,
+      requestUrl: requestConfig.url || '',
+      requestPayload: {
+        payload,
+        headers: requestConfig.headers,
+      },
+    });
+
     try {
       const response = await axios.request(requestConfig);
 
-      await this.apiResponseRepository.saveResponse({
-        type: 'AADHAAR',
-        requestUrl: requestConfig.url || '',
-        requestPayload: {
-          payload,
-          headers: requestConfig.headers,
-        },
-        responsePayload: response.data,
-      });
+      await this.apiResponseRepository.updateResponseByTransactionId(
+        data.transactionId,
+        response.data
+      );
 
       return {
         success: Boolean(response.data?.status),
@@ -109,15 +106,7 @@ export class AadhaarProvider {
         },
       });
 
-      await this.apiResponseRepository.saveResponse({
-        type: 'AADHAAR',
-        requestUrl: requestConfig.url || '',
-        requestPayload: {
-          payload,
-          headers: requestConfig.headers,
-        },
-        responsePayload: errorData,
-      });
+      await this.apiResponseRepository.updateResponseByTransactionId(data.transactionId, errorData);
 
       return {
         success: false,
@@ -137,19 +126,9 @@ export class AadhaarProvider {
       otp: data.otp,
     };
 
-    const isLive =
-      this.configService.get('NODE_ENV') === 'production' ||
-      this.configService.get('NODE_ENV') === 'qa';
-
-    const baseUrl = isLive
-      ? this.configService.get('Rewards_API_Base_Url_Live')
-      : this.configService.get('Rewards_API_Base_Url_Dev');
-
-    const permanentToken = isLive
-      ? this.configService.get('Rewards_API_Permanent_Token_Live')
-      : this.configService.get('Rewards_API_Permanent_Token_Dev');
-
-    const secretKey = this.configService.get('KYC_SECRET_KEY');
+    const baseUrl = this.appConfigService.getRewardsUrl();
+    const secretKey = this.appConfigService.getKycSecretKey();
+    const permanentToken = this.appConfigService.getRewardsPermanentToken();
 
     const requestConfig: AxiosRequestConfig = {
       method: 'post',
@@ -162,18 +141,23 @@ export class AadhaarProvider {
       data: payload,
     };
 
+    await this.apiResponseRepository.saveResponse({
+      type: 'AADHAAR',
+      transactionId: data.referenceId,
+      requestUrl: requestConfig.url || '',
+      requestPayload: {
+        payload,
+        headers: requestConfig.headers,
+      },
+    });
+
     try {
       const response = await axios.request(requestConfig);
 
-      await this.apiResponseRepository.saveResponse({
-        type: 'AADHAAR',
-        requestUrl: requestConfig.url || '',
-        requestPayload: {
-          payload,
-          headers: requestConfig.headers,
-        },
-        responsePayload: response.data,
-      });
+      await this.apiResponseRepository.updateResponseByTransactionId(
+        data.referenceId,
+        response.data
+      );
 
       return {
         success: Boolean(response.data?.status),
@@ -200,15 +184,7 @@ export class AadhaarProvider {
         },
       });
 
-      await this.apiResponseRepository.saveResponse({
-        type: 'AADHAAR',
-        requestUrl: requestConfig.url || '',
-        requestPayload: {
-          payload,
-          headers: requestConfig.headers,
-        },
-        responsePayload: errorData,
-      });
+      await this.apiResponseRepository.updateResponseByTransactionId(data.referenceId, errorData);
 
       return {
         success: false,
