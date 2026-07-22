@@ -733,8 +733,6 @@ export class KycService {
       transactionId: await ReferenceIdUtil.generateKycReferenceId(KycType.NAME_MATCH),
     });
 
-    console.log(nameMatchResult);
-
     const matchScore = Number(nameMatchResult?.responseData?.data?.match_score || 0);
     const isNameMatched = matchScore >= 85;
 

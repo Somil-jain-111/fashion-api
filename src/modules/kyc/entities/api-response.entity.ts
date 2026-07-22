@@ -7,6 +7,9 @@ export class ApiResponseEntity extends BaseEntity {
   @Column({ name: 'type' })
   type: string;
 
+  @Column({ name: 'transaction_id', type: 'varchar', length: 500, nullable: true })
+  transactionId?: string;
+
   @Column({ name: 'request_url', type: 'text', nullable: true })
   requestUrl?: string;
 

@@ -56,6 +56,16 @@ export class BankProvider {
       data: payload,
     };
 
+    await this.apiResponseRepository.saveResponse({
+      type: 'BANK',
+      transactionId: data.transactionId,
+      requestUrl: requestConfig.url || '',
+      requestPayload: {
+        payload,
+        headers: requestConfig.headers,
+      },
+    });
+
     try {
       ConsoleLogger.log(`Calling Bank verification | transactionId: ${data.transactionId}`, {
         tag: 'BankProvider.validateBankAccount',
@@ -64,15 +74,10 @@ export class BankProvider {
 
       const response = await axios.request(requestConfig);
 
-      await this.apiResponseRepository.saveResponse({
-        type: 'BANK',
-        requestUrl: requestConfig.url || '',
-        requestPayload: {
-          payload,
-          headers: requestConfig.headers,
-        },
-        responsePayload: response.data,
-      });
+      await this.apiResponseRepository.updateResponseByTransactionId(
+        data.transactionId,
+        response.data
+      );
 
       return {
         success: Boolean(response.data?.status),
@@ -83,7 +88,6 @@ export class BankProvider {
         message: response.data?.message || 'Bank verification successful',
       };
     } catch (error: any) {
-      console.log(error);
       const responseData = error.response?.data || { status: false, message: 'Bank API failed' };
       const statusCode = responseData?.data?.statuscode || error.response?.status || 500;
 
@@ -93,15 +97,10 @@ export class BankProvider {
         'BankProvider.validateBankAccount'
       );
 
-      await this.apiResponseRepository.saveResponse({
-        type: 'BANK',
-        requestUrl: requestConfig.url || '',
-        requestPayload: {
-          payload,
-          headers: requestConfig.headers,
-        },
-        responsePayload: responseData,
-      });
+      await this.apiResponseRepository.updateResponseByTransactionId(
+        data.transactionId,
+        responseData
+      );
 
       return {
         success: false,

@@ -5,6 +5,7 @@ import axios, { AxiosRequestConfig } from 'axios';
 import { KycHmacHelper } from 'src/default/common/helper/kyc-hmac.helper';
 import { AppConfigService } from 'src/default/config/config.service';
 import { ConsoleLogger } from 'src/default/logger/console/console.service';
+import { ApiResponseRepository } from '../repository';
 
 type NameMatchInput = {
   userName: string;
@@ -23,7 +24,10 @@ type KycProviderResult = {
 
 @Injectable()
 export class NameMatchProvider {
-  constructor(private readonly appConfigService: AppConfigService) {}
+  constructor(
+    private readonly appConfigService: AppConfigService,
+    private readonly apiResponseRepository: ApiResponseRepository
+  ) {}
 
   async matchName(data: NameMatchInput): Promise<KycProviderResult> {
     const payload = {
@@ -57,8 +61,23 @@ export class NameMatchProvider {
       data: payload,
     };
 
+    await this.apiResponseRepository.saveResponse({
+      type: 'NAME_MATCH',
+      transactionId: data.transactionId,
+      requestUrl: requestConfig.url || '',
+      requestPayload: {
+        payload,
+        headers: requestConfig.headers,
+      },
+    });
+
     try {
       const response = await axios.request(requestConfig);
+
+      await this.apiResponseRepository.updateResponseByTransactionId(
+        data.transactionId,
+        response.data
+      );
 
       return {
         success: Boolean(response.data?.status),
@@ -84,6 +103,11 @@ export class NameMatchProvider {
           errorResponse,
         },
       });
+
+      await this.apiResponseRepository.updateResponseByTransactionId(
+        data.transactionId,
+        errorResponse
+      );
 
       return {
         success: false,
