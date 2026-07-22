@@ -623,7 +623,7 @@ export class RedemptionsService {
     const skip = (page - 1) * limit;
 
     const [orders, count] = await this.orderRepository.getRepository().findAndCount({
-      where: { user: { id: userId } as any },
+      where: { user: { id: userId } },
       order: { created_at: 'DESC' },
       skip,
       take: limit,

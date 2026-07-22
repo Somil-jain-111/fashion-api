@@ -14,10 +14,12 @@ import { ConsoleLogger } from 'src/default/logger/console/console.service';
 import { KycStatus, KycType } from 'src/default/common/enums/kyc.enum';
 import { PointStatusEnum } from 'src/modules/redemptions/enum/point-history-status.enum.';
 import { RedemptionType } from 'src/modules/redemptions/enum/redemption-type.enum';
-import { PayoutStatus } from './entities/payout.entity';
+import { Payout, PayoutStatus } from './entities/payout.entity';
 import { DateHelper } from 'src/default/common/helper/date.helper';
 import { BusinessException } from 'src/default/error/business.exception';
 import { ERROR_CODES } from 'src/default/error/error.code';
+import { GetPaymentsQueryDto } from './dto';
+import { DataSanitizer } from 'src/default/common/utils/sanitize.utils';
 
 @Injectable()
 export class PaymentService {
@@ -457,5 +459,50 @@ export class PaymentService {
       );
       throw error;
     }
+  }
+
+  /**
+   * Fetches all the Payments/ Specific payment of user
+   *
+   * @param userId
+   * @param query
+   * @returns
+   */
+  async fetchAllPayments(
+    userId: number,
+    query: GetPaymentsQueryDto
+  ): Promise<{ data: Payout[] | []; pagination: Record<string, any> }> {
+    const page = query.page || 1;
+    const limit = query.limit || 10;
+    const offset = (page - 1) * limit;
+
+    const qb = this.payoutRepository
+      .createQueryBuilder('p')
+      .where('p.active = :active', { active: true })
+      .andWhere('p.user.id = :userId', {
+        userId,
+      });
+
+    if (query.transactionId) {
+      qb.andWhere('p.transaction_id = :transaction_id', { transaction_id: query.transactionId });
+    }
+
+    qb.skip(offset);
+    qb.take(limit);
+
+    const [result, total] = await qb.getManyAndCount();
+
+    const finalResponse = result?.map((item) => {
+      delete item.otp;
+      delete item.otp_expiry;
+      delete item.otp_verified;
+
+      return item;
+    });
+
+    return {
+      data: finalResponse,
+      pagination: CommonUtils.generatePaginationResponse(total, page, limit),
+    };
   }
 }
