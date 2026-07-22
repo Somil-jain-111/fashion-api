@@ -69,18 +69,23 @@ export class GstProvider {
       data: payload,
     };
 
+    await this.apiResponseRepository.saveResponse({
+      type: 'GST',
+      transactionId: data.transactionId,
+      requestUrl: requestConfig.url || '',
+      requestPayload: {
+        payload,
+        headers: requestConfig.headers,
+      },
+    });
+
     try {
       const response = await axios.request(requestConfig);
 
-      await this.apiResponseRepository.saveResponse({
-        type: 'GST',
-        requestUrl: requestConfig.url || '',
-        requestPayload: {
-          payload,
-          headers: requestConfig.headers,
-        },
-        responsePayload: response.data,
-      });
+      await this.apiResponseRepository.updateResponseByTransactionId(
+        data.transactionId,
+        response.data
+      );
 
       return {
         success: Boolean(response.data?.status),
@@ -107,15 +112,10 @@ export class GstProvider {
         },
       });
 
-      await this.apiResponseRepository.saveResponse({
-        type: 'GST',
-        requestUrl: requestConfig.url || '',
-        requestPayload: {
-          payload,
-          headers: requestConfig.headers,
-        },
-        responsePayload: errorResponse,
-      });
+      await this.apiResponseRepository.updateResponseByTransactionId(
+        data.transactionId,
+        errorResponse
+      );
 
       return {
         success: false,
