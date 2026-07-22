@@ -162,4 +162,16 @@ export const KYC_ERRORS = {
     message: 'Invalid beneficiary type',
     statusCode: 400,
   },
+
+  PAN_KYC_PENDING: {
+    code: 'KYC_029',
+    message: 'PAN KYC is pending and is awaiting approval from the admin.',
+    statusCode: 400,
+  },
+
+  PAN_KYC_REQUIRED_TO_REDEEM: {
+    code: 'KYC_030',
+    message: 'Complete PAN KYC to Redeem.',
+    statusCode: 400,
+  },
 } as const;

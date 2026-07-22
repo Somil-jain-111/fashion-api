@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { PayoutRepository } from './repository/payout.repository';
 import { UserRepository } from 'src/modules/user/repository';
 import { BeneficiaryRepository, KycVerificationRepository } from 'src/modules/kyc/repository';
@@ -15,6 +15,9 @@ import { KycStatus, KycType } from 'src/default/common/enums/kyc.enum';
 import { PointStatusEnum } from 'src/modules/redemptions/enum/point-history-status.enum.';
 import { RedemptionType } from 'src/modules/redemptions/enum/redemption-type.enum';
 import { PayoutStatus } from './entities/payout.entity';
+import { DateHelper } from 'src/default/common/helper/date.helper';
+import { BusinessException } from 'src/default/error/business.exception';
+import { ERROR_CODES } from 'src/default/error/error.code';
 
 @Injectable()
 export class PaymentService {
@@ -33,24 +36,6 @@ export class PaymentService {
   ) {}
 
   /**
-   * Helper to check if an OTP has expired (default: 5 minutes)
-   *
-   * @param date
-   * @param timeoutMinutes
-   * @returns boolean
-   */
-  private isOtpExpired(date: Date, timeoutMinutes = 5): boolean {
-    if (!date) {
-      return true;
-    }
-
-    const realTime = date.getTime() - date.getTimezoneOffset() * 60 * 1000;
-    const ageMs = Date.now() - realTime;
-    const FIVE_MINUTES_MS = timeoutMinutes * 60 * 1000;
-    return ageMs < 0 || ageMs > FIVE_MINUTES_MS;
-  }
-
-  /**
    * Places a DBT order
    *
    * @param userId
@@ -66,9 +51,11 @@ export class PaymentService {
     try {
       // Redis lock to prevent double-clicking
       const result = await this.redisService.client.set(lockKey, lockValue, 'EX', 600, 'NX');
+
       if (!result) {
-        throw new BadRequestException('A transaction is already in progress. Please wait.');
+        throw new BusinessException(ERROR_CODES.PAYMENT.TRANSACTION_IN_PROGRESS);
       }
+
       redisLockAcquired = true;
 
       const user = await this.userRepository.findOne(
@@ -80,44 +67,28 @@ export class PaymentService {
       );
 
       if (!user) {
-        throw new BadRequestException('User not found');
+        throw new BusinessException(ERROR_CODES.USER.USER_NOT_FOUND);
       }
 
       // Check role config for redemption
       const config = await this.dynamicConfigRepository.getUserConfigByUserRole(user.role.name);
+
       if (!config || !config.redemptionEnabled || !config.dbtEnabled) {
-        throw new BadRequestException(
-          'Bank payouts (DBT) are currently disabled for your user role.'
-        );
+        throw new BusinessException(ERROR_CODES.PAYMENT.BANK_PAYOUTS_DISABLED);
       }
 
       // Fetch user's active bank account
       const bankAccount = await this.beneficiaryRepository.findBankAccountByBeneId(userId, beneId);
 
       if (!bankAccount || bankAccount.status !== 1) {
-        throw new BadRequestException(
-          'Bank KYC / Bank Account details are not completed or verified.'
-        );
+        throw new BusinessException(ERROR_CODES.PAYMENT.BANK_DETAILS_NOT_VERIFIED);
       }
 
       const availablePoints = Number(user.points);
 
-      // Capping limits check
-      if (config.additionalSettings?.cappingLimitEnabled) {
-        const cappingLimit = Math.floor(
-          (config.additionalSettings?.cappingLimitPercentage / 100) * availablePoints
-        );
-
-        if (points > cappingLimit) {
-          throw new BadRequestException(
-            `You can redeem a maximum of ${config.additionalSettings?.cappingLimitPercentage}% of your available points.`
-          );
-        }
-      }
-
       // Available points check
       if (points > availablePoints) {
-        throw new BadRequestException('Insufficient points');
+        throw new BusinessException(ERROR_CODES.REWARDS.INSUFFICIENT_POINTS);
       }
 
       // Check daily count and sum of limits
@@ -131,9 +102,9 @@ export class PaymentService {
           : 2;
 
       if (transactionCount >= maxDailyRedemptions) {
-        throw new BadRequestException(
-          `You've reached your daily limit of ${maxDailyRedemptions} DBT transactions. Please try again tomorrow.`
-        );
+        throw new BusinessException(ERROR_CODES.PAYMENT.DAILY_TRANSACTION_LIMIT_REACHED, {
+          maxDailyRedemptions,
+        });
       }
 
       const redeemReqPoints = Number(points);
@@ -145,16 +116,16 @@ export class PaymentService {
           : 33000;
 
       if (Number(currentDayTotalPoints) >= dailyLimit) {
-        throw new BadRequestException(
-          `You've already reached your daily limit of ${dailyLimit.toLocaleString()} points. Please try again tomorrow.`
-        );
+        throw new BusinessException(ERROR_CODES.PAYMENT.DAILY_POINT_LIMIT_REACHED, {
+          dailyLimit: dailyLimit.toLocaleString(),
+        });
       }
 
       if (totalPoints > dailyLimit) {
         const remainingPoints = dailyLimit - Number(currentDayTotalPoints);
-        throw new BadRequestException(
-          `You can only redeem ${remainingPoints.toLocaleString()} more points today.`
-        );
+        throw new BusinessException(ERROR_CODES.PAYMENT.DAILY_REMAINING_POINT_LIMIT, {
+          remainingPoints: remainingPoints.toLocaleString(),
+        });
       }
 
       // Monthly limit check
@@ -170,16 +141,16 @@ export class PaymentService {
       const totalMonthlyPoints = redeemReqPoints + currentMonthtotalPoints;
 
       if (currentMonthtotalPoints >= monthlyLimit) {
-        throw new BadRequestException(
-          `You've already reached your monthly limit of ${monthlyLimit.toLocaleString()} points. Please try again next month.`
-        );
+        throw new BusinessException(ERROR_CODES.PAYMENT.MONTHLY_POINT_LIMIT_REACHED, {
+          monthlyLimit: monthlyLimit.toLocaleString(),
+        });
       }
 
       if (totalMonthlyPoints > monthlyLimit) {
         const remainingPoints = monthlyLimit - currentMonthtotalPoints;
-        throw new BadRequestException(
-          `You can only redeem ${remainingPoints.toLocaleString()} more points this month.`
-        );
+        throw new BusinessException(ERROR_CODES.PAYMENT.MONTHLY_REMAINING_POINT_LIMIT, {
+          remainingPoints: remainingPoints.toLocaleString(),
+        });
       }
 
       // PAN check for high limits
@@ -194,11 +165,9 @@ export class PaymentService {
 
         if (!panKyc || panKyc.status !== KycStatus.VERIFIED) {
           if (panKyc && panKyc.status === KycStatus.PENDING) {
-            throw new BadRequestException(
-              'PAN KYC is pending and is awaiting approval from the admin.'
-            );
+            throw new BusinessException(ERROR_CODES.KYC.PAN_KYC_PENDING);
           }
-          throw new BadRequestException('Complete PAN KYC to Redeem.');
+          throw new BusinessException(ERROR_CODES.KYC.PAN_KYC_REQUIRED_TO_REDEEM);
         }
       }
 
@@ -207,10 +176,13 @@ export class PaymentService {
           const isLive = this.appConfigService.isProduction() || this.appConfigService.isQa();
 
           const transaction_id = await CommonUtils.generateUniqueRefCode();
+
           const plainOtp = isLive
             ? Math.floor(1000 + Math.random() * 9000).toString()
             : this.appConfigService.getNonProdRewardsOtp();
+
           const otpEncrypted = CommonUtils.encrypt(String(plainOtp));
+          const otpExpiry = DateHelper.getOtpExpiryDate();
 
           if (isLive) {
             const sms = await CommonUtils.sendSMS({
@@ -232,6 +204,7 @@ export class PaymentService {
               status: PayoutStatus.INITIATED,
               otp: otpEncrypted,
               otp_verified: 0,
+              otp_expiry: otpExpiry,
               user: user,
               userBeneficiary: { id: bankAccount.id } as any,
               account_number: bankAccount.accountNumber,
@@ -279,23 +252,22 @@ export class PaymentService {
     );
 
     if (!payout) {
-      throw new BadRequestException('Transaction not found');
+      throw new BusinessException(ERROR_CODES.PAYMENT.TRANSACTION_NOT_FOUND);
     }
 
     if (payout.status !== PayoutStatus.INITIATED) {
-      throw new BadRequestException('Transaction already processed');
+      throw new BusinessException(ERROR_CODES.PAYMENT.TRANSACTION_ALREADY_PROCESSED);
     }
 
     const user = payout.user;
     if (!user) {
-      throw new BadRequestException('User not found');
+      throw new BusinessException(ERROR_CODES.USER.USER_NOT_FOUND);
     }
 
     const isLive = this.appConfigService.isProduction() || this.appConfigService.isQa();
     let plainOtp: string;
 
-    const otpDate = payout.updatedAt || payout.createdAt;
-    const expired = this.isOtpExpired(otpDate);
+    const expired = DateHelper.isOtpExpired(payout.otp_expiry);
 
     if (!expired && payout.otp) {
       try {
@@ -306,6 +278,7 @@ export class PaymentService {
           : this.appConfigService.getNonProdRewardsOtp()?.toString() || '9988';
 
         payout.otp = CommonUtils.encrypt(String(plainOtp));
+        payout.otp_expiry = DateHelper.getOtpExpiryDate();
 
         await this.payoutRepository.save(payout);
       }
@@ -317,6 +290,7 @@ export class PaymentService {
       const otpEncrypted = CommonUtils.encrypt(String(plainOtp));
 
       payout.otp = otpEncrypted;
+      payout.otp_expiry = DateHelper.getOtpExpiryDate();
 
       await this.payoutRepository.save(payout);
     }
@@ -357,7 +331,7 @@ export class PaymentService {
     );
 
     if (!payout) {
-      throw new BadRequestException('Transaction not found');
+      throw new BusinessException(ERROR_CODES.PAYMENT.TRANSACTION_NOT_FOUND);
     }
 
     const config = await this.dynamicConfigRepository.getUserConfigByUserRole(
@@ -365,22 +339,22 @@ export class PaymentService {
     );
 
     if (!config || !config.redemptionEnabled || !config.dbtEnabled) {
-      throw new BadRequestException('Redemptions/payouts are currently disabled.');
+      throw new BusinessException(ERROR_CODES.PAYMENT.PAYOUTS_DISABLED);
     }
 
     if (payout.status !== PayoutStatus.INITIATED) {
-      throw new BadRequestException('Transaction already processed');
+      throw new BusinessException(ERROR_CODES.PAYMENT.TRANSACTION_ALREADY_PROCESSED);
     }
 
     if (!payout.otp) {
-      throw new BadRequestException('OTP not found');
+      throw new BusinessException(ERROR_CODES.OTP.OTP_NOT_FOUND);
     }
 
     // Deduct points from user
     const user = await this.userRepository.findOne({ id: userId }, ['role']);
 
     if (!user) {
-      throw new BadRequestException('User not found');
+      throw new BusinessException(ERROR_CODES.USER.USER_NOT_FOUND);
     }
 
     // OTP validation
@@ -390,22 +364,22 @@ export class PaymentService {
 
     if (isProduction) {
       if (payout.otp !== encryptedOtp) {
-        throw new BadRequestException('Invalid OTP');
+        throw new BusinessException(ERROR_CODES.OTP.INVALID_OTP);
       }
     } else {
       if (otp !== defaultOtp && payout.otp !== encryptedOtp) {
-        throw new BadRequestException('Invalid OTP');
+        throw new BusinessException(ERROR_CODES.OTP.INVALID_OTP);
       }
     }
 
-    if (this.isOtpExpired(payout.updatedAt || payout.createdAt)) {
-      throw new BadRequestException('OTP expired');
+    if (DateHelper.isOtpExpired(payout.otp_expiry)) {
+      throw new BusinessException(ERROR_CODES.OTP.OTP_EXPIRED);
     }
 
     const bankAccount = payout.userBeneficiary;
 
     if (!bankAccount) {
-      throw new BadRequestException('Bank account not found');
+      throw new BusinessException(ERROR_CODES.PAYMENT.BANK_ACCOUNT_NOT_FOUND);
     }
 
     const finalAmountToSend = isProduction ? payout.amount : 1;
@@ -415,11 +389,12 @@ export class PaymentService {
         async (queryRunner) => {
           payout.otp_verified = 1;
           payout.otp = null;
+          payout.otp_expiry = null;
 
           const remainingPoints = Number(user.points) - payout.points;
 
           if (remainingPoints < 0) {
-            throw new BadRequestException('Insufficient points');
+            throw new BusinessException(ERROR_CODES.REWARDS.INSUFFICIENT_POINTS);
           }
 
           user.points = BigInt(remainingPoints);
@@ -444,6 +419,7 @@ export class PaymentService {
           payout.status = PayoutStatus.SUCCESS;
           payout.redeem_date = new Date().toISOString().split('T')[0];
           payout.pointHistory = savedPointHistory;
+
           await this.payoutRepository.save(payout, queryRunner);
 
           return {

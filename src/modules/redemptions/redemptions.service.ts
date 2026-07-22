@@ -1,6 +1,5 @@
 import { Injectable } from '@nestjs/common';
 import { KycStatus, KycType } from 'src/default/common/enums/kyc.enum';
-import { UserRole } from 'src/default/common/enums/user-type.enum';
 import { KycVerificationRepository } from 'src/modules/kyc/repository';
 import {
   OrderRepository,
@@ -29,8 +28,9 @@ import { PointStatusEnum } from './enum/point-history-status.enum.';
 import { RedemptionProviderResponseHandler } from './handlers/redemption-provider-response.handler';
 import { RedemptionProviderPayloadBuilder } from './builders/redemption-provider-payload.builder';
 import { OrderPlaceProvider } from './provider/order-place.provider';
-import { DataSource, EntityManager, QueryRunner } from 'typeorm';
+import { DataSource, QueryRunner } from 'typeorm';
 import { AppConfigService } from 'src/default/config/config.service';
+import { DateHelper } from 'src/default/common/helper/date.helper';
 
 @Injectable()
 export class RedemptionsService {
@@ -487,7 +487,7 @@ export class RedemptionsService {
       const pointHistoryObj = this.pointHistoryRepository.create(
         {
           user: { id: user.id },
-          order_id: order.id,
+          order: { id: order.id },
           points: totalDeduction,
           description: 'ORDER PLACED',
           status: PointStatusEnum.redeem,
@@ -679,9 +679,7 @@ export class RedemptionsService {
       throw new BusinessException(ERROR_CODES.ORDER.INVALID_ORDER_STATUS);
     }
 
-    const isExpired =
-      !order.redemption_otp_expired_at ||
-      new Date(order.redemption_otp_expired_at).getTime() < Date.now();
+    const isExpired = DateHelper.isOtpExpired(order.redemption_otp_expired_at);
 
     let otp = order.redemption_otp;
     let otpRefId = order.redemption_otp_ref_id;
