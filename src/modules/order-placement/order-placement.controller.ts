@@ -14,6 +14,7 @@ import { CreateOrderPlacementDto } from './dto/create-order-placement.dto';
 export class OrderPlacementController {
   constructor(private readonly orderPlacementService: OrderPlacementService) {}
 
+  @NoCache()
   @Post()
   async placeOrder(@Req() req: any, @Body() dto: CreateOrderPlacementDto) {
     const response = await this.orderPlacementService.placeOrder(req.user.id, dto);

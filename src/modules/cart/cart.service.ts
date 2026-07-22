@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { QueryRunner } from 'typeorm';
 
-import * as products from 'src/modules/products/mock/products.json';
+import products from 'src/modules/products/mock/products.json';
 import { BusinessException } from 'src/default/error/business.exception';
 import { ERROR_CODES } from 'src/default/error/error.code';
 import { ConsoleLogger } from 'src/default/logger/console/console.service';

@@ -16,35 +16,29 @@ export class CartRepository extends BaseRepository<Cart> {
   ): Promise<Cart | null> {
     const repo = queryRunner ? queryRunner.manager.getRepository(Cart) : this.repository;
 
-    return repo.findOne({
-      where: {
-        user_id: String(userId),
-        distributor_id: String(distributorId),
-        is_active: true,
-      } as any,
-      relations: ['items'],
-      order: {
-        items: {
-          createdAt: 'DESC',
-        },
-      } as any,
-    });
+    return repo
+      .createQueryBuilder('cart')
+      .leftJoinAndSelect('cart.user', 'user')
+      .leftJoinAndSelect('cart.distributor', 'distributor')
+      .leftJoinAndSelect('cart.items', 'items')
+      .where('cart.user_id = :userId', { userId })
+      .andWhere('cart.distributor_id = :distributorId', { distributorId })
+      .andWhere('cart.is_active = true')
+      .orderBy('items.created_at', 'DESC')
+      .getOne();
   }
 
   async findLatestActiveByUser(userId: string | number): Promise<Cart | null> {
-    return this.repository.findOne({
-      where: {
-        user_id: String(userId),
-        is_active: true,
-      } as any,
-      relations: ['items'],
-      order: {
-        updatedAt: 'DESC',
-        items: {
-          createdAt: 'DESC',
-        },
-      } as any,
-    });
+    return this.repository
+      .createQueryBuilder('cart')
+      .leftJoinAndSelect('cart.user', 'user')
+      .leftJoinAndSelect('cart.distributor', 'distributor')
+      .leftJoinAndSelect('cart.items', 'items')
+      .where('cart.user_id = :userId', { userId })
+      .andWhere('cart.is_active = true')
+      .orderBy('cart.updated_at', 'DESC')
+      .addOrderBy('items.created_at', 'DESC')
+      .getOne();
   }
 
   async deleteByIdWithTransaction(

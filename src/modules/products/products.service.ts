@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 
-import * as products from './mock/products.json';
+import products from './mock/products.json';
 import * as categories from './mock/categories.json';
 import * as subCategories from './mock/sub-categories.json';
 
