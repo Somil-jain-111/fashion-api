@@ -600,10 +600,15 @@ export class KycService {
 
     const gstApiData = gstProviderResult.responseData?.data || {};
 
-    const [encryptedGstImage, encryptedApiData] = await Promise.all([
-      this.encryptKycData(''),
-      this.encryptKycData(gstProviderResult.responseData),
-    ]);
+    const encryptedApiData = await this.encryptKycData(gstProviderResult.responseData);
+
+    const metadata = {
+      tradeName: gstApiData.business_name,
+      legalName: gstApiData.legal_name,
+      address: gstApiData.address,
+      status: gstApiData.gstin_status,
+      dateOfRegistration: gstApiData.date_of_registration,
+    };
 
     await this.kycVerificationRepository.upsertVerifiedKyc({
       userId: userId,
@@ -617,11 +622,7 @@ export class KycService {
       provider: 'REWARDS_API',
       providerRequest: gstProviderResult.requestPayload,
       providerResponse: encryptedApiData,
-      metadata: {
-        tradeName: gstApiData.trade_name,
-        legalName: gstApiData.legal_name,
-        address: gstApiData.primary_address,
-      },
+      metadata: metadata,
     });
 
     // Update user's firmName if it's not already set
@@ -639,8 +640,7 @@ export class KycService {
 
     return {
       verified: true,
-      tradeName: gstApiData.trade_name || null,
-      legalName: gstApiData.legal_name || null,
+      ...metadata,
     };
   }
 

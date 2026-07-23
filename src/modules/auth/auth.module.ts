@@ -11,7 +11,11 @@ import { JwtStrategy } from 'src/default/common/stratagy/jwt.strategy';
 import { IdempotencyService } from 'src/default/idempotency/idempotency.service';
 import { RedisModule } from 'src/default/databases/redis/redis.module';
 
-import { LoginHistoriesRepository, RevokedTokenRepository } from './repository';
+import {
+  KycVerificationRepository,
+  LoginHistoriesRepository,
+  RevokedTokenRepository,
+} from './repository';
 import { UserRepository, RolesRepository, UserStoreInfoRepository } from '../auth/repository';
 import { AddressesModule } from '../addresses/addresses.module';
 import { ApprovalRepository } from '../approvals/repository';
@@ -43,6 +47,7 @@ import { ApprovalRepository } from '../approvals/repository';
     UserStoreInfoRepository,
     RevokedTokenRepository,
     LoginHistoriesRepository,
+    KycVerificationRepository,
   ],
   controllers: [AuthController],
   exports: [
@@ -54,6 +59,7 @@ import { ApprovalRepository } from '../approvals/repository';
     UserStoreInfoRepository,
     RevokedTokenRepository,
     LoginHistoriesRepository,
+    KycVerificationRepository,
   ],
 })
 export class AuthModule {}
