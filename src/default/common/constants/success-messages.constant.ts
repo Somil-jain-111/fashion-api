@@ -10,6 +10,7 @@ export const SUCCESS_MESSAGES = {
     CREATED: 'Admin created successfully',
     UPDATED: 'Admin updated successfully',
     DELETED: 'Admin deleted successfully',
+    KYC_VERIFIED: 'KYC verified successfully',
   },
 
   ORDER: {

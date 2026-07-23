@@ -6,7 +6,7 @@ import { AdminVerifyKycDto } from './dto/admin-verify-kyc.dto';
 import { KycTypeFiltered } from 'src/default/common/enums/kyc.enum';
 import { BusinessException } from 'src/default/error/business.exception';
 import { UserRepository } from '../auth/repository';
-import { ReferenceIdUtil } from 'src/default/common/utils/reference-id.util';
+import { CommonUtils } from 'src/default/common/utils/common.utils';
 import { ERROR_CODES } from 'src/default/error/error.code';
 
 @Injectable()
@@ -26,11 +26,7 @@ export class AdminService {
     const user = await this.userRepository.findOne({ id: userId });
 
     if (!user) {
-      throw new BusinessException({
-        code: 'ADMIN_001',
-        message: `User with ID ${userId} not found`,
-        statusCode: 404,
-      });
+      throw new BusinessException(ERROR_CODES.USER.USER_NOT_FOUND);
     }
 
     const existingKyc = await this.kycVerificationRepository.findVerifiedByUserIdAndType(
@@ -44,7 +40,7 @@ export class AdminService {
       });
     }
 
-    const transactionId = await ReferenceIdUtil.generateKycReferenceId(type);
+    const transactionId = await CommonUtils.generateUniqueRefCode();
 
     let dummyDocNumber: string;
     let dummyMaskedDocNumber: string;

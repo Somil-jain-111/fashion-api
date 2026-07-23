@@ -6,6 +6,7 @@ import { Roles } from 'src/default/common/decorators/roles.decorator';
 import { UserRole } from 'src/default/common/enums/user-type.enum';
 import { NoCache } from 'src/default/cache/cache.decorator';
 import { ResponseMessage } from 'src/default/common/decorators/response-message.decorator';
+import { SUCCESS_MESSAGES } from 'src/default/common/constants/success-messages.constant';
 import { DataSanitizer } from 'src/default/common/utils/sanitize.utils';
 import { AdminService } from './admin.service';
 import { AdminVerifyKycDto } from './dto';
@@ -18,7 +19,7 @@ export class AdminController {
   @NoCache()
   @SkipThrottle()
   @Roles([UserRole.SUPERADMIN])
-  @ResponseMessage('KYC verified successfully')
+  @ResponseMessage(SUCCESS_MESSAGES.ADMIN.KYC_VERIFIED)
   @Post('kyc/verify')
   async verifyKyc(@Body() body: AdminVerifyKycDto) {
     const response = await this.adminService.verifyKyc(body);
