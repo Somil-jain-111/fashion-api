@@ -50,7 +50,6 @@ export class KycService {
     private upiProvider: UpiProvider,
     private readonly appConfigService: AppConfigService
   ) {}
-  // src/modules/kyc/service/kyc.service.ts
 
   encryptKycData(value: any): any {
     const secretKey = this.appConfigService.get('KYC_ENCRYPTION_SECRET_KEY');
@@ -131,7 +130,7 @@ export class KycService {
     /**
      * 1. Validate user
      */
-    const user = await this.userAuthValidator.validateActiveUserById(userId);
+    const user = await this.userAuthValidator.getAllowedUserById(userId);
 
     if (!user.username) {
       throw new BusinessException(ERROR_CODES.KYC.USER_PROFILE_NAME_REQUIRED);
@@ -250,7 +249,7 @@ export class KycService {
     /**
      * 1. Validate user
      */
-    const user = await this.userAuthValidator.validateActiveUserById(userId);
+    const user = await this.userAuthValidator.getAllowedUserById(userId);
 
     if (!user.username) {
       throw new BusinessException(ERROR_CODES.KYC.USER_PROFILE_NAME_REQUIRED);
