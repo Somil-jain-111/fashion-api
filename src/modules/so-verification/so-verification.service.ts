@@ -8,7 +8,7 @@ import {
   SoVerificationStatus,
   SoRejectionReason,
 } from './entities/so-verification.entity';
-import { ApprovalStatus, ApprovalType } from 'src/default/common/enums/approvals.enum';
+import { ApprovalAction, ApprovalStatus, ApprovalType } from 'src/default/common/enums/approvals.enum';
 import { UserStatus } from '../auth/constants/auth.constants';
 import { SoVerificationRepository } from './so-verification.repository';
 import { ApprovalRepository } from '../approvals/repository';
@@ -330,7 +330,7 @@ export class SoVerificationService {
     await this.approvalsService.handleApprovalAction(
       soUserId,
       approvalId,
-      'approve',
+      ApprovalAction.APPROVE,
       dto.remarks ?? 'Outlet verified by Sales Officer',
     );
 
