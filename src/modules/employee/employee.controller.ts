@@ -1,12 +1,4 @@
-import {
-  Body,
-  Controller,
-  Get,
-  Param,
-  Post,
-  Query,
-  UseGuards,
-} from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
 import { EmployeeService } from './employee.service';
 import { IngestEmployeeDto, TopupPointsDto } from './dto/employee.dto';
 import { JwtAuthGuard } from 'src/default/common/guards/jwt-auth.guard';
@@ -69,13 +61,10 @@ export class EmployeeController {
   @Get()
   @NoCache()
   @ResponseMessage('Employees fetched successfully')
-  async list(
-    @Query('page') page?: string,
-    @Query('limit') limit?: string,
-  ) {
+  async list(@Query('page') page?: string, @Query('limit') limit?: string) {
     const response = await this.employeeService.listEmployees(
       page ? Number(page) : 1,
-      limit ? Number(limit) : 10,
+      limit ? Number(limit) : 10
     );
     return DataSanitizer.sanitizeData(response);
   }

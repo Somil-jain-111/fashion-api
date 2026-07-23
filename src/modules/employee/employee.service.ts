@@ -15,7 +15,7 @@ export class EmployeeService {
   constructor(
     private readonly userRepository: UserRepository,
     private readonly roleRepository: RolesRepository,
-    private readonly pointHistoryRepository: PointHistoryRepository,
+    private readonly pointHistoryRepository: PointHistoryRepository
   ) {}
 
   /**
@@ -42,10 +42,7 @@ export class EmployeeService {
       });
     }
 
-    const existing = await this.userRepository.findOne(
-      { mobile: data.mobile },
-      ['role'],
-    );
+    const existing = await this.userRepository.findOne({ mobile: data.mobile }, ['role']);
 
     if (existing) {
       // Mobile exists — must be an employee for top-up, otherwise conflict
@@ -192,10 +189,7 @@ export class EmployeeService {
    * Explicit top-up for an existing employee by their user id.
    */
   async topupById(employeeUserId: number, dto: TopupPointsDto) {
-    const user = await this.userRepository.findOne(
-      { id: employeeUserId },
-      ['role'],
-    );
+    const user = await this.userRepository.findOne({ id: employeeUserId }, ['role']);
 
     if (!user) {
       throw new BusinessException(ERROR_CODES.USER.USER_NOT_FOUND);
@@ -242,16 +236,15 @@ export class EmployeeService {
    */
   async listEmployees(page: number = 1, limit: number = 10) {
     const employeeRole = await this.roleRepository.findByName(UserRole.EMPLOYEE);
-    if (!employeeRole) return { employees: [], pagination: { total: 0, page, limit, totalPages: 0 } };
+    if (!employeeRole)
+      return { employees: [], pagination: { total: 0, page, limit, totalPages: 0 } };
 
-    const [employees, total] = await this.userRepository
-      .getRepository()
-      .findAndCount({
-        where: { role: { id: employeeRole.id } as any },
-        order: { createdAt: 'DESC' },
-        skip: (page - 1) * limit,
-        take: limit,
-      });
+    const [employees, total] = await this.userRepository.getRepository().findAndCount({
+      where: { role: { id: employeeRole.id } as any },
+      order: { createdAt: 'DESC' },
+      skip: (page - 1) * limit,
+      take: limit,
+    });
 
     return {
       employees: employees.map((e) => ({
@@ -279,22 +272,17 @@ export class EmployeeService {
    * Single employee detail with point history.
    */
   async getEmployee(employeeUserId: number) {
-    const user = await this.userRepository.findOne(
-      { id: employeeUserId },
-      ['role'],
-    );
+    const user = await this.userRepository.findOne({ id: employeeUserId }, ['role']);
 
     if (!user || user.role?.name !== UserRole.EMPLOYEE) {
       throw new BusinessException(ERROR_CODES.USER.USER_NOT_FOUND);
     }
 
-    const history = await this.pointHistoryRepository
-      .getRepository()
-      .find({
-        where: { user: { id: employeeUserId } as any },
-        order: { createdAt: 'DESC' } as any,
-        take: 20,
-      });
+    const history = await this.pointHistoryRepository.getRepository().find({
+      where: { user: { id: employeeUserId } as any },
+      order: { createdAt: 'DESC' } as any,
+      take: 20,
+    });
 
     return {
       id: user.id,

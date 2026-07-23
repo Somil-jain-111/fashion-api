@@ -4,7 +4,11 @@ import { UserRepository, RolesRepository } from 'src/modules/auth/repository';
 import { BusinessException } from 'src/default/error/business.exception';
 import { ERROR_CODES } from 'src/default/error/error.code';
 import { UserStatus } from '../auth/constants/auth.constants';
-import { ApprovalAction, ApprovalStatus, ApprovalType } from 'src/default/common/enums/approvals.enum';
+import {
+  ApprovalAction,
+  ApprovalStatus,
+  ApprovalType,
+} from 'src/default/common/enums/approvals.enum';
 import { UserRole } from 'src/default/common/enums/user-type.enum';
 import { User } from '../auth/entities/users.entity';
 import { CommonUtils } from 'src/default/common/utils/common.utils';
