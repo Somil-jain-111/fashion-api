@@ -7,6 +7,14 @@ export enum KycType {
   UPI = 'UPI',
 }
 
+export const KycTypeFiltered = {
+  AADHAAR: KycType.AADHAAR,
+  PAN: KycType.PAN,
+  GST: KycType.GST,
+} as const;
+
+export type KycTypeFiltered = (typeof KycTypeFiltered)[keyof typeof KycTypeFiltered];
+
 export enum KycStatus {
   PENDING = 'PENDING',
   VERIFIED = 'VERIFIED',

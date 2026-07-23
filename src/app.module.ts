@@ -47,6 +47,7 @@ import { OrderPlacementModule } from './modules/order-placement/order-placement.
 import { ProductsModule } from './modules/products/products.module';
 import { CartModule } from './modules/cart/cart.module';
 import { EmployeeModule } from './modules/employee/employee.module';
+import { AdminModule } from './modules/admin/admin.module';
 
 @Module({
   imports: [
@@ -95,6 +96,7 @@ import { EmployeeModule } from './modules/employee/employee.module';
     ProductsModule,
     CartModule,
     EmployeeModule,
+    AdminModule,
   ],
   providers: [
     {
