@@ -545,9 +545,9 @@ export class KycService {
 
     await this.userAuthValidator.validateUserStatus(user.status);
 
-    if (user.partnerType !== UserPartnerType.INDIVIDUAL) {
-      throw new BusinessException(ERROR_CODES.KYC.INVALID_PARTNER_TYPE_FOR_GST);
-    }
+    // if (user.partnerType !== UserPartnerType.INDIVIDUAL) {
+    //   throw new BusinessException(ERROR_CODES.KYC.INVALID_PARTNER_TYPE_FOR_GST);
+    // }
 
     const encryptedGst = await this.encryptKycData(gst);
 
