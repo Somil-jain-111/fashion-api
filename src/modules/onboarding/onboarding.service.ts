@@ -221,20 +221,20 @@ export class OnboardingService {
     );
     const panKycComplete = !!panKyc;
 
-    let gstKycComplete = false;
+    // let gstKycComplete = false;
     // Store info required regardless user is individual or entity
-    let storeInfoComplete = !!user.storeInformation;
+    const storeInfoComplete = !!user.storeInformation;
 
-    if (user.partnerType === UserPartnerType.ENTITY) {
-      const gstKyc = await this.kycVerificationRepository.findVerifiedByUserIdAndType(
-        userId,
-        KycType.GST
-      );
-      gstKycComplete = !!gstKyc;
-    } else {
-      gstKycComplete = true;
-      storeInfoComplete = true;
-    }
+    // if (user.partnerType === UserPartnerType.ENTITY) {
+    const gstKyc = await this.kycVerificationRepository.findVerifiedByUserIdAndType(
+      userId,
+      KycType.GST
+    );
+    const gstKycComplete = !!gstKyc;
+    // } else {
+    //   gstKycComplete = true;
+    //   storeInfoComplete = true;
+    // }
 
     // ---- Approval & routing info (merged from SO flow) ----
     const approvals = await this.approvalRepository.findByUserId(userId, ApprovalType.PROFILE);
