@@ -4,16 +4,17 @@ import { ERROR_CODES } from 'src/default/error/error.code';
 
 import { ApprovalsService } from '../approvals/approvals.service';
 import { SoVerifyOutletDto, SoRejectOutletDto } from './dto/so-verify.dto';
+import { SoVerificationStatus, SoRejectionReason } from './entities/so-verification.entity';
 import {
-  SoVerificationStatus,
-  SoRejectionReason,
-} from './entities/so-verification.entity';
-import { ApprovalStatus, ApprovalType } from 'src/default/common/enums/approvals.enum';
+  ApprovalAction,
+  ApprovalStatus,
+  ApprovalType,
+} from 'src/default/common/enums/approvals.enum';
 import { UserStatus } from '../auth/constants/auth.constants';
 import { SoVerificationRepository } from './so-verification.repository';
 import { ApprovalRepository } from '../approvals/repository';
 import { DynamicConfigRepository } from '../dynamic-config/repository';
-import { UserRepository } from '../user/repository';
+import { UserRepository } from '../auth/repository';
 
 // Default radius in meters. Overridden by ApplicationConfig if set.
 const DEFAULT_GEOFENCE_RADIUS_METERS = 200;
@@ -29,8 +30,8 @@ export class SoVerificationService {
     private readonly approvalRepository: ApprovalRepository,
     private readonly soVerificationRepository: SoVerificationRepository,
     private readonly dynamicConfigRepository: DynamicConfigRepository,
-    private readonly approvalsService: ApprovalsService,
-  ) { }
+    private readonly approvalsService: ApprovalsService
+  ) {}
 
   // ─────────────────────────────────────────────
   // Geo-fence helpers
@@ -40,10 +41,7 @@ export class SoVerificationService {
    * Haversine formula — returns distance in meters between two lat/lng points.
    * Pure calculation, no external dependency.
    */
-  private calculateDistanceMeters(
-    lat1: number, lng1: number,
-    lat2: number, lng2: number,
-  ): number {
+  private calculateDistanceMeters(lat1: number, lng1: number, lat2: number, lng2: number): number {
     const R = 6371000; // Earth radius in meters
     const toRad = (deg: number) => (deg * Math.PI) / 180;
 
@@ -81,7 +79,7 @@ export class SoVerificationService {
     soLat: number,
     soLng: number,
     storeLat: number,
-    storeLng: number,
+    storeLng: number
   ): Promise<{ distanceMeters: number; withinRange: boolean; allowedRadiusMeters: number }> {
     const distanceMeters = this.calculateDistanceMeters(soLat, soLng, storeLat, storeLng);
     const allowedRadiusMeters = await this.getGeofenceRadiusMeters();
@@ -153,8 +151,10 @@ export class SoVerificationService {
         .map((approval) => {
           const store = approval.user.storeInformation!;
           const distanceMeters = this.calculateDistanceMeters(
-            soLat, soLng,
-            Number(store.lat), Number(store.lng),
+            soLat,
+            soLng,
+            Number(store.lat),
+            Number(store.lng)
           );
           return {
             approvalId: approval.id,
@@ -194,10 +194,10 @@ export class SoVerificationService {
   // ─────────────────────────────────────────────
 
   async getRetailerDetail(retailerUserId: number) {
-    const retailer = await this.userRepository.findOne(
-      { id: retailerUserId },
-      ['storeInformation', 'role'],
-    );
+    const retailer = await this.userRepository.findOne({ id: retailerUserId }, [
+      'storeInformation',
+      'role',
+    ]);
 
     if (!retailer) {
       throw new BusinessException(ERROR_CODES.USER.USER_NOT_FOUND);
@@ -224,15 +224,11 @@ export class SoVerificationService {
   // Geo-fence check endpoint (called as SO moves)
   // ─────────────────────────────────────────────
 
-  async checkGeofence(
-    approvalId: number,
-    soLat: number,
-    soLng: number,
-  ) {
-    const approval = await this.approvalRepository.findOne(
-      { id: approvalId },
-      ['user', 'user.storeInformation'],
-    );
+  async checkGeofence(approvalId: number, soLat: number, soLng: number) {
+    const approval = await this.approvalRepository.findOne({ id: approvalId }, [
+      'user',
+      'user.storeInformation',
+    ]);
 
     if (!approval) {
       throw new BusinessException(ERROR_CODES.APPROVAL.APPROVAL_NOT_FOUND);
@@ -247,8 +243,12 @@ export class SoVerificationService {
       });
     }
 
-    const { distanceMeters, withinRange, allowedRadiusMeters } =
-      await this.validateGeofence(soLat, soLng, Number(store.lat), Number(store.lng));
+    const { distanceMeters, withinRange, allowedRadiusMeters } = await this.validateGeofence(
+      soLat,
+      soLng,
+      Number(store.lat),
+      Number(store.lng)
+    );
 
     return {
       withinRange,
@@ -265,10 +265,10 @@ export class SoVerificationService {
   // ─────────────────────────────────────────────
 
   async verifyOutlet(soUserId: number, approvalId: number, dto: SoVerifyOutletDto) {
-    const approval = await this.approvalRepository.findOne(
-      { id: approvalId },
-      ['user', 'user.storeInformation'],
-    );
+    const approval = await this.approvalRepository.findOne({ id: approvalId }, [
+      'user',
+      'user.storeInformation',
+    ]);
 
     if (!approval) {
       throw new BusinessException(ERROR_CODES.APPROVAL.APPROVAL_NOT_FOUND);
@@ -296,11 +296,12 @@ export class SoVerificationService {
     }
 
     // ── Geo-fence validation ──
-    const { distanceMeters, withinRange, allowedRadiusMeters } =
-      await this.validateGeofence(
-        dto.geoLat, dto.geoLng,
-        Number(store.lat), Number(store.lng),
-      );
+    const { distanceMeters, withinRange, allowedRadiusMeters } = await this.validateGeofence(
+      dto.geoLat,
+      dto.geoLng,
+      Number(store.lat),
+      Number(store.lng)
+    );
 
     if (!withinRange) {
       throw new BusinessException({
@@ -330,8 +331,8 @@ export class SoVerificationService {
     await this.approvalsService.handleApprovalAction(
       soUserId,
       approvalId,
-      'approve',
-      dto.remarks ?? 'Outlet verified by Sales Officer',
+      ApprovalAction.APPROVE,
+      dto.remarks ?? 'Outlet verified by Sales Officer'
     );
 
     return {
@@ -348,10 +349,7 @@ export class SoVerificationService {
   // ─────────────────────────────────────────────
 
   async rejectOutlet(soUserId: number, approvalId: number, dto: SoRejectOutletDto) {
-    const approval = await this.approvalRepository.findOne(
-      { id: approvalId },
-      ['user'],
-    );
+    const approval = await this.approvalRepository.findOne({ id: approvalId }, ['user']);
 
     if (!approval) {
       throw new BusinessException(ERROR_CODES.APPROVAL.APPROVAL_NOT_FOUND);
@@ -396,7 +394,7 @@ export class SoVerificationService {
     return {
       message: 'Outlet rejected successfully',
       rejectionReason: dto.rejectionReason,
-      newStatus: UserStatus.BLOCKED,  // was IN_APPROVAL
+      newStatus: UserStatus.BLOCKED, // was IN_APPROVAL
       rejectedAt: new Date().toISOString(),
     };
   }
@@ -413,10 +411,7 @@ export class SoVerificationService {
    * If approvalStatus = 'rejected', show rejection banner on that screen.
    */
   async getOnboardingStatus(retailerUserId: number) {
-    const user = await this.userRepository.findOne(
-      { id: retailerUserId },
-      ['storeInformation'],
-    );
+    const user = await this.userRepository.findOne({ id: retailerUserId }, ['storeInformation']);
 
     if (!user) {
       throw new BusinessException(ERROR_CODES.USER.USER_NOT_FOUND);
@@ -444,7 +439,8 @@ export class SoVerificationService {
       const soEvidence = await this.soVerificationRepository.findLatestByRetailerId(retailerUserId);
 
       currentRejection = {
-        rejectedBy: activeApproval.level === 1 ? 'L1' : activeApproval.level === 2 ? 'L2' : 'Sales Officer',
+        rejectedBy:
+          activeApproval.level === 1 ? 'L1' : activeApproval.level === 2 ? 'L2' : 'Sales Officer',
         reason: activeApproval.remarks ?? 'Your profile was rejected. Please review and resubmit.',
         remarks: soEvidence?.remarks,
         rejectedAt: activeApproval.approved_at.toISOString(),
@@ -460,7 +456,7 @@ export class SoVerificationService {
       userStatus: user.status,
       approvalStatus: activeApproval?.status ?? null,
       approvalLevel: activeApproval?.level ?? null,
-      currentRejection,   // null if not rejected
+      currentRejection, // null if not rejected
       completedSteps: this.resolveCompletedSteps(user),
       isSubmitted: !!activeApproval,
     };
@@ -477,7 +473,8 @@ export class SoVerificationService {
       return 'SUBMIT';
     }
     if (activeApproval.status === ApprovalStatus.REJECTED) return 'BLOCKED';
-    if (activeApproval.status === ApprovalStatus.APPROVED && activeApproval.level === 3) return 'ACTIVE';
+    if (activeApproval.status === ApprovalStatus.APPROVED && activeApproval.level === 3)
+      return 'ACTIVE';
 
     // Pending at each level
     if (activeApproval.level === 1) return 'PENDING_L1_REVIEW';

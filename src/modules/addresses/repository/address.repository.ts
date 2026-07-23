@@ -88,7 +88,7 @@ export class AddressRepository extends BaseRepository<Address> {
   async findByUserIdPaginated(userId: number, page = 1, limit = 10): Promise<[Address[], number]> {
     return await this.repository.findAndCount({
       where: {
-        user_id: userId,
+        user: { id: userId },
         status: 1,
       } as FindOptionsWhere<Address>,
       order: {

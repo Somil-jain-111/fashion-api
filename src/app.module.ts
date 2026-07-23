@@ -42,6 +42,11 @@ import { OnboardingModule } from './modules/onboarding/onboarding.module';
 import { SoVerificationModule } from './modules/so-verification/so-verification.module';
 import { S3Module } from './default/common/services/s3/s3.module';
 import { DynamicConfigModule } from './modules/dynamic-config/dynamic-config.module';
+import { CmsModule } from './modules/cms/cms.module';
+import { OrderPlacementModule } from './modules/order-placement/order-placement.module';
+import { ProductsModule } from './modules/products/products.module';
+import { CartModule } from './modules/cart/cart.module';
+import { EmployeeModule } from './modules/employee/employee.module';
 
 @Module({
   imports: [
@@ -85,6 +90,11 @@ import { DynamicConfigModule } from './modules/dynamic-config/dynamic-config.mod
     SoVerificationModule,
     S3Module,
     DynamicConfigModule,
+    CmsModule,
+    OrderPlacementModule,
+    ProductsModule,
+    CartModule,
+    EmployeeModule,
   ],
   providers: [
     {

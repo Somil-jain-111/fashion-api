@@ -4,7 +4,7 @@ import { AddressesController } from './addresses.controller';
 import { AddressRepository, PincodeRepository } from 'src/modules/addresses/repository';
 import { IdempotencyService } from 'src/default/idempotency/idempotency.service';
 import { RedisModule } from 'src/default/databases/redis/redis.module';
-import { UserRepository } from '../user/repository';
+import { UserRepository } from '../auth/repository';
 import { UserAuthValidator } from '../auth/validators/user-auth.validator';
 
 @Module({

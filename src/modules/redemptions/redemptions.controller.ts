@@ -23,7 +23,7 @@ import { GetOrdersQueryDto } from './dto/get-orders-query.dto';
 import { ResendOtpDto } from './dto/resend-otp.dto';
 
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles([UserRole.RETAILER])
+@Roles([UserRole.RETAILER,  UserRole.EMPLOYEE])
 @Controller('redemptions')
 export class RedemptionsController {
   constructor(private readonly redemptionsService: RedemptionsService) {}

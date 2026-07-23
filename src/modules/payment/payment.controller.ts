@@ -28,7 +28,7 @@ import { DataSanitizer } from 'src/default/common/utils/sanitize.utils';
 
 @Controller('payment')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles([UserRole.RETAILER])
+@Roles([UserRole.RETAILER, UserRole.EMPLOYEE])
 export class PaymentController {
   constructor(private readonly paymentService: PaymentService) {}
 

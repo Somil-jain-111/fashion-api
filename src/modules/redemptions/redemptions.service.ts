@@ -87,26 +87,33 @@ export class RedemptionsService {
        * 3. Validate KYC
        * At least Aadhaar or PAN should be verified.
        */
-      const [aadhaarKyc, panKyc] = await Promise.all([
-        this.kycVerificationRepository.findOne({
-          user: { id: userId },
-          type: KycType.AADHAAR,
-          status: KycStatus.VERIFIED,
-        }),
-        this.kycVerificationRepository.findOne({
-          user: { id: userId },
-          type: KycType.PAN,
-          status: KycStatus.VERIFIED,
-        }),
-      ]);
 
-      const isAadhaarVerified = Boolean(aadhaarKyc);
-      const isPanVerified = Boolean(panKyc);
+      const skipKyc = config.additionalSettings?.skipKyc === true;
+      let isAadhaarVerified = false;
+      let isPanVerified = false;
+      if (!skipKyc) {
+        const [aadhaarKyc, panKyc] = await Promise.all([
+          this.kycVerificationRepository.findOne({
+            user: { id: userId },
+            type: KycType.AADHAAR,
+            status: KycStatus.VERIFIED,
+          }),
+          this.kycVerificationRepository.findOne({
+            user: { id: userId },
+            type: KycType.PAN,
+            status: KycStatus.VERIFIED,
+          }),
+        ]);
 
-      if (!isPanVerified && !isAadhaarVerified) {
-        throw new BusinessException(ERROR_CODES.KYC.KYC_REQUIRED_FOR_REDEMPTION);
+        isAadhaarVerified = Boolean(aadhaarKyc);
+        isPanVerified = Boolean(panKyc);
+
+        if (!isPanVerified && !isAadhaarVerified) {
+          throw new BusinessException(ERROR_CODES.KYC.KYC_REQUIRED_FOR_REDEMPTION);
+        }
+      } else {
+        isPanVerified = false;
       }
-
       /**
        * 4. Fetch reward product
        */

@@ -1,8 +1,8 @@
 import { DataSource, QueryRunner } from 'typeorm';
-import { BaseRepository } from 'src/default/common/repositories/base.repository';
-import { UserRole } from 'src/default/common/enums/user-type.enum';
+import { BaseRepository } from './base.repository';
 import { Roles } from 'src/modules/auth/entities';
 import { Injectable } from '@nestjs/common';
+import { UserRole } from 'src/default/common/enums/user-type.enum';
 
 @Injectable()
 export class RolesRepository extends BaseRepository<Roles> {

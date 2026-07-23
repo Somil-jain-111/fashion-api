@@ -4,7 +4,7 @@ import { ExtractJwt, Strategy } from 'passport-jwt';
 
 import { BusinessException } from 'src/default/error/business.exception';
 import { ERROR_CODES } from 'src/default/error/error.code';
-import { UserRepository } from 'src/modules/user/repository';
+import { UserRepository } from 'src/modules/auth/repository';
 import { RevokedTokenRepository } from 'src/modules/auth/repository';
 import { UserAuthValidator } from 'src/modules/auth/validators/user-auth.validator';
 import { BearerTokenHelper } from '../helper/bearer-token.helper';

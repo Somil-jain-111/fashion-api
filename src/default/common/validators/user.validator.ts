@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 
 import { BusinessException } from 'src/default/error/business.exception';
 import { ERROR_CODES } from 'src/default/error/error.code';
-import { RolesRepository, UserRepository } from 'src/modules/user/repository';
+import { RolesRepository, UserRepository } from 'src/modules/auth/repository';
 import { UserStatus } from 'src/modules/auth/constants/auth.constants';
 import { UserAuthValidator } from 'src/modules/auth/validators/user-auth.validator';
 import { SendOtpDto } from 'src/modules/auth/dto/send-otp.dto';

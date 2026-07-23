@@ -4,7 +4,7 @@ import {
   UserRepository,
   RolesRepository,
   UserStoreInfoRepository,
-} from 'src/modules/user/repository';
+} from 'src/modules/auth/repository';
 import { ApprovalRepository } from 'src/modules/approvals/repository';
 import { KycVerificationRepository } from 'src/modules/kyc/repository';
 import { User } from '../auth/entities/users.entity';
@@ -29,7 +29,7 @@ export class OnboardingService {
     private readonly userStoreInfoRepository: UserStoreInfoRepository,
     private readonly approvalRepository: ApprovalRepository,
     private readonly kycVerificationRepository: KycVerificationRepository,
-    private readonly roleRepository: RolesRepository,
+    private readonly roleRepository: RolesRepository
   ) {}
 
   async saveBasicInfo(userId: number, dto: SaveBasicInfoDto) {
@@ -206,95 +206,92 @@ export class OnboardingService {
   //   };
   // }
 
-async getStatus(userId: number) {
-  const user = await this.userRepository.findOne({ id: userId }, ['storeInformation']);
+  async getStatus(userId: number) {
+    const user = await this.userRepository.findOne({ id: userId }, ['storeInformation']);
 
-  if (!user) {
-    throw new BusinessException(ERROR_CODES.USER.USER_NOT_FOUND);
-  }
+    if (!user) {
+      throw new BusinessException(ERROR_CODES.USER.USER_NOT_FOUND);
+    }
 
-  const basicInfoComplete = !!(user.username && user.partnerType);
+    const basicInfoComplete = !!(user.username && user.partnerType);
 
-  const panKyc = await this.kycVerificationRepository.findVerifiedByUserIdAndType(
-    userId,
-    KycType.PAN
-  );
-  const panKycComplete = !!panKyc;
+    const panKyc = await this.kycVerificationRepository.findVerifiedByUserIdAndType(
+      userId,
+      KycType.PAN
+    );
+    const panKycComplete = !!panKyc;
 
-  let gstKycComplete = false;
-  let storeInfoComplete = false;
+    // let gstKycComplete = false;
+    // Store info required regardless user is individual or entity
+    const storeInfoComplete = !!user.storeInformation;
 
-  if (user.partnerType === UserPartnerType.ENTITY) {
+    // if (user.partnerType === UserPartnerType.ENTITY) {
     const gstKyc = await this.kycVerificationRepository.findVerifiedByUserIdAndType(
       userId,
       KycType.GST
     );
-    gstKycComplete = !!gstKyc;
-    storeInfoComplete = !!user.storeInformation;
-  } else {
-    gstKycComplete = true;
-    storeInfoComplete = true;
-  }
+    const gstKycComplete = !!gstKyc;
+    // } else {
+    //   gstKycComplete = true;
+    //   storeInfoComplete = true;
+    // }
 
-  // ---- Approval & routing info (merged from SO flow) ----
-const approvals = await this.approvalRepository.findByUserId(userId, ApprovalType.PROFILE);
+    // ---- Approval & routing info (merged from SO flow) ----
+    const approvals = await this.approvalRepository.findByUserId(userId, ApprovalType.PROFILE);
 
-  const activeApproval = approvals[0] ?? null;
+    const activeApproval = approvals[0] ?? null;
 
-  let currentRejection: {
-    rejectedBy: string;
-    reason: string;
-    rejectedAt: Date | null;
-  } | null = null;
+    let currentRejection: {
+      rejectedBy: string;
+      reason: string;
+      rejectedAt: Date | null;
+    } | null = null;
 
-  if (activeApproval?.status === ApprovalStatus.REJECTED) {
-    currentRejection = {
-      rejectedBy:
-        activeApproval.level === 1 ? 'L1'
-        : activeApproval.level === 2 ? 'L2'
-        : 'Sales Officer',
-      reason: activeApproval.remarks ?? 'Your profile was rejected.',
-      rejectedAt: activeApproval.approved_at,
+    if (activeApproval?.status === ApprovalStatus.REJECTED) {
+      currentRejection = {
+        rejectedBy:
+          activeApproval.level === 1 ? 'L1' : activeApproval.level === 2 ? 'L2' : 'Sales Officer',
+        reason: activeApproval.remarks ?? 'Your profile was rejected.',
+        rejectedAt: activeApproval.approved_at,
+      };
+    }
+
+    const currentStep = this.resolveCurrentStep(user, activeApproval);
+
+    return {
+      userId,
+      partnerType: user.partnerType,
+      basicInfoComplete,
+      panKycComplete,
+      gstKycComplete,
+      storeInfoComplete,
+      overallStatus: user.status,
+      // ---- New routing & approval fields ----
+      currentStep,
+      approvalStatus: activeApproval?.status ?? null,
+      approvalLevel: activeApproval?.level ?? null,
+      isSubmitted: !!activeApproval,
+      currentRejection,
     };
   }
 
-  const currentStep = this.resolveCurrentStep(user, activeApproval);
+  private resolveCurrentStep(user: any, activeApproval: any): string {
+    // Check user status first — it's the source of truth
+    if (user.status === UserStatus.ACTIVE) return 'ACTIVE';
+    if (user.status === UserStatus.BLOCKED) return 'BLOCKED';
 
-  return {
-    userId,
-    partnerType: user.partnerType,
-    basicInfoComplete,
-    panKycComplete,
-    gstKycComplete,
-    storeInfoComplete,
-    overallStatus: user.status,
-    // ---- New routing & approval fields ----
-    currentStep,
-    approvalStatus: activeApproval?.status ?? null,
-    approvalLevel: activeApproval?.level ?? null,
-    isSubmitted: !!activeApproval,
-    currentRejection,
-  };
-}
+    if (!activeApproval) {
+      if (!user.username || !user.partnerType) return 'BASIC_INFO';
+      if (!user.storeInformation) return 'STORE_INFO';
+      return 'SUBMIT';
+    }
 
+    if (activeApproval.level === 1) return 'PENDING_L1_REVIEW';
+    if (activeApproval.level === 2) return 'PENDING_L2_REVIEW';
+    if (activeApproval.level === 3) return 'PENDING_SO_VISIT';
 
-private resolveCurrentStep(user: any, activeApproval: any): string {
-  // Check user status first — it's the source of truth
-  if (user.status === UserStatus.ACTIVE) return 'ACTIVE';
-  if (user.status === UserStatus.BLOCKED) return 'BLOCKED';
-
-  if (!activeApproval) {
-    if (!user.username || !user.partnerType) return 'BASIC_INFO';
-    if (!user.storeInformation) return 'STORE_INFO';
-    return 'SUBMIT';
+    return 'UNKNOWN';
   }
-
-  if (activeApproval.level === 1) return 'PENDING_L1_REVIEW';
-  if (activeApproval.level === 2) return 'PENDING_L2_REVIEW';
-  if (activeApproval.level === 3) return 'PENDING_SO_VISIT';
-
-  return 'UNKNOWN';
-}
 
   async submitProfile(userId: number) {
     const status = await this.getStatus(userId);

@@ -1,12 +1,17 @@
 import { Injectable } from '@nestjs/common';
 import { ApprovalRepository } from 'src/modules/approvals/repository';
-import { UserRepository, RolesRepository } from 'src/modules/user/repository';
+import { UserRepository, RolesRepository } from 'src/modules/auth/repository';
 import { BusinessException } from 'src/default/error/business.exception';
 import { ERROR_CODES } from 'src/default/error/error.code';
 import { UserStatus } from '../auth/constants/auth.constants';
-import { ApprovalStatus, ApprovalType } from 'src/default/common/enums/approvals.enum';
+import {
+  ApprovalAction,
+  ApprovalStatus,
+  ApprovalType,
+} from 'src/default/common/enums/approvals.enum';
 import { UserRole } from 'src/default/common/enums/user-type.enum';
 import { User } from '../auth/entities/users.entity';
+import { CommonUtils } from 'src/default/common/utils/common.utils';
 
 @Injectable()
 export class ApprovalsService {
@@ -19,7 +24,7 @@ export class ApprovalsService {
   async handleApprovalAction(
     approverId: number,
     approvalId: number,
-    action: 'approve' | 'reject' | 'block',
+    action: ApprovalAction,
     remarks?: string
   ) {
     const approver = await this.userRepository.findOne({ id: approverId }, ['role']);
@@ -213,5 +218,116 @@ export class ApprovalsService {
         };
       }
     }
+  }
+
+  async getApprovalQueue(
+    approverId: number,
+    approverRole: UserRole,
+    statusFilter?: ApprovalStatus,
+    page: number = 1,
+    limit: number = 10
+  ) {
+    const level = approverRole === UserRole.L1 ? 1 : approverRole === UserRole.L2 ? 2 : null;
+
+    if (level === null && approverRole !== UserRole.SUPERADMIN) {
+      throw new BusinessException(ERROR_CODES.APPROVAL.INVALID_LEVEL);
+    }
+
+    const listQuery = this.approvalRepository
+      .getRepository()
+      .createQueryBuilder('approval')
+      .leftJoinAndSelect('approval.user', 'user')
+      .leftJoinAndSelect('user.storeInformation', 'storeInformation')
+      .leftJoinAndSelect('approval.assignedTo', 'assignedTo')
+      .leftJoinAndSelect('approval.approved_by', 'approvedBy')
+      .where('approval.approval_type = :type', { type: ApprovalType.PROFILE });
+
+    if (approverRole !== UserRole.SUPERADMIN) {
+      listQuery
+        .andWhere('approval.assigned_to = :approverId', { approverId })
+        .andWhere('approval.level = :level', { level });
+    }
+
+    if (statusFilter) {
+      listQuery.andWhere('approval.status = :status', { status: statusFilter });
+    }
+
+    const offset = (page - 1) * limit;
+
+    listQuery.orderBy('approval.id', 'DESC').skip(offset).take(limit);
+
+    const [approvals, total] = await listQuery.getManyAndCount();
+
+    const list = approvals.map((approval) => ({
+      approvalId: approval.id,
+      level: approval.level,
+      status: approval.status,
+      remarks: approval.remarks ?? null,
+      approvedAt: approval.approved_at ? new Date(approval.approved_at).toISOString() : null,
+      assignedTo: approval.assignedTo
+        ? {
+            id: approval.assignedTo.id,
+            name: approval.assignedTo.username ?? null,
+            mobile: approval.assignedTo.mobile ?? null,
+          }
+        : null,
+      approvedBy: approval.approved_by
+        ? {
+            id: approval.approved_by.id,
+            name: approval.approved_by.username ?? null,
+            mobile: approval.approved_by.mobile ?? null,
+          }
+        : null,
+      retailer: {
+        id: approval.user.id,
+        name: approval.user.username ?? null,
+        mobile: approval.user.mobile ?? null,
+        status: approval.user.status,
+        partnerType: approval.user.partnerType ?? null,
+      },
+      storeInfo: approval.user.storeInformation
+        ? {
+            address: approval.user.storeInformation.address1,
+            city: approval.user.storeInformation.city,
+            pincode: approval.user.storeInformation.pincode,
+            lat: approval.user.storeInformation.lat,
+            lng: approval.user.storeInformation.lng,
+          }
+        : null,
+    }));
+
+    return {
+      list,
+      pagination: CommonUtils.generatePaginationResponse(total, page, limit),
+    };
+  }
+
+  async getApprovalAnalytics(approverId: number, approverRole: UserRole) {
+    const level = approverRole === UserRole.L1 ? 1 : approverRole === UserRole.L2 ? 2 : null;
+
+    if (level === null && approverRole !== UserRole.SUPERADMIN) {
+      throw new BusinessException(ERROR_CODES.APPROVAL.INVALID_LEVEL);
+    }
+
+    const query = this.approvalRepository
+      .getRepository()
+      .createQueryBuilder('approval')
+      .where('approval.approval_type = :type', { type: ApprovalType.PROFILE });
+
+    if (approverRole !== UserRole.SUPERADMIN) {
+      query
+        .andWhere('approval.assigned_to = :approverId', { approverId })
+        .andWhere('approval.level = :level', { level });
+    }
+
+    const all = await query.getMany();
+
+    return {
+      total: all.length,
+      pending: all.filter((a) => a.status === ApprovalStatus.PENDING).length,
+      approved: all.filter((a) => a.status === ApprovalStatus.APPROVED).length,
+      rejected: all.filter((a) => a.status === ApprovalStatus.REJECTED).length,
+      blocked: all.filter((a) => a.status === ApprovalStatus.BLOCKED).length,
+    };
   }
 }

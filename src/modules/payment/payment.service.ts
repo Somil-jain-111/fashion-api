@@ -155,24 +155,27 @@ export class PaymentService {
         });
       }
 
+      const skipKyc = config.additionalSettings?.skipKyc === true;
       // PAN check for high limits
-      const totalPointsUsed = await this.pointHistoryRepository.getTotalPointsForPanCheck(userId);
-      const currentRedemptionPoints = Number(totalPointsUsed) + points;
 
-      if (points > 59400 || currentRedemptionPoints > 59400) {
-        const panKyc = await this.kycVerificationRepository.findOne({
-          user: { id: userId },
-          type: KycType.PAN,
-        });
+      if (!skipKyc) {
+        const totalPointsUsed = await this.pointHistoryRepository.getTotalPointsForPanCheck(userId);
+        const currentRedemptionPoints = Number(totalPointsUsed) + points;
 
-        if (!panKyc || panKyc.status !== KycStatus.VERIFIED) {
-          if (panKyc && panKyc.status === KycStatus.PENDING) {
-            throw new BusinessException(ERROR_CODES.KYC.PAN_KYC_PENDING);
+        if (points > 59400 || currentRedemptionPoints > 59400) {
+          const panKyc = await this.kycVerificationRepository.findOne({
+            user: { id: userId },
+            type: KycType.PAN,
+          });
+
+          if (!panKyc || panKyc.status !== KycStatus.VERIFIED) {
+            if (panKyc && panKyc.status === KycStatus.PENDING) {
+              throw new BusinessException(ERROR_CODES.KYC.PAN_KYC_PENDING);
+            }
+            throw new BusinessException(ERROR_CODES.KYC.PAN_KYC_REQUIRED_TO_REDEEM);
           }
-          throw new BusinessException(ERROR_CODES.KYC.PAN_KYC_REQUIRED_TO_REDEEM);
         }
       }
-
       const transactionResult = await this.transactionUtils.runInTransaction(
         async (queryRunner) => {
           const isLive = this.appConfigService.isProduction() || this.appConfigService.isQa();
