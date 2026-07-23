@@ -32,6 +32,24 @@ export class OnboardingService {
     private readonly roleRepository: RolesRepository
   ) {}
 
+  private resolveCurrentStep(user: any, activeApproval: any): string {
+    // Check user status first — it's the source of truth
+    if (user.status === UserStatus.ACTIVE) return 'ACTIVE';
+    if (user.status === UserStatus.BLOCKED) return 'BLOCKED';
+
+    if (!activeApproval) {
+      if (!user.username || !user.partnerType) return 'BASIC_INFO';
+      if (!user.storeInformation) return 'STORE_INFO';
+      return 'SUBMIT';
+    }
+
+    if (activeApproval.level === 1) return 'PENDING_L1_REVIEW';
+    if (activeApproval.level === 2) return 'PENDING_L2_REVIEW';
+    if (activeApproval.level === 3) return 'PENDING_SO_VISIT';
+
+    return 'UNKNOWN';
+  }
+
   async saveBasicInfo(userId: number, dto: SaveBasicInfoDto) {
     const user = await this.userRepository.findById(userId);
 
@@ -221,6 +239,13 @@ export class OnboardingService {
     );
     const panKycComplete = !!panKyc;
 
+    const aadhaarKyc = await this.kycVerificationRepository.findVerifiedByUserIdAndType(
+      userId,
+      KycType.AADHAAR
+    );
+
+    const aadhaarKycComplete = !!aadhaarKyc;
+
     // let gstKycComplete = false;
     // Store info required regardless user is individual or entity
     const storeInfoComplete = !!user.storeInformation;
@@ -264,6 +289,7 @@ export class OnboardingService {
       basicInfoComplete,
       panKycComplete,
       gstKycComplete,
+      aadhaarKycComplete,
       storeInfoComplete,
       overallStatus: user.status,
       // ---- New routing & approval fields ----
@@ -273,24 +299,6 @@ export class OnboardingService {
       isSubmitted: !!activeApproval,
       currentRejection,
     };
-  }
-
-  private resolveCurrentStep(user: any, activeApproval: any): string {
-    // Check user status first — it's the source of truth
-    if (user.status === UserStatus.ACTIVE) return 'ACTIVE';
-    if (user.status === UserStatus.BLOCKED) return 'BLOCKED';
-
-    if (!activeApproval) {
-      if (!user.username || !user.partnerType) return 'BASIC_INFO';
-      if (!user.storeInformation) return 'STORE_INFO';
-      return 'SUBMIT';
-    }
-
-    if (activeApproval.level === 1) return 'PENDING_L1_REVIEW';
-    if (activeApproval.level === 2) return 'PENDING_L2_REVIEW';
-    if (activeApproval.level === 3) return 'PENDING_SO_VISIT';
-
-    return 'UNKNOWN';
   }
 
   async submitProfile(userId: number) {
