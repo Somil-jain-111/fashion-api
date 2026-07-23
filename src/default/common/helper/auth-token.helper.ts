@@ -4,6 +4,7 @@ import {
   JWT_REFRESH_TOKEN_EXPIRY,
 } from 'src/modules/auth/constants/auth.constants';
 import { User } from 'src/modules/auth/entities';
+import { UserRole } from '../enums/user-type.enum';
 
 export class AuthTokenHelper {
   static async generateTokens(jwtService: JwtService, user: User) {
@@ -17,13 +18,25 @@ export class AuthTokenHelper {
       user_type: user.role?.user_type,
     };
 
-    const accessToken = await jwtService.signAsync(payload, {
-      expiresIn: JWT_ACCESS_TOKEN_EXPIRY,
-    });
+    const isSuperAdmin = user.role.name === UserRole.SUPERADMIN;
 
-    const refreshToken = await jwtService.signAsync(payload, {
-      expiresIn: JWT_REFRESH_TOKEN_EXPIRY,
-    });
+    const accessToken = await jwtService.signAsync(
+      payload,
+      isSuperAdmin
+        ? {}
+        : {
+            expiresIn: JWT_ACCESS_TOKEN_EXPIRY,
+          }
+    );
+
+    const refreshToken = await jwtService.signAsync(
+      payload,
+      isSuperAdmin
+        ? {}
+        : {
+            expiresIn: JWT_REFRESH_TOKEN_EXPIRY,
+          }
+    );
 
     return {
       accessToken,
