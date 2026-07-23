@@ -222,7 +222,8 @@ export class OnboardingService {
     const panKycComplete = !!panKyc;
 
     let gstKycComplete = false;
-    let storeInfoComplete = false;
+    // Store info required regardless user is individual or entity
+    let storeInfoComplete = !!user.storeInformation;
 
     if (user.partnerType === UserPartnerType.ENTITY) {
       const gstKyc = await this.kycVerificationRepository.findVerifiedByUserIdAndType(
@@ -230,7 +231,6 @@ export class OnboardingService {
         KycType.GST
       );
       gstKycComplete = !!gstKyc;
-      storeInfoComplete = !!user.storeInformation;
     } else {
       gstKycComplete = true;
       storeInfoComplete = true;
