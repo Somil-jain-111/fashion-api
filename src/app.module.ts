@@ -94,7 +94,7 @@ import { EmployeeModule } from './modules/employee/employee.module';
     OrderPlacementModule,
     ProductsModule,
     CartModule,
-    EmployeeModule
+    EmployeeModule,
   ],
   providers: [
     {
