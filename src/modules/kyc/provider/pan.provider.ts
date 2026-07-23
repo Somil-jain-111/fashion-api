@@ -27,7 +27,7 @@ export type PanVerifyResult = {
 @Injectable()
 export class PanProvider {
   constructor(
-    private readonly configService: AppConfigService,
+    private readonly appConfigService: AppConfigService,
     private readonly apiResponseRepository: ApiResponseRepository
   ) {}
 
@@ -50,17 +50,9 @@ export class PanProvider {
       transaction_id: data.transactionId,
     };
 
-    const isLive = this.configService.isProduction();
-
-    const baseUrl = isLive
-      ? this.configService.get('Rewards_API_Base_Url_Live')
-      : this.configService.get('Rewards_API_Base_Url_Dev');
-
-    const permanentToken = isLive
-      ? this.configService.get('Rewards_API_Permanent_Token_Live')
-      : this.configService.get('Rewards_API_Permanent_Token_Dev');
-
-    const secretKey = this.configService.get('KYC_SECRET_KEY');
+    const baseUrl = this.appConfigService.getRewardsUrl();
+    const secretKey = this.appConfigService.getKycSecretKey();
+    const permanentToken = this.appConfigService.getRewardsPermanentToken();
 
     if (!secretKey) {
       throw new BusinessException(ERROR_CODES.KYC.KYC_SECRET_KEY_MISSING);
@@ -77,18 +69,23 @@ export class PanProvider {
       data: payload,
     };
 
+    await this.apiResponseRepository.saveResponse({
+      type: 'PAN',
+      transactionId: data.transactionId,
+      requestUrl: requestConfig.url || '',
+      requestPayload: {
+        payload,
+        headers: requestConfig.headers,
+      },
+    });
+
     try {
       const response = await axios.request(requestConfig);
 
-      await this.apiResponseRepository.saveResponse({
-        type: 'PAN',
-        requestUrl: requestConfig.url || '',
-        requestPayload: {
-          payload,
-          headers: requestConfig.headers,
-        },
-        responsePayload: response.data,
-      });
+      await this.apiResponseRepository.updateResponseByTransactionId(
+        data.transactionId,
+        response.data
+      );
 
       return {
         success: Boolean(response.data?.status),
@@ -115,15 +112,10 @@ export class PanProvider {
         },
       });
 
-      await this.apiResponseRepository.saveResponse({
-        type: 'PAN',
-        requestUrl: requestConfig.url || '',
-        requestPayload: {
-          payload,
-          headers: requestConfig.headers,
-        },
-        responsePayload: errorResponse,
-      });
+      await this.apiResponseRepository.updateResponseByTransactionId(
+        data.transactionId,
+        errorResponse
+      );
 
       return {
         success: false,

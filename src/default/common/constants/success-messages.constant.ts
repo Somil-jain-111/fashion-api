@@ -22,5 +22,7 @@ export const SUCCESS_MESSAGES = {
     AADHAAR_VERIFIED: 'Aadhaar verified successfully',
     PAN_VERIFIED: 'PAN verified successfully',
     GST_VERIFIED: 'GST verified successfully',
+    BENEFICIARY_ADDED: 'Beneficiary added successfully',
+    BENEFICIARIES_FETCHED: 'Beneficiaries retrieved successfully',
   },
 } as const;

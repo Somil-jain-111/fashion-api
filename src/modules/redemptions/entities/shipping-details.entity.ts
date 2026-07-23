@@ -4,7 +4,6 @@ import {
   Column,
   CreateDateColumn,
   UpdateDateColumn,
-  BaseEntity,
   OneToOne,
   JoinColumn,
   Index,
@@ -12,14 +11,12 @@ import {
 
 import { Order } from '../../auth/entities';
 import { ShippingStatus } from '../enum/order-status.enum';
+import { BaseEntity } from '../../../default/common/entities';
 
 @Entity({ name: 'shipping_details' })
 @Index('idx_shipping_order', ['order'])
 @Index('idx_shipping_delivery_status', ['delivery_status'])
 export class ShippingDetail extends BaseEntity {
-  @PrimaryGeneratedColumn('increment', { type: 'bigint' })
-  id!: bigint;
-
   @Column({ type: 'bigint' })
   order_id!: string;
 
@@ -72,13 +69,9 @@ export class ShippingDetail extends BaseEntity {
     default: ShippingStatus.PENDING,
   })
   delivery_status!: ShippingStatus;
+
   @Column({ type: 'varchar', length: 15, nullable: false })
   mobile!: string;
-  @CreateDateColumn({ type: 'datetime', name: 'created_at' })
-  created_at!: Date;
-
-  @UpdateDateColumn({ type: 'datetime', name: 'updated_at' })
-  updated_at!: Date;
 
   @Column({ type: 'varchar', name: 'error_message', nullable: true })
   errorMessage?: string | null;

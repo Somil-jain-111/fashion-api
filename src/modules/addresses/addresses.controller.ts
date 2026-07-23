@@ -29,12 +29,12 @@ import { ResponseMessage } from 'src/default/common/decorators/response-message.
 @UseInterceptors(IdempotencyInterceptor)
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles([UserRole.RETAILER])
-@Controller('addresses')
+@Controller('address')
 export class AddressesController {
   constructor(private readonly addressesService: AddressesService) {}
 
   @Get('pincode/:pincode')
-  async getStateAndCity(@Param('pincode') params: GetPincodeDto) {
+  async getStateAndCity(@Param() params: GetPincodeDto) {
     const response = await this.addressesService.getStateAndCity(params.pincode);
     return DataSanitizer.sanitizeData(response);
   }
@@ -59,6 +59,7 @@ export class AddressesController {
 
     return DataSanitizer.sanitizeData(response);
   }
+
   @Post(':id')
   async updateAddress(@Req() req: any, @Param('id') id: string, @Body() body: UpdateAddressDto) {
     const response = await this.addressesService.updateAddress(req.user.id, id, body);

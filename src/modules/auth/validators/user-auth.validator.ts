@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { User } from '../entities';
-import { UserRepository } from 'src/modules/user/repository';
+import { UserRepository } from 'src/modules/auth/repository';
 import { ERROR_CODES } from 'src/default/error/error.code';
 import { BusinessException } from 'src/default/error/business.exception';
 import { UserStatus } from '../constants/auth.constants';
@@ -34,7 +34,7 @@ export class UserAuthValidator {
   }
 
   async validateActiveUserById(userId: number): Promise<User> {
-    const user = await this.userRepository.findById(userId);
+    const user = await this.userRepository.findById(userId, ['role']);
 
     if (!user) {
       throw new BusinessException(ERROR_CODES.USER.USER_NOT_FOUND);
@@ -59,9 +59,11 @@ export class UserAuthValidator {
 
   private throwIfUserNotActive(status: UserStatus): void {
     switch (status) {
-      case UserStatus.PARTIAL_APPROVED:
       case UserStatus.ACTIVE:
         return;
+
+      case UserStatus.PARTIAL_APPROVED:
+        throw new BusinessException(ERROR_CODES.USER.USER_HOLD);
 
       case UserStatus.IN_APPROVAL:
         throw new BusinessException(ERROR_CODES.USER.USER_PENDING);

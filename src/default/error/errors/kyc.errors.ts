@@ -126,4 +126,52 @@ export const KYC_ERRORS = {
     message: 'GST KYC cannot be done for this partner type',
     statusCode: 400,
   },
+
+  ACCOUNT_MISMATCH: {
+    code: 'KYC_023',
+    message: 'Account numbers do not match',
+    statusCode: 400,
+  },
+
+  ACCOUNT_ALREADY_USED: {
+    code: 'KYC_024',
+    message: 'This bank account is already registered',
+    statusCode: 400,
+  },
+
+  UPI_ALREADY_USED: {
+    code: 'KYC_025',
+    message: 'This UPI ID is already registered',
+    statusCode: 400,
+  },
+
+  BANK_VERIFICATION_FAILED: {
+    code: 'KYC_026',
+    message: 'Bank verification failed: {reason}',
+    statusCode: 400,
+  },
+
+  UPI_VERIFICATION_FAILED: {
+    code: 'KYC_027',
+    message: 'UPI verification failed: {reason}',
+    statusCode: 400,
+  },
+
+  INVALID_BENEFICIARY_TYPE: {
+    code: 'KYC_028',
+    message: 'Invalid beneficiary type',
+    statusCode: 400,
+  },
+
+  PAN_KYC_PENDING: {
+    code: 'KYC_029',
+    message: 'PAN KYC is pending and is awaiting approval from the admin.',
+    statusCode: 400,
+  },
+
+  PAN_KYC_REQUIRED_TO_REDEEM: {
+    code: 'KYC_030',
+    message: 'Complete PAN KYC to Redeem.',
+    statusCode: 400,
+  },
 } as const;

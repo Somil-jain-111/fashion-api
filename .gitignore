@@ -67,4 +67,5 @@ dist
 
 package-lock.json
 
-migrations
+migrations!src/migrations/
+!src/migrations/**
