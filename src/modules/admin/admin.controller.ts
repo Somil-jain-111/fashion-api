@@ -11,15 +11,15 @@ import { AdminService } from './admin.service';
 import { AdminVerifyKycDto } from './dto';
 
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles([UserRole.SUPERADMIN])
 @Controller('admin')
 export class AdminController {
   constructor(private readonly adminService: AdminService) {}
 
   @NoCache()
   @SkipThrottle()
-  @Post('kyc/verify')
+  @Roles([UserRole.SUPERADMIN])
   @ResponseMessage('KYC verified successfully')
+  @Post('kyc/verify')
   async verifyKyc(@Body() body: AdminVerifyKycDto) {
     const response = await this.adminService.verifyKyc(body);
     return DataSanitizer.sanitizeData(response);

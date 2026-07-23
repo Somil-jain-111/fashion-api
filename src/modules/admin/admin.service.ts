@@ -7,6 +7,7 @@ import { KycTypeFiltered } from 'src/default/common/enums/kyc.enum';
 import { BusinessException } from 'src/default/error/business.exception';
 import { UserRepository } from '../auth/repository';
 import { ReferenceIdUtil } from 'src/default/common/utils/reference-id.util';
+import { ERROR_CODES } from 'src/default/error/error.code';
 
 @Injectable()
 export class AdminService {
@@ -32,6 +33,17 @@ export class AdminService {
       });
     }
 
+    const existingKyc = await this.kycVerificationRepository.findVerifiedByUserIdAndType(
+      userId,
+      type
+    );
+
+    if (existingKyc) {
+      throw new BusinessException(ERROR_CODES.KYC.KYC_ALREADY_VERIFIED, {
+        type,
+      });
+    }
+
     const transactionId = await ReferenceIdUtil.generateKycReferenceId(type);
 
     let dummyDocNumber: string;
@@ -46,12 +58,6 @@ export class AdminService {
     } else if (type === KycTypeFiltered.AADHAAR) {
       dummyDocNumber = '999988887777';
       dummyMaskedDocNumber = 'XXXXXXXX7777';
-    } else {
-      throw new BusinessException({
-        code: 'ADMIN_002',
-        message: 'Invalid KYC type. Supported types: pan, gst, aadhar',
-        statusCode: 400,
-      });
     }
 
     const encryptedDoc = this.kycService.encryptKycData(dummyDocNumber);
