@@ -37,18 +37,9 @@ export class NameMatchProvider {
       name_2: data.apiUserName,
     };
 
-    // const isLive = this.configService.isProduction();
-    const isLive = true;
-
-    const baseUrl = isLive
-      ? this.appConfigService.get('Rewards_API_Base_Url_Live')
-      : this.appConfigService.get('Rewards_API_Base_Url_Dev');
-
-    const permanentToken = isLive
-      ? this.appConfigService.get('Rewards_API_Permanent_Token_Live')
-      : this.appConfigService.get('Rewards_API_Permanent_Token_Dev');
-
+    const baseUrl = this.appConfigService.getRewardsUrl();
     const secretKey = this.appConfigService.getKycSecretKey();
+    const permanentToken = this.appConfigService.getRewardsPermanentToken();
 
     const requestConfig: AxiosRequestConfig = {
       method: 'post',
