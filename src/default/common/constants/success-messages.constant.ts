@@ -17,6 +17,7 @@ export const SUCCESS_MESSAGES = {
     UPDATED: 'Order updated successfully',
     CANCELLED: 'Order cancelled successfully',
   },
+
   KYC: {
     AADHAAR_OTP_GENERATED: 'Aadhaar OTP generated successfully',
     AADHAAR_VERIFIED: 'Aadhaar verified successfully',

@@ -60,7 +60,7 @@ export class BeneficiaryRepository extends BaseRepository<UserBeneficiary> {
     return await this.getRepository(queryRunner).find({
       where,
       order: {
-        createdAt: 'DESC',
+        createdAt: 'ASC',
       },
     });
   }
