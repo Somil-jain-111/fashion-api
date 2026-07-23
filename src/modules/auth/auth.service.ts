@@ -8,7 +8,7 @@ import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
-import { LoginHistoriesRepository } from 'src/modules/auth/repository';
+import { KycVerificationRepository, LoginHistoriesRepository } from 'src/modules/auth/repository';
 import { UserRepository } from 'src/modules/auth/repository';
 import { OtpHelper } from 'src/default/common/helper/otp.helper';
 import { DateHelper } from 'src/default/common/helper/date.helper';
@@ -26,6 +26,7 @@ import { TokenType } from 'src/default/common/enums/token-type.enum';
 import { TokenHashHelper } from 'src/default/common/helper/token-hash.helper';
 import { UserValidator } from 'src/default/common/validators';
 import { AppConfigService } from 'src/default/config/config.service';
+import { KycType } from 'src/default/common/enums/kyc.enum';
 
 @Injectable()
 export class AuthService {
@@ -33,6 +34,7 @@ export class AuthService {
     private userRepository: UserRepository,
     private revokedTokenRepository: RevokedTokenRepository,
     private loginHistoryRepository: LoginHistoriesRepository,
+    private kycVerificationRepository: KycVerificationRepository,
 
     private readonly jwtService: JwtService,
     private readonly userAuthValidator: UserAuthValidator,
@@ -249,6 +251,7 @@ export class AuthService {
 
     return true;
   }
+
   async profile(userId: bigint) {
     const user = await this.userRepository.findOne(
       {
@@ -257,12 +260,18 @@ export class AuthService {
     );
 
     if (!user) {
-      throw new NotFoundException('User not found');
+      throw new BusinessException(ERROR_CODES.USER.USER_NOT_FOUND);
     }
+
+    const [panKyc, aadhaarKyc, gstKyc] = await Promise.all([
+      this.kycVerificationRepository.findVerifiedByUserIdAndType(user.id, KycType.PAN),
+      this.kycVerificationRepository.findVerifiedByUserIdAndType(user.id, KycType.AADHAAR),
+      this.kycVerificationRepository.findVerifiedByUserIdAndType(user.id, KycType.GST),
+    ]);
 
     return {
       message: 'Profile fetched successfully',
-      data: UserResponseMapper.toAuthUser(user),
+      data: UserResponseMapper.toAuthUser(user, panKyc, aadhaarKyc, gstKyc),
     };
   }
 
