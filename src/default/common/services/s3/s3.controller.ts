@@ -4,30 +4,60 @@ import { JwtAuthGuard } from 'src/default/common/guards/jwt-auth.guard';
 import { S3Service } from './s3.service';
 import { UploadBase64FileDto } from './dto/upload-base64-file.dto';
 import { ResponseMessage } from 'src/default/common/decorators/response-message.decorator';
+import { SUCCESS_MESSAGES } from 'src/default/common/constants/success-messages.constant';
 import { DataSanitizer } from 'src/default/common/utils/sanitize.utils';
+import { NoCache } from 'src/default/cache/cache.decorator';
+import { SkipThrottle } from '@nestjs/throttler';
+import { ALLOWED_UPLOAD_MIME_TYPES } from './constants/file-upload.constant';
 
 @UseGuards(JwtAuthGuard)
 @Controller('s3')
 export class S3Controller {
   constructor(private readonly s3Service: S3Service) {}
 
-  @Post('upload/image')
-  @UseInterceptors(FileInterceptor('image'))
-  @ResponseMessage('Image uploaded successfully')
-  async uploadImage(
+  // @NoCache()
+  // @SkipThrottle()
+  // @Post('upload/image')
+  // @UseInterceptors(FileInterceptor('image'))
+  // @ResponseMessage(SUCCESS_MESSAGES.COMMON.IMAGE_UPLOADED)
+  // async uploadImage(
+  //   @UploadedFile() file: Express.Multer.File,
+  //   @Body('folder') folder?: string,
+  //   @Body('public') isPublic?: string | boolean
+  // ) {
+  //   const isPublicBool = isPublic === undefined ? true : isPublic === 'true' || isPublic === true;
+
+  //   const response = await this.s3Service.uploadImageFile(file, folder || 'images', isPublicBool);
+
+  //   return DataSanitizer.sanitizeData(response);
+  // }
+
+  @NoCache()
+  @SkipThrottle()
+  @Post('upload/file')
+  @UseInterceptors(FileInterceptor('file'))
+  @ResponseMessage(SUCCESS_MESSAGES.COMMON.FILE_UPLOADED)
+  async uploadFile(
     @UploadedFile() file: Express.Multer.File,
     @Body('folder') folder?: string,
     @Body('public') isPublic?: string | boolean
   ) {
     const isPublicBool = isPublic === undefined ? true : isPublic === 'true' || isPublic === true;
 
-    const response = await this.s3Service.uploadImageFile(file, folder || 'images', isPublicBool);
+    const response = await this.s3Service.uploadDocumentFile(
+      file,
+      folder || 'uploads',
+      isPublicBool,
+      ALLOWED_UPLOAD_MIME_TYPES.ALL
+    );
 
     return DataSanitizer.sanitizeData(response);
   }
 
+  @NoCache()
+  @SkipThrottle()
   @Post('upload/base64')
-  @ResponseMessage('File uploaded successfully')
+  @ResponseMessage(SUCCESS_MESSAGES.COMMON.FILE_UPLOADED)
   async uploadBase64(@Body() dto: UploadBase64FileDto) {
     const response = await this.s3Service.uploadBase64File({
       base64: dto.base64,

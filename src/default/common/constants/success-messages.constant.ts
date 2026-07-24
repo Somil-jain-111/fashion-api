@@ -4,6 +4,9 @@ export const SUCCESS_MESSAGES = {
     CREATED_SUCCESSFULLY: 'Created successfully',
     UPDATED_SUCCESSFULLY: 'Updated successfully',
     DELETED_SUCCESSFULLY: 'Deleted successfully',
+    FILE_UPLOADED: 'File uploaded successfully',
+    DOCUMENT_UPLOADED: 'Document uploaded successfully',
+    IMAGE_UPLOADED: 'Image uploaded successfully',
   },
 
   ADMIN: {
