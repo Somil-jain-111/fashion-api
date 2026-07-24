@@ -93,17 +93,21 @@ export class OnboardingService {
   }
 
   async saveStoreInfo(userId: number, dto: SaveStoreInfoDto) {
-    const user = await this.userRepository.findById(userId);
+    const user = await this.userRepository.findById(userId, ['storeInformation']);
 
     if (!user) {
       throw new BusinessException(ERROR_CODES.USER.USER_NOT_FOUND);
     }
 
-    const userStoreStatus = await this.getStatus(user.id);
+    // const userStoreStatus = await this.getStatus(user.id);
 
-    if (userStoreStatus.storeInfoComplete) {
-      throw new BusinessException(ERROR_CODES.ONBOARD.INCOMPLETE_STORE_INFO);
-    }
+    // if (userStoreStatus.storeInfoComplete) {
+    //   return {
+    //     message: ERROR_CODES.ONBOARD.STORE_INFO_COMPLETED.message,
+    //     data: user.storeInformation,
+    //   };
+    //   // throw new BusinessException(ERROR_CODES.ONBOARD.INCOMPLETE_STORE_INFO);
+    // }
 
     // Check if store info already exists
     let storeInfo = await this.userStoreInfoRepository.findOne({ user: { id: userId } });
@@ -180,6 +184,7 @@ export class OnboardingService {
 
     return {
       message: 'Store info saved successfully',
+      data: storeInfo,
     };
   }
 

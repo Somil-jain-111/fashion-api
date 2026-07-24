@@ -21,7 +21,7 @@ export class OnboardingController {
   ) { }
 
   @NoCache()
-  @Put('basic-info')
+  @Post('basic-info')
   @ResponseMessage('Basic info updated successfully')
   async saveBasicInfo(@Req() req: any, @Body() dto: SaveBasicInfoDto) {
     const userId = Number(req.user.id);
@@ -30,7 +30,7 @@ export class OnboardingController {
   }
 
   @NoCache()
-  @Put('store-info')
+  @Post('store-info')
   @ResponseMessage('Store info saved successfully')
   async saveStoreInfo(@Req() req: any, @Body() dto: SaveStoreInfoDto) {
     const userId = Number(req.user.id);

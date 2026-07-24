@@ -29,4 +29,9 @@ export const ONBOARD_ERRORS = {
     message: 'Whatsapp Number address already used!',
     statusCode: 400,
   },
+  STORE_INFO_COMPLETED: {
+    code: 'ONBOARD_007',
+    message: 'Store info already completed!',
+    statusCode: 400,
+  },
 } as const;
