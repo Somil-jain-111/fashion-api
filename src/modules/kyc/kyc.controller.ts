@@ -71,6 +71,7 @@ export class KYCController {
     return DataSanitizer.sanitizeData(response);
   }
 
+  @NoCache()
   @Get('beneficiary')
   @ResponseMessage(SUCCESS_MESSAGES.KYC.BENEFICIARIES_FETCHED)
   async getUserBeneficiaries(@Req() req: any) {
