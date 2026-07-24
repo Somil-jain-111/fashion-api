@@ -84,7 +84,7 @@ export class DynamicConfigController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles([UserRole.SUPERADMIN])
   @SkipThrottle()
-  @Put('update')
+  @Post('update')
   async updateConfig(@Req() req, @Body() dto: EditDynamicConfigDto) {
     const userId = req.user.userId;
     const result = await this.configService.updateUserRoleConfig(dto, userId);
