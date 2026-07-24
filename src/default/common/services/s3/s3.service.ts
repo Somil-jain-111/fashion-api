@@ -91,6 +91,36 @@ export class S3Service {
   }
 
   /**
+   * Uploads a document/image file (JPG, PNG, PDF, DOC, DOCX, CSV, etc.) from a multipart/form-data request.
+   */
+  async uploadDocumentFile(
+    file: Express.Multer.File,
+    folder = 'documents',
+    isPublic = false,
+    allowedMimeTypes: string[] = ALLOWED_UPLOAD_MIME_TYPES.DOCUMENT
+  ): Promise<UploadS3Response> {
+    if (!file) {
+      throw new BusinessException(ERROR_CODES.COMMON.BAD_REQUEST);
+    }
+
+    this.validateMimeType(file.mimetype, allowedMimeTypes);
+    this.validateFileSize(file.size, 10); // 10MB limit
+
+    const finalFileName = this.generateFileName({
+      fileName: file.originalname,
+      mimeType: file.mimetype,
+    });
+
+    return this.uploadBufferToS3({
+      buffer: file.buffer,
+      fileName: finalFileName,
+      mimeType: file.mimetype,
+      folder,
+      isPublic,
+    });
+  }
+
+  /**
    * Use this for small base64 files.
    */
   async uploadBase64File(params: UploadBase64ToS3Params): Promise<UploadS3Response> {
