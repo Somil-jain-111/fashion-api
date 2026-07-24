@@ -252,27 +252,22 @@ export class AuthService {
     return true;
   }
 
-  async profile(userId: bigint) {
+  async profile(userId: number) {
+    console.log('user');
+
     const user = await this.userRepository.findOne(
       {
         id: userId,
-      }['role']
+      },
+      ['role']
     );
-
-    if (!user) {
-      throw new BusinessException(ERROR_CODES.USER.USER_NOT_FOUND);
-    }
-
     const [panKyc, aadhaarKyc, gstKyc] = await Promise.all([
       this.kycVerificationRepository.findVerifiedByUserIdAndType(user.id, KycType.PAN),
       this.kycVerificationRepository.findVerifiedByUserIdAndType(user.id, KycType.AADHAAR),
       this.kycVerificationRepository.findVerifiedByUserIdAndType(user.id, KycType.GST),
     ]);
 
-    return {
-      message: 'Profile fetched successfully',
-      data: UserResponseMapper.toAuthUser(user, panKyc, aadhaarKyc, gstKyc),
-    };
+    return UserResponseMapper.toAuthUser(user, panKyc, aadhaarKyc, gstKyc);
   }
 
   private validateLoginPayload(dto: LoginDto): void {
