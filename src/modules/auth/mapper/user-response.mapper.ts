@@ -1,8 +1,13 @@
-import { User } from 'src/modules/auth/entities';
+import { KycVerificationEntity, User } from 'src/modules/auth/entities';
 import { AuthUserResponseDto } from '../interface/auth-user.response.dto';
 
 export class UserResponseMapper {
-  static toAuthUser(user: User): AuthUserResponseDto {
+  static toAuthUser(
+    user: User,
+    panKyc?: KycVerificationEntity,
+    aadhaarKyc?: KycVerificationEntity,
+    gstKyc?: KycVerificationEntity
+  ): AuthUserResponseDto {
     return {
       id: user.id.toString(),
       uuid: user.uuid,
@@ -19,6 +24,15 @@ export class UserResponseMapper {
           }
         : null,
       created_at: user?.createdAt?.toISOString(),
+      ...(panKyc && {
+        maskedPan: panKyc?.maskedDocumentNumber,
+      }),
+      ...(aadhaarKyc && {
+        maskedAadhaar: aadhaarKyc?.maskedDocumentNumber,
+      }),
+      ...(gstKyc && {
+        maskedGst: gstKyc?.maskedDocumentNumber,
+      }),
     };
   }
 }

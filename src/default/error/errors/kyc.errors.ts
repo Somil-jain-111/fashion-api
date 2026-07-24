@@ -174,4 +174,10 @@ export const KYC_ERRORS = {
     message: 'Complete PAN KYC to Redeem.',
     statusCode: 400,
   },
+
+  KYC_ALREADY_VERIFIED: {
+    code: 'KYC_031',
+    message: 'KYC of {type} is already verified for this user.',
+    statusCode: 400,
+  },
 } as const;

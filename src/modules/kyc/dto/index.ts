@@ -1,0 +1,5 @@
+export * from './add-beneficiary.dto';
+export * from './generate-aadhar.dto';
+export * from './verify-aadhar-otp.dto';
+export * from './verify-gst.dto';
+export * from './verify-pan.dto';

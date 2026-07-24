@@ -14,4 +14,7 @@ export class AuthUserResponseDto {
     name: string;
   };
   created_at: string;
+  maskedPan?: string;
+  maskedAadhaar?: string;
+  maskedGst?: string;
 }

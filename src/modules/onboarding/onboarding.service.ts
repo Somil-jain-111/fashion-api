@@ -38,9 +38,26 @@ export class OnboardingService {
     private readonly appConfigService: AppConfigService,
   ) {}
 
-  
-async saveBasicInfo(userId: number, dto: SaveBasicInfoDto) {
-  const user = await this.userRepository.findById(userId);
+  private resolveCurrentStep(user: any, activeApproval: any): string {
+    // Check user status first — it's the source of truth
+    if (user.status === UserStatus.ACTIVE) return 'ACTIVE';
+    if (user.status === UserStatus.BLOCKED) return 'BLOCKED';
+
+    if (!activeApproval) {
+      if (!user.username || !user.partnerType) return 'BASIC_INFO';
+      if (!user.storeInformation) return 'STORE_INFO';
+      return 'SUBMIT';
+    }
+
+    if (activeApproval.level === 1) return 'PENDING_L1_REVIEW';
+    if (activeApproval.level === 2) return 'PENDING_L2_REVIEW';
+    if (activeApproval.level === 3) return 'PENDING_SO_VISIT';
+
+    return 'UNKNOWN';
+  }
+
+  async saveBasicInfo(userId: number, dto: SaveBasicInfoDto) {
+    const user = await this.userRepository.findById(userId);
 
   if (!user) {
     throw new BusinessException(ERROR_CODES.USER.USER_NOT_FOUND);
@@ -93,17 +110,21 @@ async saveBasicInfo(userId: number, dto: SaveBasicInfoDto) {
 }
 
   async saveStoreInfo(userId: number, dto: SaveStoreInfoDto) {
-    const user = await this.userRepository.findById(userId);
+    const user = await this.userRepository.findById(userId, ['storeInformation']);
 
     if (!user) {
       throw new BusinessException(ERROR_CODES.USER.USER_NOT_FOUND);
     }
 
-    const userStoreStatus = await this.getStatus(user.id);
+    // const userStoreStatus = await this.getStatus(user.id);
 
-    if (userStoreStatus.storeInfoComplete) {
-      throw new BusinessException(ERROR_CODES.ONBOARD.INCOMPLETE_STORE_INFO);
-    }
+    // if (userStoreStatus.storeInfoComplete) {
+    //   return {
+    //     message: ERROR_CODES.ONBOARD.STORE_INFO_COMPLETED.message,
+    //     data: user.storeInformation,
+    //   };
+    //   // throw new BusinessException(ERROR_CODES.ONBOARD.INCOMPLETE_STORE_INFO);
+    // }
 
     // Check if store info already exists
     let storeInfo = await this.userStoreInfoRepository.findOne({ user: { id: userId } });
@@ -180,6 +201,7 @@ async saveBasicInfo(userId: number, dto: SaveBasicInfoDto) {
 
     return {
       message: 'Store info saved successfully',
+      data: storeInfo,
     };
   }
 
@@ -239,20 +261,27 @@ async saveBasicInfo(userId: number, dto: SaveBasicInfoDto) {
     );
     const panKycComplete = !!panKyc;
 
-    let gstKycComplete = false;
-    // Store info required regardless user is individual or entity
-    let storeInfoComplete = !!user.storeInformation;
+    const aadhaarKyc = await this.kycVerificationRepository.findVerifiedByUserIdAndType(
+      userId,
+      KycType.AADHAAR
+    );
 
-    if (user.partnerType === UserPartnerType.ENTITY) {
-      const gstKyc = await this.kycVerificationRepository.findVerifiedByUserIdAndType(
-        userId,
-        KycType.GST
-      );
-      gstKycComplete = !!gstKyc;
-    } else {
-      gstKycComplete = true;
-      storeInfoComplete = true;
-    }
+    const aadhaarKycComplete = !!aadhaarKyc;
+
+    // let gstKycComplete = false;
+    // Store info required regardless user is individual or entity
+    const storeInfoComplete = !!user.storeInformation;
+
+    // if (user.partnerType === UserPartnerType.ENTITY) {
+    const gstKyc = await this.kycVerificationRepository.findVerifiedByUserIdAndType(
+      userId,
+      KycType.GST
+    );
+    const gstKycComplete = !!gstKyc;
+    // } else {
+    //   gstKycComplete = true;
+    //   storeInfoComplete = true;
+    // }
 
     // ---- Approval & routing info (merged from SO flow) ----
     const approvals = await this.approvalRepository.findByUserId(userId, ApprovalType.PROFILE);
@@ -282,6 +311,7 @@ async saveBasicInfo(userId: number, dto: SaveBasicInfoDto) {
       basicInfoComplete,
       panKycComplete,
       gstKycComplete,
+      aadhaarKycComplete,
       storeInfoComplete,
       overallStatus: user.status,
       // ---- New routing & approval fields ----
@@ -291,24 +321,6 @@ async saveBasicInfo(userId: number, dto: SaveBasicInfoDto) {
       isSubmitted: !!activeApproval,
       currentRejection,
     };
-  }
-
-  private resolveCurrentStep(user: any, activeApproval: any): string {
-    // Check user status first — it's the source of truth
-    if (user.status === UserStatus.ACTIVE) return 'ACTIVE';
-    if (user.status === UserStatus.BLOCKED) return 'BLOCKED';
-
-    if (!activeApproval) {
-      if (!user.username || !user.partnerType) return 'BASIC_INFO';
-      if (!user.storeInformation) return 'STORE_INFO';
-      return 'SUBMIT';
-    }
-
-    if (activeApproval.level === 1) return 'PENDING_L1_REVIEW';
-    if (activeApproval.level === 2) return 'PENDING_L2_REVIEW';
-    if (activeApproval.level === 3) return 'PENDING_SO_VISIT';
-
-    return 'UNKNOWN';
   }
 
   async submitProfile(userId: number) {
