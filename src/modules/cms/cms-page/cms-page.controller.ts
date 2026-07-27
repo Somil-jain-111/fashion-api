@@ -11,7 +11,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { JwtAuthGuard } from 'src/default/common/guards/jwt-auth.guard';
-import { UserStatusGuard } from 'src/default/common/guards/user-status.guard';
+// import { UserStatusGuard } from 'src/default/common/guards/user-status.guard';
 import { CmsPageService } from './cms-page.service';
 import { CreateCmsPageDto } from './dto/create-cms-page.dto';
 import { DataSanitizer } from 'src/default/common/utils/sanitize.utils';
@@ -20,7 +20,7 @@ import { CmsType } from './enum/cms-type.enum';
 import { UpdateCmsPageDto } from './dto/update-cms-page.dto';
 
 @Controller('cms-page')
-@UseGuards(JwtAuthGuard, UserStatusGuard)
+@UseGuards(JwtAuthGuard)
 export class CmsPageController {
   constructor(private readonly cmsPageService: CmsPageService) {}
 
