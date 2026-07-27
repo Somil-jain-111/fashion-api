@@ -399,7 +399,7 @@ async sendWhatsappOtp(userId: number, dto: SendWhatsappOtpDto) {
   const isLive = this.appConfigService.isProduction() || this.appConfigService.isQa();
   const otp = isLive
     ? Math.floor(1000 + Math.random() * 9000).toString()
-    : '1234'; // fixed OTP for non-prod
+    : this.appConfigService.getNonProdOtp().toString();
  
   const otpExpiry = new Date();
   otpExpiry.setMinutes(otpExpiry.getMinutes() + CONTACT_OTP_EXPIRY_MINUTES);
@@ -492,7 +492,7 @@ async sendEmailOtp(userId: number, dto: SendEmailOtpDto) {
   const isLive = this.appConfigService.isProduction() || this.appConfigService.isQa();
   const otp = isLive
     ? Math.floor(1000 + Math.random() * 9000).toString()
-    : '1234';
+    : this.appConfigService.getNonProdOtp().toString();;
  
   const otpExpiry = new Date();
   otpExpiry.setMinutes(otpExpiry.getMinutes() + CONTACT_OTP_EXPIRY_MINUTES);

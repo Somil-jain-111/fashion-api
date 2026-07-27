@@ -4,7 +4,7 @@ import { UserAuthValidator } from 'src/modules/auth/validators/user-auth.validat
 
 @Injectable()
 export class UserStatusGuard implements CanActivate {
-  private userAuthValidator: UserAuthValidator;
+constructor(private readonly userAuthValidator: UserAuthValidator) {}
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();
     const user = request.user;
