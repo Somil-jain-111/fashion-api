@@ -55,6 +55,24 @@ export class User extends BaseEntity {
   @Column({ type: 'varchar', length: 15, nullable: true, name: 'whatsapp_number' })
   whatsappNumber?: string | null;
 
+  @Column({ type: 'varchar', length: 10, nullable: true, name: 'whatsapp_otp' })
+  whatsappOtp?: string | null;
+
+  @Column({ type: 'datetime', nullable: true, name: 'whatsapp_otp_expiry' })
+  whatsappOtpExpiry?: Date | null;
+
+  @Column({ type: 'boolean', default: false, name: 'whatsapp_verified' })
+  whatsappVerified!: boolean;
+
+  @Column({ type: 'varchar', length: 10, nullable: true, name: 'email_otp' })
+  emailOtp?: string | null;
+
+  @Column({ type: 'datetime', nullable: true, name: 'email_otp_expiry' })
+  emailOtpExpiry?: Date | null;
+
+  @Column({ type: 'boolean', default: false, name: 'email_verified' })
+  emailVerified!: boolean;
+
   @Column({ type: 'varchar', length: 255, nullable: true, unique: true })
   email?: string;
 
