@@ -76,6 +76,7 @@ export class AuthController {
 
   @NoCache()
   @UseGuards(JwtAuthGuard)
+  @ResponseMessage("Profile fetched successfully")
   @Get('profile')
   async profile(@Req() req: any) {
     const response = await this.authService.profile(req.user.id);
