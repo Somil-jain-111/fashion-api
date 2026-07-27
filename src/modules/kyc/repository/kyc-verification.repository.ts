@@ -62,6 +62,7 @@ export class KycVerificationRepository extends BaseRepository<KycVerificationEnt
         documentNumber,
         type,
       },
+      relations: ['user'],
     });
   }
 
