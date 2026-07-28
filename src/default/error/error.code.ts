@@ -30,6 +30,7 @@ import { APP_VERSION_ERRORS } from './errors/app_version.errors';
 import { BANNER_ERRORS } from './errors/banner.errors';
 import { CMS_PAGE_ERRORS } from './errors/cms-page.errors';
 import { FAQ_ERRORS } from './errors/faq.errors';
+import { INVOICE_SCAN_ERRORS } from './errors/invoice-scan.errors';
 
 export type ErrorCodeValue = {
   code: string;
@@ -68,6 +69,7 @@ export const ERROR_CODES = {
   BANNER: BANNER_ERRORS,
   CMS_PAGE: CMS_PAGE_ERRORS,
   FAQ: FAQ_ERRORS,
+  INVOICE_SCAN: INVOICE_SCAN_ERRORS,
 } as const;
 
 export type ErrorCodeGroups = typeof ERROR_CODES;

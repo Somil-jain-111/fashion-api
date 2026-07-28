@@ -12,6 +12,7 @@ import {
 } from 'typeorm';
 import { User, InvoiceItemEntity, InvoiceAssortmentEntity } from '../../auth/entities';
 import { InvoiceScanStatus, InvoiceStatus } from '../enum/invoice.enum';
+import { InvoiceType } from '../enum/invoice-scan-session.enum';
 
 @Entity({ name: 'invoices' })
 @Index('uq_invoice_no_master_id', ['invoice_no', 'master_id'], { unique: true })
@@ -73,6 +74,12 @@ export class InvoiceEntity extends BaseEntity {
    */
   @Column({ type: 'int', default: 0 })
   total_pairs: number;
+
+  @Column({ type: 'enum', enum: InvoiceType, default: InvoiceType.MULTIPLE })
+  invoice_type: InvoiceType;
+
+  @Column({ type: 'datetime', nullable: true })
+  expires_at?: Date;
 
   /**
    * Successfully scanned pair QR count
