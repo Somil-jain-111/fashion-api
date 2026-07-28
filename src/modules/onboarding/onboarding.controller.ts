@@ -1,7 +1,15 @@
-import { Body, Controller, Get, Post, Put, Req, UseGuards, UseInterceptors } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Post,
+  Put,
+  Query,
+  Req,
+  UseGuards,
+  UseInterceptors,
+} from '@nestjs/common';
 import { OnboardingService } from './onboarding.service';
-import { SaveBasicInfoDto } from './dto/basic-info.dto';
-import { SaveStoreInfoDto } from './dto/store-info.dto';
 import { JwtAuthGuard } from 'src/default/common/guards/jwt-auth.guard';
 import { RolesGuard } from 'src/default/common/guards/roles.guard';
 import { Roles } from 'src/default/common/decorators/roles.decorator';
@@ -11,15 +19,25 @@ import { IdempotencyInterceptor } from 'src/default/common/interceptors/idempote
 import { NoCache } from 'src/default/cache/cache.decorator';
 import { DataSanitizer } from 'src/default/common/utils/sanitize.utils';
 import { SoVerificationService } from '../so-verification/so-verification.service';
-import { ConfirmEmailOtpDto, ConfirmWhatsappOtpDto, SendEmailOtpDto, SendWhatsappOtpDto } from './dto/contact-verification.dto';
+import { SUCCESS_MESSAGES } from 'src/default/common/constants/success-messages.constant';
+import {
+  VerifyLocationQueryDto,
+  SaveBasicInfoDto,
+  SaveStoreInfoDto,
+  ConfirmEmailOtpDto,
+  ConfirmWhatsappOtpDto,
+  SendEmailOtpDto,
+  SendWhatsappOtpDto,
+} from './dto';
 
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles([UserRole.RETAILER])
 @Controller('onboarding')
 export class OnboardingController {
-  constructor(private readonly onboardingService: OnboardingService,
+  constructor(
+    private readonly onboardingService: OnboardingService,
     private readonly soVerificationService: SoVerificationService
-  ) { }
+  ) {}
 
   @NoCache()
   @Post('basic-info')
@@ -58,6 +76,14 @@ export class OnboardingController {
     return DataSanitizer.sanitizeData(response);
   }
 
+  @NoCache()
+  @Post('verify-location')
+  @ResponseMessage(SUCCESS_MESSAGES.ONBOARDING.VERIFICATION_SUCCESSFUL)
+  async verifyLocation(@Body() body: VerifyLocationQueryDto) {
+    const response = await this.onboardingService.verifyLocationByPincode(body);
+    return DataSanitizer.sanitizeData(response);
+  }
+
   //   @Roles([UserRole.RETAILER])
   //   @NoCache()
   // @Get('status')
@@ -66,53 +92,39 @@ export class OnboardingController {
   //   return DataSanitizer.sanitizeData(response);
   // }
 
+  // ── WhatsApp verification ─────────────────────────────────────────────────────
 
-  
-// ── WhatsApp verification ─────────────────────────────────────────────────────
- 
-@NoCache()
-@Post('verify-whatsapp/send-otp')
-@ResponseMessage('WhatsApp OTP sent successfully')
-async sendWhatsappOtp(@Req() req: any, @Body() dto: SendWhatsappOtpDto) {
-  const response = await this.onboardingService.sendWhatsappOtp(
-    Number(req.user.id),
-    dto,
-  );
-  return DataSanitizer.sanitizeData(response);
-}
- 
-@NoCache()
-@Post('verify-whatsapp/confirm')
-@ResponseMessage('WhatsApp number verified successfully')
-async confirmWhatsappOtp(@Req() req: any, @Body() dto: ConfirmWhatsappOtpDto) {
-  const response = await this.onboardingService.confirmWhatsappOtp(
-    Number(req.user.id),
-    dto,
-  );
-  return DataSanitizer.sanitizeData(response);
-}
- 
-// ── Email verification ────────────────────────────────────────────────────────
- 
-@NoCache()
-@Post('verify-email/send-otp')
-@ResponseMessage('Email OTP sent successfully')
-async sendEmailOtp(@Req() req: any, @Body() dto: SendEmailOtpDto) {
-  const response = await this.onboardingService.sendEmailOtp(
-    Number(req.user.id),
-    dto,
-  );
-  return DataSanitizer.sanitizeData(response);
-}
- 
-@NoCache()
-@Post('verify-email/confirm')
-@ResponseMessage('Email verified successfully')
-async confirmEmailOtp(@Req() req: any, @Body() dto: ConfirmEmailOtpDto) {
-  const response = await this.onboardingService.confirmEmailOtp(
-    Number(req.user.id),
-    dto,
-  );
-  return DataSanitizer.sanitizeData(response);
-}
+  @NoCache()
+  @Post('verify-whatsapp/send-otp')
+  @ResponseMessage('WhatsApp OTP sent successfully')
+  async sendWhatsappOtp(@Req() req: any, @Body() dto: SendWhatsappOtpDto) {
+    const response = await this.onboardingService.sendWhatsappOtp(Number(req.user.id), dto);
+    return DataSanitizer.sanitizeData(response);
+  }
+
+  @NoCache()
+  @Post('verify-whatsapp/confirm')
+  @ResponseMessage('WhatsApp number verified successfully')
+  async confirmWhatsappOtp(@Req() req: any, @Body() dto: ConfirmWhatsappOtpDto) {
+    const response = await this.onboardingService.confirmWhatsappOtp(Number(req.user.id), dto);
+    return DataSanitizer.sanitizeData(response);
+  }
+
+  // ── Email verification ────────────────────────────────────────────────────────
+
+  @NoCache()
+  @Post('verify-email/send-otp')
+  @ResponseMessage('Email OTP sent successfully')
+  async sendEmailOtp(@Req() req: any, @Body() dto: SendEmailOtpDto) {
+    const response = await this.onboardingService.sendEmailOtp(Number(req.user.id), dto);
+    return DataSanitizer.sanitizeData(response);
+  }
+
+  @NoCache()
+  @Post('verify-email/confirm')
+  @ResponseMessage('Email verified successfully')
+  async confirmEmailOtp(@Req() req: any, @Body() dto: ConfirmEmailOtpDto) {
+    const response = await this.onboardingService.confirmEmailOtp(Number(req.user.id), dto);
+    return DataSanitizer.sanitizeData(response);
+  }
 }

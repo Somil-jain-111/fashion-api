@@ -1,12 +1,19 @@
-import { IsEnum, IsNotEmpty, IsNumber, IsOptional, IsString } from 'class-validator';
+import { IsEnum, IsNotEmpty, IsNumber, IsOptional, IsString, Max, Min } from 'class-validator';
 import { StoreAddressProofType } from '../../../default/common/enums/user-store.enum';
+import { Type } from 'class-transformer';
 
 export class SaveStoreInfoDto {
   @IsNumber()
+  @Type(() => Number)
+  @Min(-90, { message: 'Latitude must be between -90 and 90' })
+  @Max(90, { message: 'Latitude must be between -90 and 90' })
   @IsNotEmpty({ message: 'Latitude is required' })
   lat: number;
 
   @IsNumber()
+  @Type(() => Number)
+  @Min(-180, { message: 'Longitude must be between -180 and 180' })
+  @Max(180, { message: 'Longitude must be between -180 and 180' })
   @IsNotEmpty({ message: 'Longitude is required' })
   lng: number;
 

@@ -24,4 +24,9 @@ export const COMMON_ERRORS = {
     message: 'Service unavailable',
     statusCode: 503,
   },
+  BAD_REQUEST_RESON: {
+    code: 'COM_006',
+    message: 'Bad Request: {reason}',
+    statusCode: 400,
+  },
 } as const;

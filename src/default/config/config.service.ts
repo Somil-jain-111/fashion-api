@@ -55,6 +55,10 @@ export class AppConfigService {
     return Number(this.configService.get<number>('DEV_REWARDS_OTP', 222222));
   }
 
+  getGeocodingGoogleApiKey(): string {
+    return this.configService.get<string>('GOOGLE_GEOCODING_API_KEY');
+  }
+
   get<T = any>(key: string, defaultValue?: T): T {
     return this.configService.get<T>(key, defaultValue);
   }
