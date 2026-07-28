@@ -1,7 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { DataSource, FindOptionsWhere } from 'typeorm';
-import { BaseRepository } from 'src/default/common/repositories/base.repository';
+//
 import { Address } from 'src/modules/addresses/entities/address.entity';
+import { BaseRepository } from 'src/default/common/repositories/base.repository';
 
 @Injectable()
 export class AddressRepository extends BaseRepository<Address> {
@@ -17,7 +18,7 @@ export class AddressRepository extends BaseRepository<Address> {
         },
       } as FindOptionsWhere<Address>,
       order: {
-        created_at: 'DESC',
+        createdAt: 'ASC',
       },
     });
   }
@@ -37,50 +38,24 @@ export class AddressRepository extends BaseRepository<Address> {
   async findActiveAddressById(addressId: string, userId: number): Promise<Address | null> {
     return await this.repository.findOne({
       where: {
-        id: addressId,
+        id: Number(addressId),
         user: { id: userId },
-        status: 1,
-      } as FindOptionsWhere<Address>,
+        active: true,
+      },
+      order: {
+        createdAt: 'ASC',
+      },
     });
   }
 
   async softDeleteAddress(addressId: string, userId: number): Promise<void> {
     await await this.repository.update(
       {
-        id: addressId,
+        id: Number(addressId),
         user: { id: userId },
-      } as FindOptionsWhere<Address>,
+      },
       {
-        status: 2,
-        isDefault: false,
-      }
-    );
-  }
-
-  async removeDefaultAddress(userId: string): Promise<void> {
-    await this.repository.update(
-      {
-        user: { id: Number(userId) },
-        isDefault: true,
-        status: 1,
-      } as FindOptionsWhere<Address>,
-      {
-        isDefault: false,
-      }
-    );
-  }
-
-  async setDefaultAddress(addressId: string, userId: string): Promise<void> {
-    await this.removeDefaultAddress(userId);
-
-    await this.repository.update(
-      {
-        id: addressId,
-        user: { id: Number(userId) },
-        status: 1,
-      } as FindOptionsWhere<Address>,
-      {
-        isDefault: true,
+        active: false,
       }
     );
   }
@@ -89,13 +64,45 @@ export class AddressRepository extends BaseRepository<Address> {
     return await this.repository.findAndCount({
       where: {
         user: { id: userId },
-        status: 1,
-      } as FindOptionsWhere<Address>,
+        active: true,
+      },
       order: {
-        created_at: 'DESC',
+        createdAt: 'ASC',
       },
       skip: (page - 1) * limit,
       take: limit,
     });
   }
+
+  /**
+   * OBSOLETE
+   */
+
+  // async removeDefaultAddress(userId: string): Promise<void> {
+  //   await this.repository.update(
+  //     {
+  //       user: { id: Number(userId) },
+  //       isDefault: true,
+  //       active: true,
+  //     } as FindOptionsWhere<Address>,
+  //     {
+  //       // isDefault: false,
+  //     }
+  //   );
+  // }
+
+  // async setDefaultAddress(addressId: string, userId: string): Promise<void> {
+  //   await this.removeDefaultAddress(userId);
+
+  //   await this.repository.update(
+  //     {
+  //       id: Number(addressId),
+  //       user: { id: Number(userId) },
+  //       active: true,
+  //     },
+  //     {
+  //       // isDefault: true,
+  //     }
+  //   );
+  // }
 }

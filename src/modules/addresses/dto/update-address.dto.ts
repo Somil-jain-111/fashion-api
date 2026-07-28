@@ -1,4 +1,4 @@
-import { IsEmail, IsOptional, IsString, Matches, MaxLength } from 'class-validator';
+import { IsBoolean, IsEmail, IsOptional, IsString, Matches, MaxLength } from 'class-validator';
 
 export class UpdateAddressDto {
   @IsOptional()
@@ -32,4 +32,8 @@ export class UpdateAddressDto {
   @IsString()
   @MaxLength(255)
   landmark?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  isDefault?: boolean;
 }
