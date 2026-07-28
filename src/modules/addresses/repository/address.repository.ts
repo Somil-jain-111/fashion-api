@@ -38,7 +38,7 @@ export class AddressRepository extends BaseRepository<Address> {
     return await this.repository.findOne({
       where: {
         id: addressId,
-        user_id: userId,
+        user: { id: userId },
         status: 1,
       } as FindOptionsWhere<Address>,
     });
@@ -48,7 +48,7 @@ export class AddressRepository extends BaseRepository<Address> {
     await await this.repository.update(
       {
         id: addressId,
-        user_id: userId,
+        user: { id: userId },
       } as FindOptionsWhere<Address>,
       {
         status: 2,
@@ -60,7 +60,7 @@ export class AddressRepository extends BaseRepository<Address> {
   async removeDefaultAddress(userId: string): Promise<void> {
     await this.repository.update(
       {
-        user_id: userId,
+        user: { id: Number(userId) },
         isDefault: true,
         status: 1,
       } as FindOptionsWhere<Address>,
@@ -76,7 +76,7 @@ export class AddressRepository extends BaseRepository<Address> {
     await this.repository.update(
       {
         id: addressId,
-        user_id: userId,
+        user: { id: Number(userId) },
         status: 1,
       } as FindOptionsWhere<Address>,
       {
