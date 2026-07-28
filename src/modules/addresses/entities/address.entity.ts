@@ -1,7 +1,7 @@
 import { Entity, Column, ManyToOne, JoinColumn, Index } from 'typeorm';
 
 import { User } from '../../auth/entities';
-import { addressType } from '../../../default/common/enums/address.enum';
+import { AddressType } from '../../../default/common/enums/address.enum';
 import { BaseEntity } from '../../../default/common/entities';
 
 @Entity({ name: 'addresses' })
@@ -52,13 +52,13 @@ export class Address extends BaseEntity {
   @Column({ type: 'decimal', precision: 10, scale: 7, nullable: true })
   longitude?: number;
 
-  // @Column({
-  //   type: 'enum',
-  //   enum: addressType,
-  //   nullable: false,
-  //   default: addressType.Primary,
-  // })
-  // addressType!: addressType;
+  @Column({
+    type: 'enum',
+    enum: AddressType,
+    nullable: false,
+    default: AddressType.Primary,
+  })
+  addressType!: AddressType;
 
   // @Column({ type: 'boolean', default: false })
   // isDefault!: boolean;

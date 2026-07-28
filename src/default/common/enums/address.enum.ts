@@ -1,4 +1,4 @@
-export enum addressType {
+export enum AddressType {
   Primary = 'Primary',
   Secondary = 'Secondary',
 }
