@@ -345,10 +345,17 @@ export class OnboardingService {
       };
     }
 
+    let applicationId = user.applicationId;
+    if (!applicationId) {
+      applicationId = CommonUtils.generateApplicationId();
+      await this.userRepository.updateById(userId, { applicationId });
+    }
+
     const currentStep = this.resolveCurrentStep(user, activeApproval);
 
     return {
       userId,
+      applicationId,
       partnerType: user.partnerType,
       basicInfoComplete,
       panKycComplete,
@@ -416,6 +423,7 @@ export class OnboardingService {
 
     return {
       message: 'Profile submitted for L1 approval successfully',
+      applicationId: status.applicationId,
     };
   }
 

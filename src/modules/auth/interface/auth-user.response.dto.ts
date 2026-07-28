@@ -3,6 +3,7 @@ import { UserStatus } from '../constants/auth.constants';
 export class AuthUserResponseDto {
   id: string;
   uuid: string;
+  applicationId?: string;
   username: string;
   mobile: string;
   whatsapp_number: string;

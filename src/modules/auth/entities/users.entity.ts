@@ -39,6 +39,9 @@ export class User extends BaseEntity {
   @Column({ type: 'varchar', length: 36, nullable: true, unique: true })
   uuid?: string;
 
+  @Column({ type: 'varchar', length: 50, nullable: true, unique: true, name: 'application_id' })
+  applicationId?: string;
+
   @Column({
     type: 'enum',
     enum: Salutation,
