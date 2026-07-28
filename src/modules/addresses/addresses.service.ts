@@ -182,11 +182,8 @@ export class AddressesService {
 
     await this.userAuthValidator.validateActiveUserById(userId);
 
-    console.log("sssssss")
     const address = await this.addressRepository.findActiveAddressById(addressId, userId);
-    console.log("sssssss")
 
-    console.log(address)
     if (!address) {
       throw new BusinessException(ERROR_CODES.ADDRESS.ADDRESS_NOT_FOUND);
     }
@@ -235,7 +232,6 @@ export class AddressesService {
       data: { userId, addressId },
     });
 
-    console.log("updatedAddress",updatedAddress)
     return new AddressResponseDTO(updatedAddress);
   }
 
