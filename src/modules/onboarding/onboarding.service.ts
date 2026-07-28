@@ -310,20 +310,20 @@ export class OnboardingService {
 
     const aadhaarKycComplete = !!aadhaarKyc;
 
-    // let gstKycComplete = false;
+    // GST only for entity Partner Type
+    let gstKycComplete = false;
     // Store info required regardless user is individual or entity
     const storeInfoComplete = !!user.storeInformation;
 
-    // if (user.partnerType === UserPartnerType.ENTITY) {
-    const gstKyc = await this.kycVerificationRepository.findVerifiedByUserIdAndType(
-      userId,
-      KycType.GST
-    );
-    const gstKycComplete = !!gstKyc;
-    // } else {
-    //   gstKycComplete = true;
-    //   storeInfoComplete = true;
-    // }
+    if (user.partnerType === UserPartnerType.ENTITY) {
+      const gstKyc = await this.kycVerificationRepository.findVerifiedByUserIdAndType(
+        userId,
+        KycType.GST
+      );
+      gstKycComplete = !!gstKyc;
+    } else {
+      gstKycComplete = true;
+    }
 
     // ---- Approval & routing info (merged from SO flow) ----
     const approvals = await this.approvalRepository.findByUserId(userId, ApprovalType.PROFILE);
@@ -345,10 +345,18 @@ export class OnboardingService {
       };
     }
 
+    let applicationId = user.applicationId;
+
+    if (!applicationId) {
+      applicationId = CommonUtils.generateApplicationId();
+      await this.userRepository.updateById(userId, { applicationId });
+    }
+
     const currentStep = this.resolveCurrentStep(user, activeApproval);
 
     return {
       userId,
+      applicationId,
       partnerType: user.partnerType,
       basicInfoComplete,
       panKycComplete,
@@ -376,12 +384,13 @@ export class OnboardingService {
       throw new BusinessException(ERROR_CODES.ONBOARD.INCOMPLETE_PAN_KYC);
     }
 
+    if (!status.storeInfoComplete) {
+      throw new BusinessException(ERROR_CODES.ONBOARD.INCOMPLETE_STORE_INFO);
+    }
+
     if (status.partnerType === UserPartnerType.ENTITY) {
       if (!status.gstKycComplete) {
         throw new BusinessException(ERROR_CODES.ONBOARD.INCOMPLETE_GST_KYC);
-      }
-      if (!status.storeInfoComplete) {
-        throw new BusinessException(ERROR_CODES.ONBOARD.INCOMPLETE_STORE_INFO);
       }
     }
 
@@ -416,6 +425,7 @@ export class OnboardingService {
 
     return {
       message: 'Profile submitted for L1 approval successfully',
+      applicationId: status.applicationId,
     };
   }
 

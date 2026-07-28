@@ -31,6 +31,14 @@ export class CommonUtils {
     return uuidv4();
   }
 
+  static generateApplicationId(prefix: string = 'RET'): string {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const rand5 = Math.floor(10000 + Math.random() * 90000);
+    return `${prefix}_${year}_${month}_${rand5}`;
+  }
+
   static async hashPassword(password: string): Promise<string> {
     const salt = await bcrypt.genSalt(CommonUtils.SALT_ROUNDS);
     return bcrypt.hash(password, salt);
@@ -357,143 +365,126 @@ export class CommonUtils {
     };
   }
 
+  static async sendWhatsappOtp(data: { mobile: string; otp: string; name?: string }): Promise<any> {
+    try {
+      const mobileStr = String(data.mobile ?? '').trim();
+      if (!mobileStr) {
+        ConsoleLogger.log('WhatsApp OTP skipped | reason=no mobile', 'CommonUtils');
+        return null;
+      }
 
-
-  static async sendWhatsappOtp(data: {
-  mobile: string;
-  otp: string;
-  name?: string;
-}): Promise<any> {
-  try {
-    const mobileStr = String(data.mobile ?? '').trim();
-    if (!mobileStr) {
-      ConsoleLogger.log('WhatsApp OTP skipped | reason=no mobile', 'CommonUtils');
-      return null;
-    }
-
-    const payload = {
-      project_id: 'CAMPUS_WHATSAPP_PROJECT_ID',      
-      admin_id: 'CAMPUS_WHATSAPP_ADMIN_ID',           
-      raw_template: {
-        name: 'CAMPUS_WHATSAPP_OTP_TEMPLATE_NAME',    
-        parameter_format: 'POSITIONAL',
-        components: [
-          {
-            type: 'BODY',
-            text: 'Dear *{{1}}*, your OTP for verification is *{{2}}*. This OTP is valid for 5 minutes. Do not share it with anyone.',
-            example: {
-              body_text: [['User', '1234']],
+      const payload = {
+        project_id: 'CAMPUS_WHATSAPP_PROJECT_ID',
+        admin_id: 'CAMPUS_WHATSAPP_ADMIN_ID',
+        raw_template: {
+          name: 'CAMPUS_WHATSAPP_OTP_TEMPLATE_NAME',
+          parameter_format: 'POSITIONAL',
+          components: [
+            {
+              type: 'BODY',
+              text: 'Dear *{{1}}*, your OTP for verification is *{{2}}*. This OTP is valid for 5 minutes. Do not share it with anyone.',
+              example: {
+                body_text: [['User', '1234']],
+              },
             },
-          },
-          {
-            type: 'FOOTER',
-            text: 'Campus Shoes Loyalty Program',
-          },
-        ],
-        language: 'en',
-        status: 'APPROVED',
-        category: 'UTILITY',
-        id: 'CAMPUS_WHATSAPP_OTP_TEMPLATE_ID',        
-      },
-      number: parseInt(mobileStr, 10),
-      body: {
-        '1': data.name ?? 'User',
-        '2': data.otp,
-      },
-      language: 'english',
-    };
-
-    ConsoleLogger.log(
-      `Sending WhatsApp OTP | mobile=${mobileStr}`,
-      'CommonUtils',
-    );
-
-    const response = await axios.post(
-      'https://communicationapi2.almond.solutions/api/v1/message/process',
-      payload,
-      {
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer CAMPUS_WHATSAPP_AUTH_TOKEN', 
+            {
+              type: 'FOOTER',
+              text: 'Campus Shoes Loyalty Program',
+            },
+          ],
+          language: 'en',
+          status: 'APPROVED',
+          category: 'UTILITY',
+          id: 'CAMPUS_WHATSAPP_OTP_TEMPLATE_ID',
         },
-        maxBodyLength: Infinity,
-      },
-    );
+        number: parseInt(mobileStr, 10),
+        body: {
+          '1': data.name ?? 'User',
+          '2': data.otp,
+        },
+        language: 'english',
+      };
 
-    ConsoleLogger.log(
-      `WhatsApp OTP sent | status=${response?.status} | mobile=${mobileStr}`,
-      'CommonUtils',
-    );
+      ConsoleLogger.log(`Sending WhatsApp OTP | mobile=${mobileStr}`, 'CommonUtils');
 
-    return response.data;
-  } catch (err: any) {
-    ConsoleLogger.error(
-      `WhatsApp OTP failed | mobile=${data.mobile} | message=${err?.message}`,
-      err?.stack,
-      'CommonUtils',
-    );
-    return null;
-  }
-}
+      const response = await axios.post(
+        'https://communicationapi2.almond.solutions/api/v1/message/process',
+        payload,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: 'Bearer CAMPUS_WHATSAPP_AUTH_TOKEN',
+          },
+          maxBodyLength: Infinity,
+        }
+      );
 
+      ConsoleLogger.log(
+        `WhatsApp OTP sent | status=${response?.status} | mobile=${mobileStr}`,
+        'CommonUtils'
+      );
 
-static async sendEmailOtp(data: {
-  email: string;
-  otp: string;
-  name?: string;
-}): Promise<any> {
-  try {
-    const emailStr = String(data.email ?? '').trim();
-    if (!emailStr) {
-      ConsoleLogger.log('Email OTP skipped | reason=no email', 'CommonUtils');
+      return response.data;
+    } catch (err: any) {
+      ConsoleLogger.error(
+        `WhatsApp OTP failed | mobile=${data.mobile} | message=${err?.message}`,
+        err?.stack,
+        'CommonUtils'
+      );
       return null;
     }
-
-    const subject = 'Your OTP for Campus Shoes Loyalty Program';
-    const html =
-      `<p>Dear ${data.name ?? 'User'},</p>` +
-      `<p>Your OTP for verifying your email address is: <strong>${data.otp}</strong></p>` +
-      `<p>This OTP is valid for 5 minutes. Do not share it with anyone.</p>` +
-      `<p>Regards,<br/>Campus Shoes Loyalty Program</p>`;
-
-    const mailPayload = {
-      mailName: subject,
-      mailSubject: subject,
-      from: 'no-reply@almonds.ai',                 
-      to: [emailStr],
-      htmlContent: html,
-    };
-
-    ConsoleLogger.log(
-      `Sending Email OTP | email=${emailStr}`,
-      'CommonUtils',
-    );
-
-    const response = await axios.post(
-      'https://communicationapi2.almond.solutions/api/mail',
-      mailPayload,
-      {
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer CAMPUS_EMAIL_AUTH_TOKEN',
-        },
-        maxBodyLength: Infinity,
-      },
-    );
-
-    ConsoleLogger.log(
-      `Email OTP sent | status=${response?.status} | email=${emailStr}`,
-      'CommonUtils',
-    );
-
-    return response.data;
-  } catch (err: any) {
-    ConsoleLogger.error(
-      `Email OTP failed | email=${data.email} | message=${err?.message}`,
-      err?.stack,
-      'CommonUtils',
-    );
-    return null;
   }
-}
+
+  static async sendEmailOtp(data: { email: string; otp: string; name?: string }): Promise<any> {
+    try {
+      const emailStr = String(data.email ?? '').trim();
+      if (!emailStr) {
+        ConsoleLogger.log('Email OTP skipped | reason=no email', 'CommonUtils');
+        return null;
+      }
+
+      const subject = 'Your OTP for Campus Shoes Loyalty Program';
+      const html =
+        `<p>Dear ${data.name ?? 'User'},</p>` +
+        `<p>Your OTP for verifying your email address is: <strong>${data.otp}</strong></p>` +
+        `<p>This OTP is valid for 5 minutes. Do not share it with anyone.</p>` +
+        `<p>Regards,<br/>Campus Shoes Loyalty Program</p>`;
+
+      const mailPayload = {
+        mailName: subject,
+        mailSubject: subject,
+        from: 'no-reply@almonds.ai',
+        to: [emailStr],
+        htmlContent: html,
+      };
+
+      ConsoleLogger.log(`Sending Email OTP | email=${emailStr}`, 'CommonUtils');
+
+      const response = await axios.post(
+        'https://communicationapi2.almond.solutions/api/mail',
+        mailPayload,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: 'Bearer CAMPUS_EMAIL_AUTH_TOKEN',
+          },
+          maxBodyLength: Infinity,
+        }
+      );
+
+      ConsoleLogger.log(
+        `Email OTP sent | status=${response?.status} | email=${emailStr}`,
+        'CommonUtils'
+      );
+
+      return response.data;
+    } catch (err: any) {
+      ConsoleLogger.error(
+        `Email OTP failed | email=${data.email} | message=${err?.message}`,
+        err?.stack,
+        'CommonUtils'
+      );
+      return null;
+    }
+  }
 }

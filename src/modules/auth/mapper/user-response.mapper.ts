@@ -11,6 +11,7 @@ export class UserResponseMapper {
     return {
       id: user.id.toString(),
       uuid: user.uuid,
+      applicationId: user.applicationId,
       username: user.username,
       mobile: user.mobile,
       whatsapp_number: user.whatsappNumber,
