@@ -7,6 +7,8 @@ import { UserStatus } from 'src/modules/auth/constants/auth.constants';
 import { UserAuthValidator } from 'src/modules/auth/validators/user-auth.validator';
 import { SendOtpDto } from 'src/modules/auth/dto/send-otp.dto';
 
+import { CommonUtils } from 'src/default/common/utils/common.utils';
+
 @Injectable()
 export class UserValidator {
   constructor(
@@ -30,6 +32,7 @@ export class UserValidator {
         user = await this.userRepository.save({
           mobile: dto.mobile,
           status: UserStatus.IN_APPROVAL,
+          applicationId: CommonUtils.generateApplicationId(),
           ...(dto.partnerType && {
             partnerType: dto.partnerType,
           }),

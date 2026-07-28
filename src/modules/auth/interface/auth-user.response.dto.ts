@@ -3,12 +3,14 @@ import { UserStatus } from '../constants/auth.constants';
 export class AuthUserResponseDto {
   id: string;
   uuid: string;
+  applicationId?: string;
   username: string;
   mobile: string;
   whatsapp_number: string;
   email: string;
   image_url: string;
   status: UserStatus;
+  points: string;
   role: {
     id: string;
     name: string;

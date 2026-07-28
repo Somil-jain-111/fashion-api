@@ -11,12 +11,14 @@ export class UserResponseMapper {
     return {
       id: user.id.toString(),
       uuid: user.uuid,
+      applicationId: user.applicationId,
       username: user.username,
       mobile: user.mobile,
       whatsapp_number: user.whatsappNumber,
       email: user.email,
       image_url: user.image_url,
       status: user.status,
+      points: String(user.points),
       role: user.role
         ? {
             id: user.role.id.toString(),

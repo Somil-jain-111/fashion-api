@@ -1,28 +1,14 @@
-import {
-  Entity,
-  PrimaryGeneratedColumn,
-  Column,
-  CreateDateColumn,
-  UpdateDateColumn,
-  BaseEntity,
-  ManyToOne,
-  JoinColumn,
-  Index,
-} from 'typeorm';
+import { Entity, Column, ManyToOne, JoinColumn, Index } from 'typeorm';
 
 import { User } from '../../auth/entities';
-import { addressType } from '../../../default/common/enums/address.enum';
-import { AddressStatus } from '../enum/address-status.enum';
+import { AddressType } from '../../../default/common/enums/address.enum';
+import { BaseEntity } from '../../../default/common/entities';
 
 @Entity({ name: 'addresses' })
 @Index('idx_addresses_user_id', ['user'])
 @Index('idx_addresses_mobile', ['mobile'])
 @Index('idx_addresses_pincode', ['pincode'])
-@Index('idx_addresses_status', ['status'])
 export class Address extends BaseEntity {
-  @PrimaryGeneratedColumn('increment', { type: 'bigint' })
-  id!: string;
-
   @ManyToOne(() => User, (user) => user.addresses, {
     nullable: false,
     onDelete: 'CASCADE',
@@ -68,24 +54,12 @@ export class Address extends BaseEntity {
 
   @Column({
     type: 'enum',
-    enum: addressType,
+    enum: AddressType,
     nullable: false,
-    default: addressType.Primary,
+    default: AddressType.Primary,
   })
-  addressType!: addressType;
+  addressType!: AddressType;
 
-  @Column({ type: 'boolean', default: false })
-  isDefault!: boolean;
-
-  @Column({
-    type: 'tinyint',
-    default: AddressStatus.ACTIVE,
-  })
-  status!: AddressStatus;
-
-  @CreateDateColumn({ type: 'datetime' })
-  created_at!: Date;
-
-  @UpdateDateColumn({ type: 'datetime' })
-  updated_at!: Date;
+  // @Column({ type: 'boolean', default: false })
+  // isDefault!: boolean;
 }
