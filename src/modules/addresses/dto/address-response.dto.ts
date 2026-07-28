@@ -11,6 +11,7 @@ export class AddressResponseDTO {
   cityName: string | null;
   stateName: string | null;
   zoneName: string | null;
+  addressType: string | null;
 
   constructor(address: Address) {
     this.id = address.id?.toString() || '';
@@ -23,5 +24,6 @@ export class AddressResponseDTO {
     this.cityName = address.city_name || null;
     this.stateName = address.state_name || null;
     this.zoneName = address.zone_name || null;
+    this.addressType = address.addressType || '';
   }
 }

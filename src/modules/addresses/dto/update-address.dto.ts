@@ -1,4 +1,5 @@
-import { IsBoolean, IsEmail, IsOptional, IsString, Matches, MaxLength } from 'class-validator';
+import { IsEnum, IsOptional, IsString, Matches, MaxLength } from 'class-validator';
+import { AddressType } from 'src/default/common/enums/address.enum';
 
 export class UpdateAddressDto {
   @IsOptional()
@@ -34,6 +35,6 @@ export class UpdateAddressDto {
   landmark?: string;
 
   @IsOptional()
-  @IsBoolean()
-  isDefault?: boolean;
+  @IsEnum(AddressType)
+  addressType?: AddressType;
 }

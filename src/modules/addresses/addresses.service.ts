@@ -10,6 +10,7 @@ import { PaginationQueryDto } from 'src/default/common/dto/pagination-query.dto'
 import { UserAuthValidator } from '../auth/validators/user-auth.validator';
 import { CreateAddressDto } from './dto/create-address.dto';
 import { UpdateAddressDto } from './dto/update-address.dto';
+import { AddressType } from 'src/default/common/enums/address.enum';
 
 @Injectable()
 export class AddressesService {
@@ -140,7 +141,7 @@ export class AddressesService {
 
     const pincodeDetails = await this.getStateAndCity(dto.pincode);
 
-    // const isDefault = addresses.length === 0;
+    const isDefault = addresses.length === 0;
 
     const address = await this.addressRepository.create({
       user: { id: userId } as any,
@@ -153,8 +154,7 @@ export class AddressesService {
       city_name: pincodeDetails.city.name,
       state_name: pincodeDetails.state.name,
       zone_name: pincodeDetails.region?.name || null,
-      // addressType: isDefault ? addressType.Primary : addressType.Secondary,
-      // isDefault,
+      addressType: dto.addressType || isDefault ? AddressType.Primary : AddressType.Secondary,
       active: true,
     });
 
@@ -222,6 +222,10 @@ export class AddressesService {
       address.city_name = pincodeDetails.city.name;
       address.state_name = pincodeDetails.city.state.name;
       address.zone_name = pincodeDetails.city.state.region?.name || null;
+    }
+
+    if (dto.addressType) {
+      address.addressType = dto.addressType;
     }
 
     const updatedAddress = await this.addressRepository.save(address);
