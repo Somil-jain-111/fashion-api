@@ -34,4 +34,9 @@ export const ONBOARD_ERRORS = {
     message: 'Store info already completed!',
     statusCode: 400,
   },
+  LOCATION_PINCODE_MISMATCH: {
+    code: 'ONBOARD_008',
+    message: 'Location (latitude & longitude) does not match the provided pincode.',
+    statusCode: 400,
+  },
 } as const;

@@ -51,6 +51,26 @@ export class OnboardingService {
     return 'UNKNOWN';
   }
 
+  private async validatePincode(pincode: string, lat: number, lng: number) {
+    // Verify using Google
+    let verificationResponse = await this.locationVerificationHelper.getLocationByGoogle(lat, lng);
+
+    let responsePincode = verificationResponse?.data?.pincode;
+
+    // Verify using OSM (Fallback)
+    if (!responsePincode) {
+      verificationResponse = await this.locationVerificationHelper.getLocationByOSM(lat, lng);
+      responsePincode = verificationResponse?.data?.pincode;
+    }
+
+    const isValidPincode = Number(responsePincode) === Number(pincode);
+
+    return {
+      isValidPincode: isValidPincode,
+      details: verificationResponse.data,
+    };
+  }
+
   async saveBasicInfo(userId: number, dto: SaveBasicInfoDto) {
     const user = await this.userRepository.findById(userId);
 
@@ -112,6 +132,22 @@ export class OnboardingService {
 
     // Check if store info already exists
     let storeInfo = await this.userStoreInfoRepository.findOne({ user: { id: userId } });
+
+    const targetLat = dto.lat ?? storeInfo?.lat;
+    const targetLng = dto.lng ?? storeInfo?.lng;
+    const targetPincode = dto.pincode ?? storeInfo?.pincode;
+
+    if (targetLat && targetLng && targetPincode) {
+      const locationVerification = await this.validatePincode(
+        String(targetPincode),
+        targetLat,
+        targetLng
+      );
+
+      if (!locationVerification?.isValidPincode) {
+        throw new BusinessException(ERROR_CODES.ONBOARD.LOCATION_PINCODE_MISMATCH);
+      }
+    }
 
     /**
      * If store info exists only update the incoming fields from body
@@ -370,22 +406,6 @@ export class OnboardingService {
   async verifyLocationByPincode(body: VerifyLocationQueryDto) {
     const { pincode, lat, lng } = body;
 
-    // Verify using Google
-    let verificationResponse = await this.locationVerificationHelper.getLocationByGoogle(lat, lng);
-
-    let responsePincode = verificationResponse?.data?.pincode;
-
-    // Verify using OSM (Fallback)
-    if (!responsePincode) {
-      verificationResponse = await this.locationVerificationHelper.getLocationByOSM(lat, lng);
-      responsePincode = verificationResponse?.data?.pincode;
-    }
-
-    const isValidPincode = Number(responsePincode) === Number(pincode);
-
-    return {
-      isValidPincode: isValidPincode,
-      details: verificationResponse.data,
-    };
+    return await this.validatePincode(pincode, lat, lng);
   }
 }
