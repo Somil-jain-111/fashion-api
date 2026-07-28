@@ -67,6 +67,7 @@ export class Address extends BaseEntity {
   longitude?: number;
 
   @Column({
+    
     type: 'enum',
     enum: addressType,
     nullable: false,
