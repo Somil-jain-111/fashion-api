@@ -8,14 +8,14 @@ import {
 import { ApprovalRepository } from 'src/modules/approvals/repository';
 import { KycVerificationRepository } from 'src/modules/kyc/repository';
 import { User } from '../auth/entities/users.entity';
-import { SaveBasicInfoDto } from './dto/basic-info.dto';
-import { SaveStoreInfoDto } from './dto/store-info.dto';
 import { ERROR_CODES } from 'src/default/error/error.code';
 import { UserStatus } from '../auth/constants/auth.constants';
 import { KycType } from 'src/default/common/enums/kyc.enum';
 import { BusinessException } from 'src/default/error/business.exception';
 import { UserPartnerType, UserRole } from 'src/default/common/enums/user-type.enum';
 import { ApprovalStatus, ApprovalType } from 'src/default/common/enums/approvals.enum';
+import { VerifyLocationQueryDto, SaveBasicInfoDto, SaveStoreInfoDto } from './dto';
+import { LocationVerificationHelper } from 'src/default/common/helper/location-verification.helper';
 
 @Injectable()
 export class OnboardingService {
@@ -29,7 +29,8 @@ export class OnboardingService {
     private readonly userStoreInfoRepository: UserStoreInfoRepository,
     private readonly approvalRepository: ApprovalRepository,
     private readonly kycVerificationRepository: KycVerificationRepository,
-    private readonly roleRepository: RolesRepository
+    private readonly roleRepository: RolesRepository,
+    private readonly locationVerificationHelper: LocationVerificationHelper
   ) {}
 
   private resolveCurrentStep(user: any, activeApproval: any): string {
@@ -357,6 +358,34 @@ export class OnboardingService {
 
     return {
       message: 'Profile submitted for L1 approval successfully',
+    };
+  }
+
+  /**
+   * Verify location by pincode with LAT & LNG
+   *
+   * @param body
+   * @returns
+   */
+  async verifyLocationByPincode(body: VerifyLocationQueryDto) {
+    const { pincode, lat, lng } = body;
+
+    // Verify using Google
+    let verificationResponse = await this.locationVerificationHelper.getLocationByGoogle(lat, lng);
+
+    let responsePincode = verificationResponse?.data?.pincode;
+
+    // Verify using OSM (Fallback)
+    if (!responsePincode) {
+      verificationResponse = await this.locationVerificationHelper.getLocationByOSM(lat, lng);
+      responsePincode = verificationResponse?.data?.pincode;
+    }
+
+    const isValidPincode = Number(responsePincode) === Number(pincode);
+
+    return {
+      isValidPincode: isValidPincode,
+      details: verificationResponse.data,
     };
   }
 }

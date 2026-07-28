@@ -30,4 +30,8 @@ export const SUCCESS_MESSAGES = {
     BENEFICIARY_ADDED: 'Beneficiary added successfully',
     BENEFICIARIES_FETCHED: 'Beneficiaries retrieved successfully',
   },
+
+  ONBOARDING: {
+    VERIFICATION_SUCCESSFUL: 'Verification successful',
+  },
 } as const;
