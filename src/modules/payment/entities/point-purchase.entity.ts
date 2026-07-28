@@ -1,10 +1,9 @@
+import { BaseEntity } from '../../../default/common/entities';
 import {
   Column,
-  CreateDateColumn,
   Entity,
   Index,
-  PrimaryGeneratedColumn,
-  UpdateDateColumn,
+
 } from 'typeorm';
 
 export enum PointPurchaseStatus {
@@ -20,10 +19,7 @@ export enum PointPurchaseStatus {
 @Index('uq_point_purchase_link', ['paymentLinkId'], { unique: true })
 @Index('uq_point_purchase_payment', ['razorpayPaymentId'], { unique: true })
 @Index('idx_point_purchase_user_status', ['userId', 'status'])
-export class PointPurchase {
-  @PrimaryGeneratedColumn({ type: 'bigint', unsigned: true })
-  id: string;
-
+export class PointPurchase extends BaseEntity {
   @Column({ name: 'reference_id', type: 'varchar', length: 100, unique: true })
   referenceId: string;
 
@@ -75,10 +71,4 @@ export class PointPurchase {
 
   @Column({ name: 'provider_payload', type: 'json', nullable: true })
   providerPayload?: Record<string, unknown>;
-
-  @CreateDateColumn({ name: 'created_at' })
-  createdAt: Date;
-
-  @UpdateDateColumn({ name: 'updated_at' })
-  updatedAt: Date;
 }

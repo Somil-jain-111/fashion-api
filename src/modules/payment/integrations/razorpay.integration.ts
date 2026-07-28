@@ -4,6 +4,7 @@ import { createHmac, timingSafeEqual } from 'crypto';
 import { AppConfigService } from 'src/default/config/config.service';
 import { BusinessException } from 'src/default/error/business.exception';
 import { ERROR_CODES } from 'src/default/error/error.code';
+import { ConsoleLogger } from 'src/default/logger/console/console.service';
 
 export type RazorpayPaymentLink = {
   id: string;
@@ -27,7 +28,7 @@ export class RazorpayIntegration {
     referenceId: string;
     description: string;
     callbackUrl: string;
-    customer: { name: string; contact: string; email: string };
+    customer: { name?: string; contact?: string; email?: string };
     notes: Record<string, string>;
   }): Promise<RazorpayPaymentLink> {
     const keyId = this.config.get<string>('RAZORPAY_KEY_ID');
@@ -36,6 +37,9 @@ export class RazorpayIntegration {
       throw new BusinessException(ERROR_CODES.PAYMENT.RAZORPAY_CONFIGURATION_MISSING);
     }
     try {
+      const customer = Object.fromEntries(
+        Object.entries(input.customer).filter(([, value]) => Boolean(value))
+      );
       const { data } = await this.client.post<RazorpayPaymentLink>(
         '/payment_links',
         {
@@ -44,8 +48,9 @@ export class RazorpayIntegration {
           accept_partial: false,
           description: input.description,
           reference_id: input.referenceId,
-          expire_by: Math.floor(Date.now() / 1000) + 15 * 60,
-          customer: input.customer,
+          // Razorpay requires a future timestamp. Keep a buffer for network latency.
+          expire_by: Math.floor(Date.now() / 1000) + 20 * 60,
+          ...(Object.keys(customer).length ? { customer } : {}),
           notify: { sms: false, email: false },
           notes: input.notes,
           callback_url: input.callbackUrl,
@@ -55,6 +60,21 @@ export class RazorpayIntegration {
       );
       return data;
     } catch (error) {
+      const providerError = axios.isAxiosError(error)
+        ? {
+            status: error.response?.status,
+            code: error.response?.data?.error?.code,
+            description: error.response?.data?.error?.description,
+            field: error.response?.data?.error?.field,
+            source: error.response?.data?.error?.source,
+            reason: error.response?.data?.error?.reason,
+          }
+        : { description: error?.message };
+      ConsoleLogger.error(
+        'Razorpay payment-link request failed.',
+        JSON.stringify(providerError),
+        'RazorpayIntegration.createPaymentLink'
+      );
       throw new BusinessException(ERROR_CODES.PAYMENT.PAYMENT_LINK_CREATION_FAILED);
     }
   }

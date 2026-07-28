@@ -52,7 +52,8 @@ export class PaymentService {
     if (!user) throw new BusinessException(ERROR_CODES.USER.USER_NOT_FOUND);
 
     const split = calculatePaymentSplit({ userPoints: 0, requiredPoints: points });
-    const referenceId = `points_${userId}_${await CommonUtils.generateUniqueRefCode()}`;
+    // Razorpay reference_id has a strict length limit; keep this compact and unique.
+    const referenceId = `PP_${userId}_${await CommonUtils.generateUniqueUUIDCode()}`;
     const configuredCallbackUrl =
       this.appConfigService.get<string>('POINT_PURCHASE_CALLBACK_URL') ||
       (this.appConfigService.get<string>('FRONTEND_URL')
@@ -64,6 +65,7 @@ export class PaymentService {
     if (!callbackUrl) {
       throw new BusinessException(ERROR_CODES.PAYMENT.RAZORPAY_CONFIGURATION_MISSING);
     }
+    console.log('ssssss');
 
     const purchase = await this.pointPurchaseRepository.createPending({
       referenceId,
@@ -128,6 +130,7 @@ export class PaymentService {
         current_points: Number(user.points),
       };
     } catch (error) {
+      console.log(error.stack);
       await this.pointPurchaseRepository.markFailed(
         purchase.id,
         error?.message || 'Razorpay payment link creation failed'

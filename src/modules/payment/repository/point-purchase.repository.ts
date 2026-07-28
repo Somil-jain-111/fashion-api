@@ -47,7 +47,7 @@ export class PointPurchaseRepository extends BaseRepository<PointPurchase> {
   }
 
   async markLinkCreated(
-    id: string,
+    id: number,
     paymentLinkId: string,
     paymentUrl: string,
     providerPayload: Record<string, unknown>,
@@ -64,7 +64,7 @@ export class PointPurchaseRepository extends BaseRepository<PointPurchase> {
     );
   }
 
-  async markFailed(id: string, failureReason: string, queryRunner?: QueryRunner): Promise<void> {
+  async markFailed(id: number, failureReason: string, queryRunner?: QueryRunner): Promise<void> {
     await this.getRepository(queryRunner).update(
       { id },
       { status: PointPurchaseStatus.FAILED, failureReason: failureReason.slice(0, 500) }
@@ -72,7 +72,7 @@ export class PointPurchaseRepository extends BaseRepository<PointPurchase> {
   }
 
   async markPaid(
-    id: string,
+    id: number,
     razorpayPaymentId: string,
     providerPayload: Record<string, unknown>,
     queryRunner: QueryRunner
