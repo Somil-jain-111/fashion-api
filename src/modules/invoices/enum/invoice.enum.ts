@@ -6,6 +6,7 @@ export enum InvoiceStatus {
 }
 
 export enum InvoiceScanStatus {
+  IN_PROGRESS="IN_PROGRESS",
   NOT_SCANNED = 'NOT_SCANNED',
   PARTIALLY_SCANNED = 'PARTIALLY_SCANNED',
   FULLY_SCANNED = 'FULLY_SCANNED',

@@ -3,4 +3,6 @@ export enum InvoicePairScanStatus {
   SCANNED = 'SCANNED',
   INVALID = 'INVALID',
   EXPIRED = 'EXPIRED',
+  REDEEMED = 'REDEEMED',
+  USED = 'USED',
 }

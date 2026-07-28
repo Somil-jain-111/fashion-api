@@ -20,7 +20,15 @@ import { NoCache } from 'src/default/cache/cache.decorator';
 import { DataSanitizer } from 'src/default/common/utils/sanitize.utils';
 import { SoVerificationService } from '../so-verification/so-verification.service';
 import { SUCCESS_MESSAGES } from 'src/default/common/constants/success-messages.constant';
-import { VerifyLocationQueryDto, SaveBasicInfoDto, SaveStoreInfoDto } from './dto';
+import {
+  VerifyLocationQueryDto,
+  SaveBasicInfoDto,
+  SaveStoreInfoDto,
+  ConfirmEmailOtpDto,
+  ConfirmWhatsappOtpDto,
+  SendEmailOtpDto,
+  SendWhatsappOtpDto,
+} from './dto';
 
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles([UserRole.RETAILER])
@@ -83,4 +91,40 @@ export class OnboardingController {
   //   const response = await this.soVerificationService.getOnboardingStatus(Number(req.user.id));
   //   return DataSanitizer.sanitizeData(response);
   // }
+
+  // ── WhatsApp verification ─────────────────────────────────────────────────────
+
+  @NoCache()
+  @Post('verify-whatsapp/send-otp')
+  @ResponseMessage('WhatsApp OTP sent successfully')
+  async sendWhatsappOtp(@Req() req: any, @Body() dto: SendWhatsappOtpDto) {
+    const response = await this.onboardingService.sendWhatsappOtp(Number(req.user.id), dto);
+    return DataSanitizer.sanitizeData(response);
+  }
+
+  @NoCache()
+  @Post('verify-whatsapp/confirm')
+  @ResponseMessage('WhatsApp number verified successfully')
+  async confirmWhatsappOtp(@Req() req: any, @Body() dto: ConfirmWhatsappOtpDto) {
+    const response = await this.onboardingService.confirmWhatsappOtp(Number(req.user.id), dto);
+    return DataSanitizer.sanitizeData(response);
+  }
+
+  // ── Email verification ────────────────────────────────────────────────────────
+
+  @NoCache()
+  @Post('verify-email/send-otp')
+  @ResponseMessage('Email OTP sent successfully')
+  async sendEmailOtp(@Req() req: any, @Body() dto: SendEmailOtpDto) {
+    const response = await this.onboardingService.sendEmailOtp(Number(req.user.id), dto);
+    return DataSanitizer.sanitizeData(response);
+  }
+
+  @NoCache()
+  @Post('verify-email/confirm')
+  @ResponseMessage('Email verified successfully')
+  async confirmEmailOtp(@Req() req: any, @Body() dto: ConfirmEmailOtpDto) {
+    const response = await this.onboardingService.confirmEmailOtp(Number(req.user.id), dto);
+    return DataSanitizer.sanitizeData(response);
+  }
 }

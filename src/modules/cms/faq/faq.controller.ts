@@ -11,7 +11,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { JwtAuthGuard } from 'src/default/common/guards/jwt-auth.guard';
-import { UserStatusGuard } from 'src/default/common/guards/user-status.guard';
+// import { UserStatusGuard } from 'src/default/common/guards/user-status.guard';
 import { FaqService } from './faq.service';
 import { CreateFaqDto } from './dto/create-faq.dto';
 import { DataSanitizer } from 'src/default/common/utils/sanitize.utils';
@@ -19,7 +19,7 @@ import { FaqQueryDto } from './dto/faq-query.dto';
 import { UpdateFaqDto } from './dto/update-faq.dto';
 
 @Controller('faqs')
-@UseGuards(JwtAuthGuard, UserStatusGuard)
+@UseGuards(JwtAuthGuard)
 export class FaqController {
   constructor(private readonly faqService: FaqService) {}
 

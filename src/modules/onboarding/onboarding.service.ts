@@ -14,8 +14,20 @@ import { KycType } from 'src/default/common/enums/kyc.enum';
 import { BusinessException } from 'src/default/error/business.exception';
 import { UserPartnerType, UserRole } from 'src/default/common/enums/user-type.enum';
 import { ApprovalStatus, ApprovalType } from 'src/default/common/enums/approvals.enum';
-import { VerifyLocationQueryDto, SaveBasicInfoDto, SaveStoreInfoDto } from './dto';
+import { CommonUtils } from 'src/default/common/utils/common.utils';
+import { AppConfigService } from 'src/default/config/config.service';
+import {
+  VerifyLocationQueryDto,
+  SaveBasicInfoDto,
+  SaveStoreInfoDto,
+  ConfirmEmailOtpDto,
+  ConfirmWhatsappOtpDto,
+  SendEmailOtpDto,
+  SendWhatsappOtpDto,
+} from './dto';
 import { LocationVerificationHelper } from 'src/default/common/helper/location-verification.helper';
+
+const CONTACT_OTP_EXPIRY_MINUTES = 5;
 
 @Injectable()
 export class OnboardingService {
@@ -30,6 +42,7 @@ export class OnboardingService {
     private readonly approvalRepository: ApprovalRepository,
     private readonly kycVerificationRepository: KycVerificationRepository,
     private readonly roleRepository: RolesRepository,
+    private readonly appConfigService: AppConfigService,
     private readonly locationVerificationHelper: LocationVerificationHelper
   ) {}
 
@@ -81,7 +94,6 @@ export class OnboardingService {
     // Check email uniqueness
     if (dto.email) {
       const existingUserWithEmail = await this.userRepository.findByEmail(dto.email);
-
       if (existingUserWithEmail && Number(existingUserWithEmail.id) !== userId) {
         throw new BusinessException(ERROR_CODES.ONBOARD.EMAIL_ALREADY_USED);
       }
@@ -92,23 +104,33 @@ export class OnboardingService {
       const existingUserWithWhatsapp = await this.userRepository.findOne({
         whatsappNumber: dto.whatsappNumber,
       });
-
       if (existingUserWithWhatsapp && Number(existingUserWithWhatsapp.id) !== userId) {
         throw new BusinessException(ERROR_CODES.ONBOARD.WHATSAPP_NUMBER_ALREADY_USED);
       }
     }
 
-    // Update user basic info
+    // Reset verification flags if contact details changed
+    const whatsappChanged = dto.whatsappNumber && dto.whatsappNumber !== user.whatsappNumber;
+    const emailChanged = dto.email && dto.email !== user.email;
+
     const updatedData = await this.userRepository.updateById(userId, {
       username: dto.name,
       partnerType: dto.partnerType,
-      ...(dto.email && {
-        email: dto.email,
+      ...(dto.email && { email: dto.email }),
+      ...(dto.whatsappNumber && { whatsappNumber: dto.whatsappNumber }),
+      // Reset whatsapp verification if number changed
+      ...(whatsappChanged && {
+        whatsappVerified: false,
+        whatsappOtp: null,
+        whatsappOtpExpiry: null,
       }),
-      ...(dto.whatsappNumber && {
-        whatsappNumber: dto.whatsappNumber,
+      // Reset email verification if email changed
+      ...(emailChanged && {
+        emailVerified: false,
+        emailOtp: null,
+        emailOtpExpiry: null,
       }),
-    });
+    } as any);
 
     return updatedData;
   }
@@ -394,6 +416,189 @@ export class OnboardingService {
 
     return {
       message: 'Profile submitted for L1 approval successfully',
+    };
+  }
+
+  async sendWhatsappOtp(userId: number, dto: SendWhatsappOtpDto) {
+    const user = await this.userRepository.findById(userId);
+    if (!user) throw new BusinessException(ERROR_CODES.USER.USER_NOT_FOUND);
+
+    // Check number isn't already taken by another user
+    const existing = await this.userRepository.findOne({
+      whatsappNumber: dto.whatsappNumber,
+    });
+    if (existing && Number(existing.id) !== userId) {
+      throw new BusinessException({
+        code: 'VERIFY_001',
+        message: 'This WhatsApp number is already in use by another account.',
+        statusCode: 409,
+      });
+    }
+
+    const isLive = this.appConfigService.isProduction() || this.appConfigService.isQa();
+    const otp = isLive
+      ? Math.floor(1000 + Math.random() * 9000).toString()
+      : this.appConfigService.getNonProdOtp().toString();
+
+    const otpExpiry = new Date();
+    otpExpiry.setMinutes(otpExpiry.getMinutes() + CONTACT_OTP_EXPIRY_MINUTES);
+
+    // Update whatsapp number + store OTP + reset verified flag
+    await this.userRepository.updateById(userId, {
+      whatsappNumber: dto.whatsappNumber,
+      whatsappOtp: otp,
+      whatsappOtpExpiry: otpExpiry,
+      whatsappVerified: false,
+    } as any);
+
+    // Send via WhatsApp service
+    if (isLive) {
+      await CommonUtils.sendWhatsappOtp({
+        mobile: dto.whatsappNumber,
+        otp,
+        name: user.username ?? undefined,
+      });
+    }
+
+    return {
+      message: `OTP sent to WhatsApp number ${dto.whatsappNumber}`,
+      expiresInMinutes: CONTACT_OTP_EXPIRY_MINUTES,
+      ...(isLive ? {} : { otp }), // expose OTP in non-prod for testing
+    };
+  }
+
+  async confirmWhatsappOtp(userId: number, dto: ConfirmWhatsappOtpDto) {
+    const user = await this.userRepository.findById(userId);
+    if (!user) throw new BusinessException(ERROR_CODES.USER.USER_NOT_FOUND);
+
+    if (!(user as any).whatsappOtp) {
+      throw new BusinessException({
+        code: 'VERIFY_002',
+        message: 'No OTP found. Please request a new OTP first.',
+        statusCode: 400,
+      });
+    }
+
+    // Expiry check
+    const expiry = (user as any).whatsappOtpExpiry;
+    if (!expiry || new Date() > new Date(expiry)) {
+      throw new BusinessException({
+        code: 'VERIFY_003',
+        message: 'OTP has expired. Please request a new one.',
+        statusCode: 400,
+      });
+    }
+
+    // OTP match check
+    if ((user as any).whatsappOtp !== dto.otp) {
+      throw new BusinessException({
+        code: 'VERIFY_004',
+        message: 'Invalid OTP. Please try again.',
+        statusCode: 400,
+      });
+    }
+
+    // Mark verified, clear OTP
+    await this.userRepository.updateById(userId, {
+      whatsappVerified: true,
+      whatsappOtp: null,
+      whatsappOtpExpiry: null,
+    } as any);
+
+    return {
+      message: 'WhatsApp number verified successfully.',
+      whatsappNumber: user.whatsappNumber,
+      verified: true,
+    };
+  }
+
+  // ── Email ─────────────────────────────────────────────────────────────────────
+
+  async sendEmailOtp(userId: number, dto: SendEmailOtpDto) {
+    const user = await this.userRepository.findById(userId);
+    if (!user) throw new BusinessException(ERROR_CODES.USER.USER_NOT_FOUND);
+
+    // Check email isn't already taken by another user
+    const existing = await this.userRepository.findOne({ email: dto.email });
+    if (existing && Number(existing.id) !== userId) {
+      throw new BusinessException({
+        code: 'VERIFY_005',
+        message: 'This email address is already in use by another account.',
+        statusCode: 409,
+      });
+    }
+
+    const isLive = this.appConfigService.isProduction() || this.appConfigService.isQa();
+    const otp = isLive
+      ? Math.floor(1000 + Math.random() * 9000).toString()
+      : this.appConfigService.getNonProdOtp().toString();
+
+    const otpExpiry = new Date();
+    otpExpiry.setMinutes(otpExpiry.getMinutes() + CONTACT_OTP_EXPIRY_MINUTES);
+
+    // Update email + store OTP + reset verified flag
+    await this.userRepository.updateById(userId, {
+      email: dto.email,
+      emailOtp: otp,
+      emailOtpExpiry: otpExpiry,
+      emailVerified: false,
+    } as any);
+
+    // Send via email service
+    if (isLive) {
+      await CommonUtils.sendEmailOtp({
+        email: dto.email,
+        otp,
+        name: user.username ?? undefined,
+      });
+    }
+
+    return {
+      message: `OTP sent to ${dto.email}`,
+      expiresInMinutes: CONTACT_OTP_EXPIRY_MINUTES,
+      ...(isLive ? {} : { otp }),
+    };
+  }
+
+  async confirmEmailOtp(userId: number, dto: ConfirmEmailOtpDto) {
+    const user = await this.userRepository.findById(userId);
+    if (!user) throw new BusinessException(ERROR_CODES.USER.USER_NOT_FOUND);
+
+    if (!(user as any).emailOtp) {
+      throw new BusinessException({
+        code: 'VERIFY_006',
+        message: 'No OTP found. Please request a new OTP first.',
+        statusCode: 400,
+      });
+    }
+
+    const expiry = (user as any).emailOtpExpiry;
+    if (!expiry || new Date() > new Date(expiry)) {
+      throw new BusinessException({
+        code: 'VERIFY_007',
+        message: 'OTP has expired. Please request a new one.',
+        statusCode: 400,
+      });
+    }
+
+    if ((user as any).emailOtp !== dto.otp) {
+      throw new BusinessException({
+        code: 'VERIFY_008',
+        message: 'Invalid OTP. Please try again.',
+        statusCode: 400,
+      });
+    }
+
+    await this.userRepository.updateById(userId, {
+      emailVerified: true,
+      emailOtp: null,
+      emailOtpExpiry: null,
+    } as any);
+
+    return {
+      message: 'Email verified successfully.',
+      email: user.email,
+      verified: true,
     };
   }
 
