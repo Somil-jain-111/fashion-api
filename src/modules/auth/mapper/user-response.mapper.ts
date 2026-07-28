@@ -17,6 +17,7 @@ export class UserResponseMapper {
       email: user.email,
       image_url: user.image_url,
       status: user.status,
+      points: String(user.points),
       role: user.role
         ? {
             id: user.role.id.toString(),

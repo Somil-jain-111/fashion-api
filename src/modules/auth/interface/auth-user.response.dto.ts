@@ -9,6 +9,7 @@ export class AuthUserResponseDto {
   email: string;
   image_url: string;
   status: UserStatus;
+  points: string;
   role: {
     id: string;
     name: string;
