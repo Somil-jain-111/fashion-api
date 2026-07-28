@@ -24,21 +24,22 @@ import { CreateAddressDto } from './dto/create-address.dto';
 import { UpdateAddressDto } from './dto/update-address.dto';
 import { ResponseMessage } from 'src/default/common/decorators/response-message.decorator';
 
-@NoCache()
-@SkipThrottle()
-@UseInterceptors(IdempotencyInterceptor)
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles([UserRole.RETAILER])
 @Controller('address')
 export class AddressesController {
   constructor(private readonly addressesService: AddressesService) {}
 
+  @NoCache()
+  @SkipThrottle()
   @Get('pincode/:pincode')
   async getStateAndCity(@Param() params: GetPincodeDto) {
     const response = await this.addressesService.getStateAndCity(params.pincode);
     return DataSanitizer.sanitizeData(response);
   }
 
+  @NoCache()
+  @SkipThrottle()
   @Get()
   async getMyAddresses(@Req() req: any, @Query() query: PaginationQueryDto) {
     const response = await this.addressesService.getMyAddresses(req.user.id, query);
@@ -46,6 +47,8 @@ export class AddressesController {
     return DataSanitizer.sanitizeData(response);
   }
 
+  @NoCache()
+  @SkipThrottle()
   @Get(':id')
   async getAddressById(@Req() req: any, @Param('id') id: string) {
     const response = await this.addressesService.getAddressById(req.user.id, id);
@@ -53,6 +56,9 @@ export class AddressesController {
     return DataSanitizer.sanitizeData(response);
   }
 
+  @NoCache()
+  @SkipThrottle()
+  @UseInterceptors(IdempotencyInterceptor)
   @Post()
   async createAddress(@Req() req: any, @Body() body: CreateAddressDto) {
     const response = await this.addressesService.createAddress(req.user.id, body);
@@ -60,6 +66,9 @@ export class AddressesController {
     return DataSanitizer.sanitizeData(response);
   }
 
+  @NoCache()
+  @SkipThrottle()
+  @UseInterceptors(IdempotencyInterceptor)
   @Post(':id')
   async updateAddress(@Req() req: any, @Param('id') id: string, @Body() body: UpdateAddressDto) {
     const response = await this.addressesService.updateAddress(req.user.id, id, body);
@@ -67,6 +76,9 @@ export class AddressesController {
     return DataSanitizer.sanitizeData(response);
   }
 
+  @NoCache()
+  @SkipThrottle()
+  @UseInterceptors(IdempotencyInterceptor)
   @ResponseMessage('Address deleted successfully')
   @Post(':id/delete')
   async deleteAddress(@Req() req: any, @Param('id') id: string) {
