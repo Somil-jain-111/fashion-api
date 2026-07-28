@@ -22,6 +22,7 @@ import {
   ValidateInvoiceDto,
 } from './dto';
 import { InvoiceService } from './services';
+import { NoCache } from 'src/default/cache/cache.decorator';
 
 @ApiTags('Invoice Scanning')
 @ApiBearerAuth()
@@ -58,6 +59,7 @@ export class InvoicesController {
     return DataSanitizer.sanitizeData(response);
   }
 
+  @NoCache()
   @Get('session/:sessionId')
   async progress(@Req() request: any, @Param('sessionId') sessionId: string) {
     const response = await this.invoices.progress(sessionId, String(request.user.id));
