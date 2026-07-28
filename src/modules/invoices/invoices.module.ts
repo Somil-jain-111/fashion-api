@@ -6,10 +6,12 @@ import { AppConfigService } from 'src/default/config/config.service';
 import { InvoicesController } from './invoices.controller';
 import {
   InvoiceHistoryRepository,
+  InvoicePointHistoryRepository,
   InvoicePairRepository,
   InvoiceRepository,
   InvoiceSessionRepository,
   PairHistoryRepository,
+  UserRewardRepository,
 } from './repository';
 import {
   AuditService,
@@ -48,6 +50,8 @@ import {
     InvoicePairRepository,
     PairHistoryRepository,
     InvoiceHistoryRepository,
+    UserRewardRepository,
+    InvoicePointHistoryRepository,
     RedisLockService,
     InvoiceValidationService,
     PairValidationService,

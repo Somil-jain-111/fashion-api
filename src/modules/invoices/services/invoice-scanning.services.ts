@@ -2,15 +2,11 @@ import { InjectQueue, Processor, WorkerHost } from '@nestjs/bullmq';
 import { Injectable } from '@nestjs/common';
 import { Queue, Job } from 'bullmq';
 import { randomUUID } from 'crypto';
-import { DataSource, EntityManager, In } from 'typeorm';
+import { DataSource, EntityManager } from 'typeorm';
 import { RedisService } from 'src/default/databases/redis/redis.service';
 import { BusinessException } from 'src/default/error/business.exception';
 import { ERROR_CODES } from 'src/default/error/error.code';
 import { ConsoleLogger } from 'src/default/logger/console/console.service';
-import { User } from 'src/modules/auth/entities';
-import { PointHistory } from 'src/modules/redemptions/entities/point-history.entity';
-import { PointStatusEnum } from 'src/modules/redemptions/enum/point-history-status.enum.';
-import { RedemptionType } from 'src/modules/redemptions/enum/redemption-type.enum';
 import { InvoicePairScanStatus } from '../enum/invoice-pair-scan-status.enum';
 import { InvoiceScanStatus, InvoiceStatus } from '../enum/invoice.enum';
 import {
@@ -23,14 +19,15 @@ import {
 import { InvoiceHistoryQueryDto, InvoiceSummaryResponseDto, ScanProgressResponseDto } from '../dto';
 import {
   InvoiceHistoryRepository,
+  InvoicePointHistoryRepository,
   InvoicePairRepository,
   InvoiceRepository,
   InvoiceSessionRepository,
   PairHistoryRepository,
+  UserRewardRepository,
 } from '../repository';
 import { InvoiceScanSessionEntity } from '../entities/invoice-scan-session.entity';
 import { PairScanHistoryEntity } from '../entities/pair-scan-history.entity';
-import { InvoiceScanAuditEntity } from '../entities/invoice-scan-audit.entity';
 import { InvoiceEntity } from '../entities/invoice.entity';
 
 const CACHE_TTL_SECONDS = 30 * 60;
@@ -162,6 +159,11 @@ export class PointCalculationService {
 
 @Injectable()
 export class RewardService {
+  constructor(
+    private readonly users: UserRewardRepository,
+    private readonly pointHistories: InvoicePointHistoryRepository
+  ) {}
+
   async award(
     manager: EntityManager,
     userId: string,
@@ -170,24 +172,16 @@ export class RewardService {
     description: string
   ): Promise<void> {
     if (points <= 0) return;
-    await manager.getRepository(User).increment({ id: Number(userId) }, 'points', points);
-    const user = await manager.getRepository(User).findOne({
-      select: { id: true, points: true },
-      where: { id: Number(userId) },
-    });
-    await manager.getRepository(PointHistory).save(
-      manager.getRepository(PointHistory).create({
-        user: { id: Number(userId) } as User,
+    const balance = await this.users.addPoints(userId, points, manager);
+    await this.pointHistories.createEarnHistory(
+      {
+        userId,
         points,
+        balance,
+        transactionId,
         description,
-        type: RedemptionType.EARN,
-        status: PointStatusEnum.added,
-        date: new Date(),
-        month: String(new Date().getMonth() + 1),
-        year: String(new Date().getFullYear()),
-        user_remaining_points: Number(user?.points ?? 0),
-        transaction_id: transactionId,
-      })
+      },
+      manager
     );
   }
 }
@@ -223,6 +217,7 @@ export class ScanSessionService {
     private readonly sessions: InvoiceSessionRepository,
     private readonly pairHistory: PairHistoryRepository,
     private readonly histories: InvoiceHistoryRepository,
+    private readonly invoiceRepository: InvoiceRepository,
     private readonly lock: RedisLockService,
     private readonly redis: RedisService,
     private readonly audit: AuditService,
@@ -247,7 +242,7 @@ export class ScanSessionService {
     return this.lock.withLock(`lock:invoice:${invoiceNumber}`, async () => {
       const existing = await this.sessions.findActive(invoice.id, userId);
       if (existing) return this.progress(existing);
-      const session = await this.sessions.save({
+      const session = await this.sessions.createSession({
         sessionId: randomUUID(),
         invoiceId: invoice.id,
         invoiceNumber: invoice.invoice_no,
@@ -265,7 +260,7 @@ export class ScanSessionService {
         invoiceId: invoice.id,
         userId,
       });
-      await this.histories.save({
+      await this.histories.saveHistory({
         invoiceId: invoice.id,
         invoiceNumber: invoice.invoice_no,
         sessionId: session.sessionId,
@@ -336,34 +331,13 @@ export class ScanSessionService {
           failureReason: reason,
         })),
       ];
-      if (rows.length) {
-        await this.pairHistory
-          .createQueryBuilder('history')
-          .insert()
-          .into(PairScanHistoryEntity)
-          .values(rows)
-          .orIgnore()
-          .execute();
-      }
-      const counts = await this.pairHistory
-        .createQueryBuilder('history')
-        .select('COUNT(*)', 'scanned')
-        .addSelect(
-          'SUM(CASE WHEN history.status IN (:...validStatuses) THEN 1 ELSE 0 END)',
-          'valid'
-        )
-        .addSelect('SUM(CASE WHEN history.status = :invalidStatus THEN 1 ELSE 0 END)', 'invalid')
-        .where('history.session_id = :sessionId', { sessionId })
-        .setParameters({
-          validStatuses: [PairHistoryStatus.VALID, PairHistoryStatus.REWARDED],
-          invalidStatus: PairHistoryStatus.INVALID,
-        })
-        .getRawOne();
-      session.scannedPairs = Number(counts?.scanned ?? 0);
-      session.validPairs = Number(counts?.valid ?? 0);
-      session.invalidPairs = Number(counts?.invalid ?? 0);
+      await this.pairHistory.insertIgnore(rows);
+      const counts = await this.pairHistory.countBySession(sessionId);
+      session.scannedPairs = counts.scanned;
+      session.validPairs = counts.valid;
+      session.invalidPairs = counts.invalid;
       session.lastScannedAt = new Date();
-      await this.sessions.getRepository().save(session);
+      await this.sessions.saveSession(session);
       await this.redis.delete(`session:${sessionId}:${userId}`);
       await this.audit.record('PAIRS_SCANNED', {
         sessionId,
@@ -397,12 +371,7 @@ export class ScanSessionService {
         }
         const pending = await this.pairHistory.pendingValid(sessionId, manager);
         if (!pending.length) throw new BusinessException(ERROR_CODES.INVOICE_SCAN.NO_VALID_PAIRS);
-        const invoice = await manager
-          .getRepository(InvoiceEntity)
-          .createQueryBuilder('invoice')
-          .setLock('pessimistic_write')
-          .where('invoice.id = :invoiceId', { invoiceId: session.invoiceId })
-          .getOneOrFail();
+        const invoice = await this.invoiceRepository.findByIdForUpdate(session.invoiceId, manager);
         const newInvoiceValid = Math.min(
           invoice.total_pairs,
           invoice.scanned_pairs + pending.length
@@ -415,27 +384,28 @@ export class ScanSessionService {
           `invoice:${sessionId}:${newInvoiceValid}`,
           `Invoice reward for ${session.invoiceNumber}`
         );
-        await manager
-          .getRepository(PairScanHistoryEntity)
-          .update({ id: In(pending.map((row) => row.id)) }, { status: PairHistoryStatus.REWARDED });
+        await this.pairHistory.markRewarded(
+          pending.map((row) => row.id),
+          manager
+        );
         invoice.scanned_pairs = newInvoiceValid;
         invoice.earned_points += points;
         invoice.scan_status =
           newInvoiceValid >= invoice.total_pairs
             ? InvoiceScanStatus.FULLY_SCANNED
             : InvoiceScanStatus.PARTIALLY_SCANNED;
-        await manager.getRepository(InvoiceEntity).save(invoice);
+        await this.invoiceRepository.saveInvoice(invoice, manager);
         const completed = session.validPairs >= session.expectedPairs;
         if (completed) {
           session.status = ScanSessionStatus.COMPLETED;
           session.completedAt = new Date();
         }
-        await manager.getRepository(InvoiceScanSessionEntity).save(session);
+        await this.sessions.saveSession(session, manager);
         const historyStatus = completed
           ? InvoiceHistoryStatus.COMPLETED
           : InvoiceHistoryStatus.PARTIALLY_SUBMITTED;
-        await manager.getRepository(InvoiceScanAuditEntity).save(
-          manager.getRepository(InvoiceScanAuditEntity).create({
+        await this.histories.saveHistory(
+          {
             invoiceId: session.invoiceId,
             invoiceNumber: session.invoiceNumber,
             sessionId,
@@ -443,7 +413,8 @@ export class ScanSessionService {
             status: historyStatus,
             pointsAwarded: points,
             metadata: { submittedPairs: pending.length },
-          })
+          },
+          manager
         );
         return {
           pointsAwarded: points,
@@ -464,8 +435,8 @@ export class ScanSessionService {
     return this.lock.withLock(`lock:session:${sessionId}`, async () => {
       const session = await this.ownedActive(sessionId, userId);
       session.status = ScanSessionStatus.CANCELLED;
-      await this.sessions.getRepository().save(session);
-      await this.histories.save({
+      await this.sessions.saveSession(session);
+      await this.histories.saveHistory({
         invoiceId: session.invoiceId,
         invoiceNumber: session.invoiceNumber,
         sessionId,
@@ -481,13 +452,12 @@ export class ScanSessionService {
 
   async pairs(sessionId: string, userId: string, page = 1, limit = 100) {
     await this.ownedActive(sessionId, userId, false);
-    const [items, total] = await this.pairHistory.getRepository().findAndCount({
-      where: { sessionId, userId },
-      select: ['id', 'pairUid', 'status', 'scanSource', 'failureReason', 'createdAt'],
-      order: { id: 'DESC' },
-      skip: (page - 1) * limit,
-      take: limit,
-    });
+    const { items, total } = await this.pairHistory.findPageBySession(
+      sessionId,
+      userId,
+      page,
+      limit
+    );
     return { items, total, page, limit };
   }
 }
@@ -527,32 +497,14 @@ export class InvoiceService {
   }
 
   async history(userId: string, query: InvoiceHistoryQueryDto) {
-    const qb = this.histories
-      .createQueryBuilder('history')
-      .where('history.user_id = :userId', { userId });
-    if (query.invoiceNumber)
-      qb.andWhere('history.invoice_number = :invoiceNumber', {
-        invoiceNumber: query.invoiceNumber,
-      });
-    if (query.status) qb.andWhere('history.status = :status', { status: query.status });
-    if (query.fromDate)
-      qb.andWhere('history.created_at >= :fromDate', { fromDate: query.fromDate });
-    if (query.toDate) qb.andWhere('history.created_at <= :toDate', { toDate: query.toDate });
-    const [items, total] = await qb
-      .orderBy('history.id', 'DESC')
-      .skip((query.page - 1) * query.limit)
-      .take(query.limit)
-      .getManyAndCount();
+    const { items, total } = await this.histories.findHistory(userId, query);
     return { items, total, page: query.page, limit: query.limit };
   }
 
   async historyDetail(id: string, userId: string) {
-    const history = await this.histories.findOne({ id, userId });
+    const history = await this.histories.findOwnedById(id, userId);
     if (!history) throw new BusinessException(ERROR_CODES.COMMON.NOT_FOUND);
-    const pairs = await this.pairHistories.findMany({
-      where: { sessionId: history.sessionId, userId },
-      order: { id: 'ASC' },
-    });
+    const pairs = await this.pairHistories.findBySession(history.sessionId, userId);
     return {
       invoice: history,
       scannedPairs: pairs,
