@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Inject, forwardRef } from '@nestjs/common';
 import { DataSource, QueryRunner } from 'typeorm';
 //
 import { ERROR_CODES } from 'src/default/error/error.code';
@@ -8,6 +8,9 @@ import { KycStatus, KycType } from 'src/default/common/enums/kyc.enum';
 import { KycVerificationRepository } from 'src/modules/kyc/repository';
 import { UserAuthValidator } from 'src/modules/auth/validators/user-auth.validator';
 import { RewardsService } from '../rewards/rewards.service';
+import { RedemptionsService } from '../redemptions/redemptions.service';
+import { PlaceCartOrderDto } from '../redemptions/dto/place-cart-order.dto';
+import { VerifyOrderDto } from '../redemptions/dto/verify-order.dto';
 import {
   RedemptionCartRepository,
   RedemptionCartItemRepository,
@@ -22,6 +25,8 @@ export class RedemptionCartService {
     private readonly redemptionCartRepository: RedemptionCartRepository,
     private readonly redemptionCartItemRepository: RedemptionCartItemRepository,
     private readonly rewardsService: RewardsService,
+    // @Inject(forwardRef(() => RedemptionsService))
+    private readonly redemptionsService: RedemptionsService,
     private readonly kycVerificationRepository: KycVerificationRepository,
     private readonly userAuthValidator: UserAuthValidator,
     private readonly dataSource: DataSource
@@ -305,5 +310,27 @@ export class RedemptionCartService {
     }
 
     return this.getCart(userId);
+  }
+
+  /**
+   * Place order for all items in active cart
+   *
+   * @param userId
+   * @param dto
+   * @returns
+   */
+  async placeCartOrder(userId: number, dto: PlaceCartOrderDto) {
+    return this.redemptionsService.placeCartOrder(userId, dto);
+  }
+
+  /**
+   * Verify OTP for cart order
+   *
+   * @param userId
+   * @param dto
+   * @returns
+   */
+  async verifyCartOrder(userId: number, dto: VerifyOrderDto) {
+    return this.redemptionsService.verifyCartOrder(userId, dto);
   }
 }

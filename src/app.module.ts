@@ -48,6 +48,7 @@ import { ProductsModule } from './modules/products/products.module';
 import { CartModule } from './modules/cart/cart.module';
 import { EmployeeModule } from './modules/employee/employee.module';
 import { AdminModule } from './modules/admin/admin.module';
+import { RedemptionCartModule } from './modules/redemption-cart/redemption-cart.module';
 
 @Module({
   imports: [
@@ -97,6 +98,7 @@ import { AdminModule } from './modules/admin/admin.module';
     CartModule,
     EmployeeModule,
     AdminModule,
+    RedemptionCartModule,
   ],
   providers: [
     {

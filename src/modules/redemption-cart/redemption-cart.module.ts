@@ -9,9 +9,10 @@ import {
 import { KycModule } from '../kyc/kyc.module';
 import { AuthModule } from '../auth/auth.module';
 import { RewardsModule } from '../rewards/rewards.module';
+import { RedemptionsModule } from '../redemptions/redemptions.module';
 
 @Module({
-  imports: [AuthModule, KycModule, forwardRef(() => RewardsModule)],
+  imports: [AuthModule, KycModule, RewardsModule, RedemptionsModule],
   controllers: [RedemptionCartController],
   providers: [RedemptionCartService, RedemptionCartRepository, RedemptionCartItemRepository],
   exports: [RedemptionCartService, RedemptionCartRepository, RedemptionCartItemRepository],

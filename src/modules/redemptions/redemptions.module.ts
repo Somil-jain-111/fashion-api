@@ -22,7 +22,6 @@ import { KycModule } from '../kyc/kyc.module';
 import { AddressesModule } from '../addresses/addresses.module';
 import { RewardsModule } from '../rewards/rewards.module';
 import { DynamicConfigModule } from '../dynamic-config/dynamic-config.module';
-import { RedemptionCartModule } from '../redemption-cart/redemption-cart.module';
 
 @Module({
   imports: [
@@ -32,10 +31,25 @@ import { RedemptionCartModule } from '../redemption-cart/redemption-cart.module'
     AddressesModule,
     RewardsModule,
     DynamicConfigModule,
-    RedemptionCartModule,
   ],
   controllers: [RedemptionsController],
   providers: [
+    RedemptionsService,
+    TransactionService,
+    OrderRepository,
+    OrderItemRepository,
+    PointHistoryRepository,
+    ShippingDetailRepository,
+    VoucherRepository,
+    ProductProvider,
+    IdempotencyService,
+    RedemptionOtpValidator,
+    RedemptionProviderResponseHandler,
+    RedemptionProviderPayloadBuilder,
+    OrderPlaceProvider,
+    AppConfigService,
+  ],
+  exports: [
     RedemptionsService,
     TransactionService,
     OrderRepository,

@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Req, UseGuards, UseInterceptors } from '@nestjs/common';
 import { JwtAuthGuard } from 'src/default/common/guards/jwt-auth.guard';
 import { RolesGuard } from 'src/default/common/guards/roles.guard';
 import { Roles } from 'src/default/common/decorators/roles.decorator';
@@ -6,8 +6,11 @@ import { UserRole } from 'src/default/common/enums/user-type.enum';
 import { ResponseMessage } from 'src/default/common/decorators/response-message.decorator';
 import { NoCache } from 'src/default/cache/cache.decorator';
 import { DataSanitizer } from 'src/default/common/utils/sanitize.utils';
+import { IdempotencyInterceptor } from 'src/default/common/interceptors/idempotency-check.interceptor';
 import { RedemptionCartService } from './redemption-cart.service';
 import { ManageCartItemDto } from './dto/manage-cart-item.dto';
+import { PlaceCartOrderDto } from '../redemptions/dto/place-cart-order.dto';
+import { VerifyOrderDto } from '../redemptions/dto/verify-order.dto';
 
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles([UserRole.RETAILER])
@@ -30,6 +33,26 @@ export class RedemptionCartController {
   async manageCartItem(@Req() req: any, @Body() dto: ManageCartItemDto) {
     const userId = Number(req.user.id);
     const response = await this.redemptionCartService.manageCartItem(userId, dto);
+    return DataSanitizer.sanitizeData(response);
+  }
+
+  @NoCache()
+  @UseInterceptors(IdempotencyInterceptor)
+  @Post('place-order')
+  @ResponseMessage('Cart order placed successfully. OTP has been sent.')
+  async placeOrder(@Req() req: any, @Body() dto: PlaceCartOrderDto) {
+    const userId = Number(req.user.id);
+    const response = await this.redemptionCartService.placeCartOrder(userId, dto);
+    return DataSanitizer.sanitizeData(response);
+  }
+
+  @NoCache()
+  @UseInterceptors(IdempotencyInterceptor)
+  @Post('verify-order')
+  @ResponseMessage('Redemption cart OTP verified and order placed successfully')
+  async verifyOrder(@Req() req: any, @Body() dto: VerifyOrderDto) {
+    const userId = Number(req.user.id);
+    const response = await this.redemptionCartService.verifyCartOrder(userId, dto);
     return DataSanitizer.sanitizeData(response);
   }
 
