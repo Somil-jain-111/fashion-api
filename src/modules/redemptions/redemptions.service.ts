@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { forwardRef, Inject, Injectable } from '@nestjs/common';
 import { KycStatus, KycType } from 'src/default/common/enums/kyc.enum';
 import { KycVerificationRepository } from 'src/modules/kyc/repository';
 import {
@@ -45,6 +45,7 @@ export class RedemptionsService {
     private rewardsService: RewardsService,
     private orderRepository: OrderRepository,
     private orderItemRepository: OrderItemRepository,
+    @Inject(forwardRef(() => RedemptionCartService))
     private redemptionCartService: RedemptionCartService,
     private shippingDetailRepository: ShippingDetailRepository,
     private userAuthValidator: UserAuthValidator,

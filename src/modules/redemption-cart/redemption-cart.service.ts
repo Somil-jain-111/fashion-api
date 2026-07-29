@@ -25,7 +25,7 @@ export class RedemptionCartService {
     private readonly redemptionCartRepository: RedemptionCartRepository,
     private readonly redemptionCartItemRepository: RedemptionCartItemRepository,
     private readonly rewardsService: RewardsService,
-    // @Inject(forwardRef(() => RedemptionsService))
+    @Inject(forwardRef(() => RedemptionsService))
     private readonly redemptionsService: RedemptionsService,
     private readonly kycVerificationRepository: KycVerificationRepository,
     private readonly userAuthValidator: UserAuthValidator,

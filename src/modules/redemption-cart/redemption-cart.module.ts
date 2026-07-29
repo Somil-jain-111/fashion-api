@@ -12,7 +12,7 @@ import { RewardsModule } from '../rewards/rewards.module';
 import { RedemptionsModule } from '../redemptions/redemptions.module';
 
 @Module({
-  imports: [AuthModule, KycModule, RewardsModule, RedemptionsModule],
+  imports: [AuthModule, KycModule, RewardsModule, forwardRef(() => RedemptionsModule)],
   controllers: [RedemptionCartController],
   providers: [RedemptionCartService, RedemptionCartRepository, RedemptionCartItemRepository],
   exports: [RedemptionCartService, RedemptionCartRepository, RedemptionCartItemRepository],
