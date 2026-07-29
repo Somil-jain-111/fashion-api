@@ -18,6 +18,7 @@ import {
   User,
   ShippingDetail,
   OrderStatusHistory,
+  OrderItem,
 } from '../../auth/entities';
 
 import { OrderStatus } from '../enum/order-status.enum';
@@ -52,11 +53,11 @@ export class Order extends BaseEntity {
   @Column({ type: 'text', nullable: true })
   remarks?: string | null;
 
-  @Column({ type: 'varchar', length: 255, nullable: false })
-  product_id!: string;
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  product_id?: string | null;
 
-  @Column({ type: 'varchar', length: 255, nullable: false })
-  product_name!: string;
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  product_name?: string | null;
 
   @Column({ type: 'text', nullable: true })
   product_remarks?: string | null;
@@ -139,6 +140,9 @@ export class Order extends BaseEntity {
 
   @OneToMany(() => PointHistory, (pointHistory) => pointHistory.order)
   pointHistory?: PointHistory[];
+
+  @OneToMany(() => OrderItem, (item) => item.order, { cascade: true })
+  items!: OrderItem[];
 
   @OneToMany(() => OrderStatusHistory, (history) => history.order)
   statusHistory?: OrderStatusHistory[];
