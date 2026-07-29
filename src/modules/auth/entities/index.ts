@@ -34,3 +34,5 @@ export * from '../../cart/entities/cart-items.entity';
 export * from '../../cart/entities/cart.entity';
 export * from '../../invoices/entities/invoice-pair-scan-history.entity';
 export * from '../../invoices/entities/invoice-scan-history.entity';
+export * from '../../payment/entities/payout.entity'
+export * from '../../payment/entities/point-purchase.entity'

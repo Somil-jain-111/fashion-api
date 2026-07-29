@@ -62,6 +62,15 @@ export class UserRepository extends BaseRepository<User> {
     });
   }
 
+  async findByIdForUpdate(userId: number, queryRunner: QueryRunner): Promise<User | null> {
+    return queryRunner.manager
+      .getRepository(User)
+      .createQueryBuilder('user')
+      .setLock('pessimistic_write')
+      .where('user.id = :userId', { userId })
+      .getOne();
+  }
+
   async updateOtp(
     userId: number,
     otp: string,
