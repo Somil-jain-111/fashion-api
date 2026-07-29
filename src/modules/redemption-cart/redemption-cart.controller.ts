@@ -11,7 +11,7 @@ import { ManageCartItemDto } from './dto/manage-cart-item.dto';
 
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles([UserRole.RETAILER])
-@Controller('redemptions/cart')
+@Controller('redemptions-cart')
 export class RedemptionCartController {
   constructor(private readonly redemptionCartService: RedemptionCartService) {}
 
