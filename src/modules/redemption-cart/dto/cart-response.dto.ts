@@ -15,7 +15,6 @@ export class CartItemResponseDto {
 
 export class CartResponseDto {
   cartId: string;
-  status: string;
   totalQuantity: number;
   totalBasePoints: number;
   isPanVerified: boolean;

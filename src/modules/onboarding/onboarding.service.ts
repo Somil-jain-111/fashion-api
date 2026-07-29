@@ -320,6 +320,7 @@ export class OnboardingService {
         userId,
         KycType.GST
       );
+
       gstKycComplete = !!gstKyc;
     } else {
       gstKycComplete = true;

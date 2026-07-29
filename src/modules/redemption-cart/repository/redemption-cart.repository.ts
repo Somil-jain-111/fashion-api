@@ -1,11 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { DataSource, QueryRunner } from 'typeorm';
 //
-import {
-  RedemptionCart,
-  RedemptionCartItem,
-  RedemptionCartStatus,
-} from 'src/modules/auth/entities';
+import { RedemptionCart, RedemptionCartItem } from 'src/modules/auth/entities';
 import { BaseRepository } from 'src/default/common/repositories/base.repository';
 
 @Injectable()
@@ -22,7 +18,9 @@ export class RedemptionCartRepository extends BaseRepository<RedemptionCart> {
     return repo.findOne({
       where: {
         user: { id: userId },
-        status: RedemptionCartStatus.ACTIVE,
+      },
+      order: {
+        id: 'ASC',
       },
       relations: ['items'],
     });
@@ -33,5 +31,11 @@ export class RedemptionCartRepository extends BaseRepository<RedemptionCart> {
 export class RedemptionCartItemRepository extends BaseRepository<RedemptionCartItem> {
   constructor(dataSource: DataSource) {
     super(dataSource.getRepository(RedemptionCartItem));
+  }
+
+  async deleteCartItemsByCartId(cartId: number, queryRunner?: QueryRunner) {
+    const repo = this.getRepository(queryRunner);
+
+    return await repo.delete({ cart: { id: cartId } });
   }
 }

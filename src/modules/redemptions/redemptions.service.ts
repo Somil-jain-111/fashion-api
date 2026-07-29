@@ -9,7 +9,6 @@ import {
 } from 'src/modules/redemptions/repository';
 import { RedemptionCartRepository } from '../redemption-cart/repository/redemption-cart.repository';
 import { RedemptionCartService } from '../redemption-cart/redemption-cart.service';
-import { RedemptionCartStatus } from '../redemption-cart/enums/redemption-cart-status.enum';
 import { DynamicConfigRepository } from 'src/modules/dynamic-config/repository';
 import { CommonUtils } from 'src/default/common/utils/common.utils';
 import { BusinessException } from 'src/default/error/business.exception';
@@ -478,15 +477,13 @@ export class RedemptionsService {
         await this.pointHistoryRepository.save(pointHistoryObj, queryRunner);
       }
 
-      // Mark active cart as PLACED and link order_id
+      // Flush cart items once checked out
       const activeCart = await this.redemptionCartRepository.findActiveCartByUser(
         userId,
         queryRunner
       );
       if (activeCart) {
-        activeCart.status = RedemptionCartStatus.PLACED;
-        activeCart.order = { id: order.id } as any;
-        await this.redemptionCartRepository.save(activeCart, queryRunner);
+        await this.redemptionCartService.clearCartItems(activeCart.id, queryRunner);
       }
     });
 

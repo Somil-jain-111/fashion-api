@@ -16,7 +16,6 @@ export * from '../../redemptions/entities/order.entity';
 export * from '../../redemptions/entities/order-item.entity';
 export * from '../../redemption-cart/entities/redemption-cart.entity';
 export * from '../../redemption-cart/entities/redemption-cart-item.entity';
-export * from '../../redemption-cart/enums/redemption-cart-status.enum';
 export * from '../../redemptions/entities/shipping-details.entity';
 export * from '../../redemptions/entities/voucher.entity';
 export * from '../../invoices/entities/invoice-assortment.entity';
@@ -34,5 +33,5 @@ export * from '../../cart/entities/cart-items.entity';
 export * from '../../cart/entities/cart.entity';
 export * from '../../invoices/entities/invoice-pair-scan-history.entity';
 export * from '../../invoices/entities/invoice-scan-history.entity';
-export * from '../../payment/entities/payout.entity'
-export * from '../../payment/entities/point-purchase.entity'
+export * from '../../payment/entities/payout.entity';
+export * from '../../payment/entities/point-purchase.entity';
