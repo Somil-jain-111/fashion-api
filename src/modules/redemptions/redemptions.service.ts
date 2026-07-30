@@ -35,6 +35,7 @@ import { DataSource, QueryRunner } from 'typeorm';
 import { AppConfigService } from 'src/default/config/config.service';
 import { DateHelper } from 'src/default/common/helper/date.helper';
 import { ParentOrderType } from './enum/order-type.enum';
+import { RedemptionType } from './enum/redemption-type.enum';
 
 @Injectable()
 export class RedemptionsService {
@@ -230,7 +231,7 @@ export class RedemptionsService {
       );
 
       // Create Single Child Order Item
-      const itemTxnId = `${masterOrderNumber}_1`;
+      const itemTxnId = CommonUtils.generateTransactionID();
 
       const savedOrderItem = await this.orderItemRepository.save(
         {
@@ -748,6 +749,7 @@ export class RedemptionsService {
             user: { id: user.id },
             order: { id: order.id },
             points: grandTotalDeduction,
+            type: RedemptionType.REDEMPTION,
             description: 'ORDER PLACED',
             status: PointStatusEnum.redeem,
             date: new Date(),
