@@ -1,13 +1,13 @@
 import { Entity, Column, ManyToOne, OneToOne, JoinColumn, Index } from 'typeorm';
 
-import { Order, Voucher } from '../../auth/entities';
+import { Order, ShippingDetail, Voucher } from '../../auth/entities';
 import { OrderStatus } from '../enum/order-status.enum';
 import { BaseEntity } from '../../../default/common/entities';
 
 @Entity({ name: 'order_items' })
 @Index('idx_order_item_order', ['order'])
 @Index('idx_order_item_status', ['status'])
-@Index('idx_order_item_number', ['itemOrderNumber'])
+@Index('idx_order_item_number', ['orderNumber'])
 export class OrderItem extends BaseEntity {
   @ManyToOne(() => Order, (order) => order.items, {
     nullable: false,
@@ -16,8 +16,8 @@ export class OrderItem extends BaseEntity {
   @JoinColumn({ name: 'order_id' })
   order!: Order;
 
-  @Column({ type: 'varchar', length: 100, nullable: false, name: 'item_order_number' })
-  itemOrderNumber!: string;
+  @Column({ type: 'varchar', length: 100, nullable: false, name: 'order_number' })
+  orderNumber!: string;
 
   @Column({ type: 'varchar', length: 255, nullable: false, name: 'product_id' })
   productId!: string;
@@ -76,4 +76,9 @@ export class OrderItem extends BaseEntity {
     cascade: true,
   })
   voucher?: Voucher | null;
+
+  @OneToOne(() => ShippingDetail, (shipping) => shipping.orderItem, {
+    cascade: true,
+  })
+  shippingDetail!: ShippingDetail;
 }

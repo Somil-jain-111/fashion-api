@@ -261,13 +261,13 @@ export class RedemptionCartService {
    * @param itemId
    * @returns
    */
-  async removeItem(userId: number, itemId: number | string): Promise<CartResponseDto> {
+  async removeItem(userId: number, itemId: number): Promise<CartResponseDto> {
     const cart = await this.getOrCreateActiveCart(userId);
-    const itemToDelete = (cart.items || []).find((item) => String(item.id) === String(itemId));
+    // const itemToDelete = (cart.items || []).find((item) => String(item.id) === String(itemId));
 
-    if (itemToDelete) {
-      await this.redemptionCartItemRepository.deleteById(itemToDelete.id);
-    }
+    // if (itemToDelete) {
+    await this.redemptionCartItemRepository.deleteById(itemId);
+    // }
 
     return this.getCart(userId);
   }
@@ -283,7 +283,7 @@ export class RedemptionCartService {
     await this.redemptionCartRepository.update(
       { id: cartId },
       {
-        totalQuantity: 0,
+        totalItems: 0,
         totalBasePoints: 0,
         tdsPoints: 0,
         tdsPercentage: 0,

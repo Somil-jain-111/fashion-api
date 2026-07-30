@@ -14,8 +14,7 @@ export class RedemptionCartRepository extends BaseRepository<RedemptionCart> {
     userId: number,
     queryRunner?: QueryRunner
   ): Promise<RedemptionCart | null> {
-    const repo = queryRunner ? queryRunner.manager.getRepository(RedemptionCart) : this.repository;
-    return repo.findOne({
+    return await this.getRepository(queryRunner).findOne({
       where: {
         user: { id: userId },
       },

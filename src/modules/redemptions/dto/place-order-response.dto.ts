@@ -11,9 +11,10 @@ export class PlaceOrderResponseDto {
     expiredAt: Date;
   };
 
-  constructor(data: { order: any; shippingDetail?: any; otpDetails: any }) {
-    const { order, shippingDetail, otpDetails } = data;
-    this.order = new OrderSummaryResponseDto({ order, shippingDetail });
+  constructor(data: { order: any; otpDetails: any }) {
+    const { order, otpDetails } = data;
+    this.order = new OrderSummaryResponseDto({ order });
+
     this.otp = {
       orderId: order.id?.toString() || '',
       otpRefId: otpDetails.otpRefId,

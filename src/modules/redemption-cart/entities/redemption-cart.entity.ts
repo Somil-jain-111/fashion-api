@@ -11,7 +11,7 @@ export class RedemptionCart extends BaseEntity {
   @JoinColumn({ name: 'user_id' })
   user!: User;
 
-  @Column({ type: 'int', default: 0, name: 'total_quantity' })
+  @Column({ type: 'int', default: 0, name: 'total_items' })
   totalItems!: number;
 
   @Column({ type: 'float', default: 0, name: 'total_base_points' })
