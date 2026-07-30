@@ -236,9 +236,9 @@ export class OnboardingService {
       });
 
       // Link store information to user
-      await this.userRepository.updateById(userId, {
-        storeInformation: { id: storeInfo.id } as any,
-      });
+      // await this.userRepository.updateById(userId, {
+      //   storeInformation: { id: storeInfo.id } as any,
+      // });
     }
 
     return {
