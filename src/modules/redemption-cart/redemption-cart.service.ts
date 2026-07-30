@@ -54,7 +54,7 @@ export class RedemptionCartService {
       cart = await this.redemptionCartRepository.save(
         {
           user: { id: userId } as any,
-          totalQuantity: 0,
+          totalItems: 0,
           totalBasePoints: 0,
           tdsPoints: 0,
           tdsPercentage: 0,
@@ -87,7 +87,7 @@ export class RedemptionCartService {
   ): Promise<RedemptionCart> {
     const items = cart.items || [];
 
-    const totalQuantity = items.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
+    const totalItems = items.length;
     const totalBasePoints = items.reduce(
       (sum, item) => sum + Number(item.pricePoint || 0) * Number(item.quantity || 0),
       0
@@ -123,7 +123,7 @@ export class RedemptionCartService {
       tdsPercentage = Number(calculation.panTax);
     }
 
-    cart.totalQuantity = totalQuantity;
+    cart.totalItems = totalItems;
     cart.totalBasePoints = totalBasePoints;
     cart.tdsPoints = tdsPoints;
     cart.tdsPercentage = tdsPercentage;
@@ -172,7 +172,7 @@ export class RedemptionCartService {
 
     return {
       cartId: String(cart.id),
-      totalQuantity: cart.totalQuantity,
+      totalItems: cart.totalItems,
       totalBasePoints: cart.totalBasePoints,
       isPanVerified: cart.isPanVerified,
       tdsPercentage: cart.tdsPercentage,

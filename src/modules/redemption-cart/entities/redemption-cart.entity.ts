@@ -1,4 +1,4 @@
-import { Entity, Column, ManyToOne, OneToMany, JoinColumn, Index } from 'typeorm';
+import { Entity, Column, ManyToOne, OneToMany, JoinColumn, Index, OneToOne } from 'typeorm';
 //
 import { User } from '../../auth/entities';
 import { RedemptionCartItem } from './redemption-cart-item.entity';
@@ -7,12 +7,12 @@ import { BaseEntity } from '../../../default/common/entities';
 @Entity({ name: 'redemption_carts' })
 @Index('idx_redemption_cart_user', ['user'])
 export class RedemptionCart extends BaseEntity {
-  @ManyToOne(() => User, { nullable: false })
+  @OneToOne(() => User, (user) => user.redemptionCart, { nullable: false })
   @JoinColumn({ name: 'user_id' })
   user!: User;
 
   @Column({ type: 'int', default: 0, name: 'total_quantity' })
-  totalQuantity!: number;
+  totalItems!: number;
 
   @Column({ type: 'float', default: 0, name: 'total_base_points' })
   totalBasePoints!: number;
