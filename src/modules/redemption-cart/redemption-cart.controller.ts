@@ -50,26 +50,6 @@ export class RedemptionCartController {
 
   @NoCache()
   @UseInterceptors(IdempotencyInterceptor)
-  @Post('place-order')
-  @ResponseMessage('Cart order placed successfully. OTP has been sent.')
-  async placeOrder(@Req() req: any, @Body() dto: PlaceCartOrderDto) {
-    const userId = Number(req.user.id);
-    const response = await this.redemptionCartService.placeCartOrder(userId, dto);
-    return DataSanitizer.sanitizeData(response);
-  }
-
-  @NoCache()
-  @UseInterceptors(IdempotencyInterceptor)
-  @Post('verify-order')
-  @ResponseMessage('Redemption cart OTP verified and order placed successfully')
-  async verifyOrder(@Req() req: any, @Body() dto: VerifyOrderDto) {
-    const userId = Number(req.user.id);
-    const response = await this.redemptionCartService.verifyCartOrder(userId, dto);
-    return DataSanitizer.sanitizeData(response);
-  }
-
-  @NoCache()
-  @UseInterceptors(IdempotencyInterceptor)
   @Post('remove-item')
   @ResponseMessage('Item removed from cart successfully')
   async removeItem(@Req() req: any, @Body() body: RemoveCartItemDto) {

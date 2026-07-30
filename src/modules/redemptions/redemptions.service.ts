@@ -34,6 +34,7 @@ import { OrderPlaceProvider } from './provider/order-place.provider';
 import { DataSource, QueryRunner } from 'typeorm';
 import { AppConfigService } from 'src/default/config/config.service';
 import { DateHelper } from 'src/default/common/helper/date.helper';
+import { ParentOrderType } from './enum/order-type.enum';
 
 @Injectable()
 export class RedemptionsService {
@@ -204,66 +205,60 @@ export class RedemptionsService {
       const orderType = productType;
       const masterOrderNumber = `ORD_${user.id}_${Date.now()}`;
 
-      // Create Parent Order
-      const parentOrder = this.orderRepository.create({
-        order_number: masterOrderNumber,
-        total_points: totalBasePoints,
-        quantity: totalQuantity,
-        taxable_points: taxablePoints,
-        tds_percentage: tdsPercentage,
-        tds_points: tdsPoints,
-        grand_total_points: grandTotalPoints,
-        user_remaining_points: Number(user.points || 0),
-        order_type: orderType,
-        status: OrderStatus.ORDER_REVIEW,
-        user: { id: user.id } as any,
-        product_id: dto.productId,
-        product_name: product.name || product.brand || 'Reward Product',
-        product_sku: product.sku || null,
-        product_image_url: product.main_image || null,
-        short_desc: product.short_description || product.long_description || null,
-        price_point: pricePoint,
-        cost: Number(product.atsCost || 0),
-        mrp: Number(product.mrp || 0),
-        remarks: 'SINGLE_ORDER',
+      const savedOrder = await this.orderRepository.save(
+        {
+          order_number: masterOrderNumber,
+          totalItems: 1,
+          total_points: totalBasePoints,
+          taxable_points: taxablePoints,
+          tds_percentage: tdsPercentage,
+          tds_points: tdsPoints,
+          grand_total_points: grandTotalPoints,
+          user_remaining_points: Number(user.points || 0),
+          order_type: ParentOrderType.SINGLE,
+          status: OrderStatus.ORDER_REVIEW,
+          user: { id: user.id } as any,
+          remarks: 'SINGLE_ORDER',
 
-        redemption_otp: String(otp),
-        redemption_otp_ref_id: otpRefId,
-        redemption_otp_expired_at: otpExpiryDate,
-        redemption_otp_mobile: otpMobile,
-        redemption_otp_receiver_type: otpReceiverType,
-      });
-
-      const savedOrder = await this.orderRepository.save(parentOrder, queryRunner);
+          redemption_otp: String(otp),
+          redemption_otp_ref_id: otpRefId,
+          redemption_otp_expired_at: otpExpiryDate,
+          redemption_otp_mobile: otpMobile,
+          redemption_otp_receiver_type: otpReceiverType,
+        },
+        queryRunner
+      );
 
       // Create Single Child Order Item
       const itemTxnId = `${masterOrderNumber}_1`;
-      const orderItemObj = this.orderItemRepository.create({
-        order: { id: savedOrder.id } as any,
-        itemOrderNumber: itemTxnId,
-        productId: dto.productId,
-        productName: product.name || product.brand || 'Reward Product',
-        productType: productType,
-        pricePoint: pricePoint,
-        quantity: 1,
-        totalPoints: pricePoint,
-        productSku: product.sku || null,
-        productImageUrl: product.main_image || null,
-        shortDesc: product.short_description || product.long_description || null,
-        cost: Number(product.atsCost || 0),
-        mrp: Number(product.mrp || 0),
-        status: OrderStatus.ORDER_REVIEW,
-        transactionId: itemTxnId,
-      });
 
-      await this.orderItemRepository.save(orderItemObj, queryRunner);
+      const savedOrderItem = await this.orderItemRepository.save(
+        {
+          order: { id: savedOrder.id } as any,
+          orderNumber: '',
+          productId: dto.productId,
+          productName: product.name || product.brand || 'Reward Product',
+          productType: productType,
+          pricePoint: pricePoint,
+          quantity: 1,
+          totalPoints: pricePoint,
+          productSku: product.sku || null,
+          productImageUrl: product.main_image || null,
+          shortDesc: product.short_description || product.long_description || null,
+          cost: Number(product.atsCost || 0),
+          mrp: Number(product.mrp || 0),
+          status: OrderStatus.ORDER_REVIEW,
+          transactionId: itemTxnId,
+        },
+        queryRunner
+      );
 
       // Create shipping detail if physical product
       let shippingDetail: any = null;
       if (hasPhysicalProduct && address) {
-        const shippingObj = this.shippingDetailRepository.create(
+        shippingDetail = await this.shippingDetailRepository.save(
           {
-            order: { id: savedOrder.id } as any,
+            orderItem: { id: savedOrderItem.id },
             addressLine1: address.addressLine1 || address.address || '',
             addressLine2: address.addressLine2 || null,
             landmark: address.landmark || null,
@@ -276,8 +271,6 @@ export class RedemptionsService {
           },
           queryRunner
         );
-
-        shippingDetail = await this.shippingDetailRepository.save(shippingObj, queryRunner);
       }
 
       ConsoleLogger.log('PLACE_ORDER_SUCCESS', {
@@ -295,7 +288,7 @@ export class RedemptionsService {
 
       return new PlaceOrderResponseDto({
         order: savedOrder,
-        shippingDetail,
+        // shippingDetail,
         otpDetails: {
           otpRefId,
           mobile: otpMobile,
@@ -369,6 +362,8 @@ export class RedemptionsService {
       // Re-verify catalog and check item types
       let totalBasePoints = 0;
       let totalQuantity = 0;
+      let totalMrp = 0;
+      let totalCost = 0;
       let hasPhysicalProduct = false;
       let hasDigitalProduct = false;
 
@@ -402,6 +397,8 @@ export class RedemptionsService {
         const qty = Number(cartItem.quantity || 1);
         totalBasePoints += pricePoint * qty;
         totalQuantity += qty;
+        totalMrp += Number(product.mrp || 0) * qty;
+        totalCost += Number(product.atsCost || 0) * qty;
       }
 
       if (totalBasePoints <= 0) {
@@ -463,83 +460,84 @@ export class RedemptionsService {
       const otpExpiryDate = new Date();
       otpExpiryDate.setMinutes(otpExpiryDate.getMinutes() + 5);
 
-      const orderType = hasPhysicalProduct ? (hasDigitalProduct ? 'mixed' : 'physical') : 'digital';
       const masterOrderNumber = `ORD_${user.id}_${Date.now()}`;
 
       // Create Parent Order
-      const parentOrder = this.orderRepository.create({
-        order_number: masterOrderNumber,
-        total_points: totalBasePoints,
-        quantity: totalQuantity,
-        taxable_points: taxablePoints,
-        tds_percentage: tdsPercentage,
-        tds_points: tdsPoints,
-        grand_total_points: grandTotalPoints,
-        user_remaining_points: Number(user.points || 0),
-        order_type: orderType,
-        status: OrderStatus.ORDER_REVIEW,
-        user: { id: user.id } as any,
-        remarks: 'CART_ORDER',
+      const savedOrder = await this.orderRepository.save(
+        {
+          order_number: masterOrderNumber,
+          order_type: ParentOrderType.CART,
+          totalItems: totalQuantity,
+          total_points: totalBasePoints,
+          taxable_points: taxablePoints,
+          tds_percentage: tdsPercentage,
+          tds_points: tdsPoints,
+          grand_total_points: grandTotalPoints,
+          user_remaining_points: Number(user.points || 0),
+          status: OrderStatus.ORDER_REVIEW,
+          user: { id: user.id } as any,
+          remarks: 'CART_ORDER',
 
-        redemption_otp: String(otp),
-        redemption_otp_ref_id: otpRefId,
-        redemption_otp_expired_at: otpExpiryDate,
-        redemption_otp_mobile: otpMobile,
-        redemption_otp_receiver_type: otpReceiverType,
-      });
-
-      const savedOrder = await this.orderRepository.save(parentOrder, queryRunner);
+          redemption_otp: String(otp),
+          redemption_otp_ref_id: otpRefId,
+          redemption_otp_expired_at: otpExpiryDate,
+          redemption_otp_mobile: otpMobile,
+          redemption_otp_receiver_type: otpReceiverType,
+        },
+        queryRunner
+      );
 
       // Create Child Order Items (NOTE: Redemption is always of 1 quantity, so if cart item says quantity 2, create 2 separate child order items)
       let itemSeq = 1;
       for (const cartItem of activeCart.items) {
         const metadata = cartItem.metadata || {};
         const qty = Number(cartItem.quantity || 1);
-        for (let q = 0; q < qty; q++) {
-          const itemTxnId = `${masterOrderNumber}_${itemSeq}`;
-          const orderItemObj = this.orderItemRepository.create({
-            order: { id: savedOrder.id } as any,
-            itemOrderNumber: itemTxnId,
-            productId: cartItem.productId,
-            productName: cartItem.productName,
-            productType: cartItem.productType,
-            pricePoint: cartItem.pricePoint,
-            quantity: 1,
-            totalPoints: cartItem.pricePoint,
-            productSku: metadata.sku || null,
-            productImageUrl: metadata.imageUrl || null,
-            shortDesc: metadata.description || null,
-            cost: Number(metadata.cost || 0),
-            mrp: Number(metadata.mrp || 0),
-            status: OrderStatus.ORDER_REVIEW,
-            transactionId: itemTxnId,
-          });
+        const itemProductType = String(cartItem.productType || '').toLowerCase();
 
-          await this.orderItemRepository.save(orderItemObj, queryRunner);
+        for (let q = 0; q < qty; q++) {
+          const itemTxnId = CommonUtils.generateTransactionID();
+
+          const savedOrderItem = await this.orderItemRepository.save(
+            {
+              order: { id: savedOrder.id } as any,
+              orderNumber: '',
+              productId: cartItem.productId,
+              productName: cartItem.productName,
+              productType: cartItem.productType,
+              pricePoint: cartItem.pricePoint,
+              quantity: 1,
+              totalPoints: cartItem.pricePoint,
+              productSku: metadata.sku || null,
+              productImageUrl: metadata.imageUrl || null,
+              shortDesc: metadata.description || null,
+              cost: Number(metadata.cost || 0),
+              mrp: Number(metadata.mrp || 0),
+              status: OrderStatus.ORDER_REVIEW,
+              transactionId: itemTxnId,
+            },
+            queryRunner
+          );
+
+          if (itemProductType === 'physical' && address) {
+            await this.shippingDetailRepository.save(
+              {
+                orderItem: { id: savedOrderItem.id } as any,
+                addressLine1: address.addressLine1 || address.address || '',
+                addressLine2: address.addressLine2 || null,
+                landmark: address.landmark || null,
+                pincode: address.pincode?.toString() || '',
+                cityName: address.cityName || null,
+                stateName: address.stateName || null,
+                zoneName: address.zoneName || null,
+                delivery_status: ShippingStatus.PENDING,
+                mobile: address.mobile,
+              },
+              queryRunner
+            );
+          }
+
           itemSeq++;
         }
-      }
-
-      // Create shipping detail if physical items present
-      let shippingDetail: any = null;
-      if (hasPhysicalProduct && address) {
-        const shippingObj = this.shippingDetailRepository.create(
-          {
-            order: { id: savedOrder.id } as any,
-            addressLine1: address.addressLine1 || address.address || '',
-            addressLine2: address.addressLine2 || null,
-            landmark: address.landmark || null,
-            pincode: address.pincode?.toString() || '',
-            cityName: address.cityName || null,
-            stateName: address.stateName || null,
-            zoneName: address.zoneName || null,
-            delivery_status: ShippingStatus.PENDING,
-            mobile: address.mobile,
-          },
-          queryRunner
-        );
-
-        shippingDetail = await this.shippingDetailRepository.save(shippingObj, queryRunner);
       }
 
       // Clean/clear active cart items once verification OTP is created/sent
@@ -560,7 +558,7 @@ export class RedemptionsService {
 
       return new PlaceOrderResponseDto({
         order: savedOrder,
-        shippingDetail,
+        // shippingDetail,
         otpDetails: {
           otpRefId,
           mobile: otpMobile,
@@ -600,10 +598,10 @@ export class RedemptionsService {
 
     const order = await this.orderRepository.findOne(
       {
-        id: dto.orderId,
+        id: Number(dto.orderId),
         user: { id: userId },
       },
-      ['items', 'shippingDetail']
+      ['items', 'items.shippingDetail']
     );
 
     if (!order) {
@@ -616,15 +614,7 @@ export class RedemptionsService {
 
     await this.redemptionOtpValidator.validate(order, dto.otp);
 
-    let shippingDetail: any = order.shippingDetail || null;
-    const isPhysical = order.order_type === 'physical' || order.order_type === 'mixed';
-
-    if (isPhysical && !shippingDetail) {
-      shippingDetail = await this.shippingDetailRepository.findOne({
-        order_id: order.id,
-      });
-    }
-
+    const orderItems = order.items || [];
     const grandTotalDeduction = Number(order.grand_total_points || 0);
 
     if (grandTotalDeduction > Number(user.points || 0)) {
@@ -636,13 +626,24 @@ export class RedemptionsService {
     const itemResults: any[] = [];
     let successCount = 0;
 
-    const orderItems = order.items || [];
-
     for (const item of orderItems) {
+      let itemShippingDetail = item.shippingDetail;
+      if (!itemShippingDetail && item.productType === 'physical') {
+        itemShippingDetail = await this.shippingDetailRepository.findOne({
+          orderItem: { id: item.id },
+        });
+      }
       const providerPayload = this.redemptionProviderPayloadBuilder.build(
         user,
-        item,
-        shippingDetail
+        {
+          ...item,
+          total_points: item.totalPoints || item.pricePoint,
+          quantity: item.quantity || 1,
+          transaction_id: item.transactionId,
+          product_sku: item.productSku,
+          order_type: item.productType,
+        },
+        itemShippingDetail
       );
 
       let providerResponse: any = null;
@@ -656,26 +657,62 @@ export class RedemptionsService {
       }
 
       await this.transactionUtils.runInTransaction(async (queryRunner: QueryRunner) => {
-        const res = await this.redemptionProviderResponseHandler.handleOrderItem(
+        const handleRes = await this.redemptionProviderResponseHandler.handle(
           {
-            orderItem: item,
+            user,
+            order: {
+              id: item.id,
+              order_type: item.productType,
+            },
+            shippingDetail: itemShippingDetail,
             providerResponse: providerResponse?.responseData || providerResponse,
           },
           queryRunner
         );
 
-        if (res.success) {
+        const isSuccess =
+          providerResponse?.statusCode === 200 ||
+          providerResponse?.responseData?.statusCode === 200;
+
+        if (isSuccess) {
           successCount++;
         }
 
+        const rewardsOrderNumber =
+          providerResponse?.responseData?.data?.order_number ||
+          providerResponse?.data?.order_number ||
+          null;
+
+        const itemRepo = queryRunner.manager.getRepository('order_items');
+        await itemRepo.update(
+          { id: item.id },
+          {
+            orderNumber: rewardsOrderNumber || item.transactionId,
+            status: isSuccess ? OrderStatus.PLACED : OrderStatus.FAILED,
+            ...(isSuccess
+              ? {}
+              : {
+                  errorMessage:
+                    providerResponse?.message ||
+                    providerResponse?.responseData?.message ||
+                    'Provider request failed',
+                }),
+          }
+        );
+
         itemResults.push({
           orderItemId: item.id,
+          orderNumber: rewardsOrderNumber || item.transactionId,
           productId: item.productId,
           productName: item.productName,
-          status: res.success ? OrderStatus.PLACED : OrderStatus.FAILED,
-          transactionId: res.transactionId || item.transactionId,
-          voucher: res.voucher || null,
-          errorMessage: res.errorMessage || null,
+          status: isSuccess ? OrderStatus.PLACED : OrderStatus.FAILED,
+          transactionId: item.transactionId,
+          voucher: handleRes || null,
+          errorMessage: !isSuccess
+            ? providerResponse?.message ||
+              providerResponse?.responseData?.message ||
+              'Provider request failed'
+            : null,
         });
       });
     }
@@ -706,7 +743,7 @@ export class RedemptionsService {
         const userRepo = queryRunner.manager.getRepository('users');
         await userRepo.update({ id: user.id }, { points: BigInt(userRemainingPoints) });
 
-        const pointHistoryObj = this.pointHistoryRepository.create(
+        await this.pointHistoryRepository.save(
           {
             user: { id: user.id },
             order: { id: order.id },
@@ -720,8 +757,6 @@ export class RedemptionsService {
           },
           queryRunner
         );
-
-        await this.pointHistoryRepository.save(pointHistoryObj, queryRunner);
       }
     });
 
@@ -729,7 +764,7 @@ export class RedemptionsService {
       orderId: order.id,
       orderNumber: order.order_number,
       status: finalStatus,
-      totalQuantity: order.quantity,
+      totalQuantity: order.totalItems,
       grandTotalPoints: grandTotalDeduction,
       userRemainingPoints,
       items: itemResults,
@@ -776,8 +811,8 @@ export class RedemptionsService {
 
     if (query.orderId) {
       const order = await this.orderRepository.findOne(
-        { id: query.orderId, user: { id: userId } as any },
-        ['shippingDetail', 'voucher']
+        { id: Number(query.orderId), user: { id: userId } as any },
+        ['items', 'items.shippingDetail', 'items.voucher']
       );
 
       if (!order) {
@@ -787,48 +822,61 @@ export class RedemptionsService {
       return {
         orderId: order.id.toString(),
         orderNumber: order.order_number || null,
-        productId: order.product_id,
-        productName: order.product_name,
-        productSku: order.product_sku || null,
-        productImageUrl: order.product_image_url || null,
         orderType: order.order_type,
-        quantity: Number(order.quantity),
-        mrp: order.mrp.toString(),
-        cost: order.cost.toString(),
-        pricePoint: order.price_point.toString(),
+        totalItems: Number(order.totalItems || 0),
         totalPoints: Number(order.total_points),
+        taxablePoints: Number(order.taxable_points),
+        tdsPercentage: Number(order.tds_percentage),
+        tdsPoints: Number(order.tds_points),
         grandTotalPoints: Number(order.grand_total_points),
         userRemainingPoints: Number(order.user_remaining_points),
         orderStatus: order.status,
         errorMessage: order.errorMessage || null,
-        created_at: order.created_at,
-        updated_at: order.updated_at,
-        shippingDetail: order.shippingDetail
-          ? {
-              id: order.shippingDetail.id.toString(),
-              shipDate: order.shippingDetail.ship_date || null,
-              trackingNumber: order.shippingDetail.tracking_number || null,
-              trackingUrl: order.shippingDetail.tracking_url || null,
-              podLink: order.shippingDetail.pod_link || null,
-              deliveryPartner: order.shippingDetail.delivery_partner || null,
-              addressLine1: order.shippingDetail.addressLine1,
-              addressLine2: order.shippingDetail.addressLine2 || null,
-              landmark: order.shippingDetail.landmark || null,
-              pincode: order.shippingDetail.pincode,
-              cityName: order.shippingDetail.cityName || null,
-              stateName: order.shippingDetail.stateName || null,
-              zoneName: order.shippingDetail.zoneName || null,
-              deliveryStatus: order.shippingDetail.delivery_status,
-              mobile: order.shippingDetail.mobile,
-            }
-          : null,
-        voucher: order.voucher
-          ? {
-              couponCode: order.voucher.coupon_code,
-              vPin: order.voucher.v_pin,
-              expiryDate: order.voucher.expiry_date,
-            }
-          : null,
+        created_at: order.createdAt,
+        updated_at: order.updatedAt,
+        items: (order.items || []).map((item) => ({
+          orderItemId: item.id.toString(),
+          orderNumber: item.orderNumber || null,
+          productId: item.productId,
+          productName: item.productName,
+          productType: item.productType,
+          productSku: item.productSku || null,
+          productImageUrl: item.productImageUrl || null,
+          shortDesc: item.shortDesc || null,
+          pricePoint: Number(item.pricePoint),
+          quantity: Number(item.quantity),
+          totalPoints: Number(item.totalPoints),
+          cost: Number(item.cost),
+          mrp: Number(item.mrp),
+          status: item.status,
+          errorMessage: item.errorMessage || null,
+          shippingDetail: item.shippingDetail
+            ? {
+                id: item.shippingDetail.id.toString(),
+                shipDate: item.shippingDetail.ship_date || null,
+                trackingNumber: item.shippingDetail.tracking_number || null,
+                trackingUrl: item.shippingDetail.tracking_url || null,
+                podLink: item.shippingDetail.pod_link || null,
+                deliveryPartner: item.shippingDetail.delivery_partner || null,
+                addressLine1: item.shippingDetail.addressLine1,
+                addressLine2: item.shippingDetail.addressLine2 || null,
+                landmark: item.shippingDetail.landmark || null,
+                pincode: item.shippingDetail.pincode,
+                cityName: item.shippingDetail.cityName || null,
+                stateName: item.shippingDetail.stateName || null,
+                zoneName: item.shippingDetail.zoneName || null,
+                deliveryStatus: item.shippingDetail.delivery_status,
+                mobile: item.shippingDetail.mobile,
+              }
+            : null,
+          voucher: item.voucher
+            ? {
+                couponCode: item.voucher.coupon_code,
+                vPin: item.voucher.v_pin,
+                expiryDate: item.voucher.expiry_date,
+              }
+            : null,
+        })),
       };
     }
 
@@ -838,17 +886,16 @@ export class RedemptionsService {
 
     const [orders, count] = await this.orderRepository.getRepository().findAndCount({
       where: { user: { id: userId } },
-      order: { created_at: 'DESC' },
+      order: { createdAt: 'DESC' },
       skip,
       take: limit,
-      relations: ['shippingDetail'],
+      relations: ['items', 'items.shippingDetail'],
     });
 
     const items = orders.map(
       (order) =>
         new OrderSummaryResponseDto({
           order,
-          shippingDetail: order.shippingDetail,
         })
     );
 
@@ -881,7 +928,7 @@ export class RedemptionsService {
     await this.userAuthValidator.validateActiveUserById(userId);
 
     const order = await this.orderRepository.findOne({
-      id: dto.orderId,
+      id: Number(dto.orderId),
       user: { id: userId } as any,
     });
 
