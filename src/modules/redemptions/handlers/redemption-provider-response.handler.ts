@@ -134,4 +134,62 @@ export class RedemptionProviderResponseHandler {
 
     return couponResponse;
   }
+
+  async handleOrderItem(
+    params: { orderItem: any; providerResponse: any },
+    queryRunner: QueryRunner
+  ) {
+    const { orderItem, providerResponse } = params;
+    const itemRepo = queryRunner.manager.getRepository('order_items');
+
+    if (providerResponse?.statusCode !== 200) {
+      const errMsg =
+        providerResponse?.message || providerResponse?.data?.message || 'Provider order failed';
+      await itemRepo.update(
+        { id: orderItem.id },
+        {
+          status: OrderStatus.FAILED,
+          errorMessage: errMsg,
+        }
+      );
+      return { success: false, errorMessage: errMsg, voucher: null };
+    }
+
+    const orderNumber = providerResponse.data?.order_number || orderItem.transactionId;
+    await itemRepo.update(
+      { id: orderItem.id },
+      {
+        transactionId: orderNumber,
+        status: OrderStatus.PLACED,
+      }
+    );
+
+    let voucherData: any = null;
+    const coupon = providerResponse.data?.coupon_Codes?.[0];
+
+    if (coupon) {
+      const voucherObj = this.voucherRepository.create(
+        {
+          coupon_code: coupon.coupon_code,
+          v_pin: coupon.v_pin,
+          expiry_date: coupon.expiry_date,
+          orderItem: { id: orderItem.id } as any,
+        },
+        queryRunner
+      );
+
+      const savedVoucher = await this.voucherRepository.save(voucherObj, queryRunner);
+      voucherData = {
+        coupon_code: savedVoucher.coupon_code,
+        v_pin: savedVoucher.v_pin,
+        expiry_date: savedVoucher.expiry_date,
+      };
+    }
+
+    return {
+      success: true,
+      transactionId: orderNumber,
+      voucher: voucherData,
+    };
+  }
 }

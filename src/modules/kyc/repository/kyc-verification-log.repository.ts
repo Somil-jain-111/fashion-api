@@ -1,7 +1,7 @@
 // src/modules/kyc/repository/kyc-verification-log.repository.ts
 
 import { Injectable } from '@nestjs/common';
-import { DataSource, EntityManager, Repository } from 'typeorm';
+import { DataSource, QueryRunner } from 'typeorm';
 import { KycLogStatus, KycType } from 'src/default/common/enums/kyc.enum';
 import { BaseRepository } from 'src/default/common/repositories/base.repository';
 import { KycVerificationLogEntity } from 'src/modules/auth/entities';
@@ -10,10 +10,6 @@ import { KycVerificationLogEntity } from 'src/modules/auth/entities';
 export class KycVerificationLogRepository extends BaseRepository<KycVerificationLogEntity> {
   constructor(dataSource: DataSource) {
     super(dataSource.getRepository(KycVerificationLogEntity));
-  }
-
-  private getKycLogRepository(manager?: EntityManager): Repository<KycVerificationLogEntity> {
-    return manager ? manager.getRepository(KycVerificationLogEntity) : this.repository;
   }
 
   async createLog(
@@ -29,31 +25,30 @@ export class KycVerificationLogRepository extends BaseRepository<KycVerification
       failureReason?: string;
       journeyId?: string;
     },
-    manager?: EntityManager
+    queryRunner?: QueryRunner
   ): Promise<KycVerificationLogEntity> {
-    const repo = this.getKycLogRepository(manager);
-
-    const entity = repo.create({
-      user: { id: data.user_id },
-      type: data.type,
-      status: data.status,
-      referenceId: data.referenceId,
-      documentNumber: data.documentNumber,
-      provider: data.provider,
-      requestPayload: data.requestPayload,
-      responsePayload: data.responsePayload,
-      failureReason: data.failureReason,
-      journeyId: data.journeyId,
-    });
-
-    return repo.save(entity);
+    return await this.save(
+      {
+        user: { id: data.user_id },
+        type: data.type,
+        status: data.status,
+        referenceId: data.referenceId,
+        documentNumber: data.documentNumber,
+        provider: data.provider,
+        requestPayload: data.requestPayload,
+        responsePayload: data.responsePayload,
+        failureReason: data.failureReason,
+        journeyId: data.journeyId,
+      },
+      queryRunner
+    );
   }
 
   async findByReferenceId(
     referenceId: string,
-    manager?: EntityManager
+    queryRunner?: QueryRunner
   ): Promise<KycVerificationLogEntity | null> {
-    return this.getKycLogRepository(manager).findOne({
+    return this.getRepository(queryRunner).findOne({
       where: {
         referenceId,
       },
@@ -66,9 +61,9 @@ export class KycVerificationLogRepository extends BaseRepository<KycVerification
   async findLatestByUserIdAndType(
     userId: number,
     type: KycType,
-    manager?: EntityManager
+    queryRunner?: QueryRunner
   ): Promise<KycVerificationLogEntity | null> {
-    return this.getKycLogRepository(manager).findOne({
+    return this.getRepository(queryRunner).findOne({
       where: {
         user: { id: userId },
         type,
@@ -81,9 +76,9 @@ export class KycVerificationLogRepository extends BaseRepository<KycVerification
 
   async findLogsByUserId(
     userId: number,
-    manager?: EntityManager
+    queryRunner?: QueryRunner
   ): Promise<KycVerificationLogEntity[]> {
-    return this.getKycLogRepository(manager).find({
+    return this.getRepository(queryRunner).find({
       where: {
         user: { id: userId },
       },
@@ -96,9 +91,9 @@ export class KycVerificationLogRepository extends BaseRepository<KycVerification
   async findLogsByUserIdAndType(
     userId: number,
     type: KycType,
-    manager?: EntityManager
+    queryRunner?: QueryRunner
   ): Promise<KycVerificationLogEntity[]> {
-    return this.getKycLogRepository(manager).find({
+    return this.getRepository(queryRunner).find({
       where: {
         user: { id: userId },
         type,
@@ -113,9 +108,9 @@ export class KycVerificationLogRepository extends BaseRepository<KycVerification
     userId: number,
     type: KycType,
     referenceId: string,
-    manager?: EntityManager
+    queryRunner?: QueryRunner
   ): Promise<KycVerificationLogEntity | null> {
-    return this.getKycLogRepository(manager).findOne({
+    return this.getRepository(queryRunner).findOne({
       where: {
         user: { id: userId },
         type,
@@ -131,13 +126,11 @@ export class KycVerificationLogRepository extends BaseRepository<KycVerification
     userId: string,
     type: KycType,
     expiryMinutes = 10,
-    manager?: EntityManager
+    queryRunner?: QueryRunner
   ): Promise<void> {
-    const repo = this.getKycLogRepository(manager);
-
     const expiryDate = new Date(Date.now() - expiryMinutes * 60 * 1000);
 
-    await repo
+    await this.getRepository(queryRunner)
       .createQueryBuilder()
       .update(KycVerificationLogEntity)
       .set({
@@ -154,11 +147,9 @@ export class KycVerificationLogRepository extends BaseRepository<KycVerification
   async expireAllPendingOtpLogs(
     userId: number,
     type: KycType,
-    manager?: EntityManager
+    queryRunner?: QueryRunner
   ): Promise<void> {
-    const repo = this.getKycLogRepository(manager);
-
-    await repo.update(
+    await this.getRepository(queryRunner).update(
       {
         user: { id: userId },
         type,
@@ -176,13 +167,11 @@ export class KycVerificationLogRepository extends BaseRepository<KycVerification
     type: KycType,
     referenceId: string,
     expiryMinutes = 10,
-    manager?: EntityManager
+    queryRunner?: QueryRunner
   ): Promise<KycVerificationLogEntity | null> {
-    const repo = this.getKycLogRepository(manager);
-
     const expiryDate = new Date(Date.now() - expiryMinutes * 60 * 1000);
 
-    return repo
+    return this.getRepository(queryRunner)
       .createQueryBuilder('log')
       .where('log.user_id = :userId', { userId })
       .andWhere('log.type = :type', { type })
