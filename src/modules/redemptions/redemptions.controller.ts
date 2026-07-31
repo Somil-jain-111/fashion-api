@@ -16,7 +16,7 @@ import { RolesGuard } from 'src/default/common/guards/roles.guard';
 import { Roles } from 'src/default/common/decorators/roles.decorator';
 import { UserRole } from 'src/default/common/enums/user-type.enum';
 import { PlaceOrderDto } from './dto/place-order.dto';
-import { PlaceCartOrderDto } from './dto/place-cart-order.dto';
+import { PlaceCartOrderDto } from '../redemption-cart/dto';
 import { NoCache } from 'src/default/cache/cache.decorator';
 import { ResponseMessage } from 'src/default/common/decorators/response-message.decorator';
 import { VerifyOrderDto } from './dto/verify-order.dto';
