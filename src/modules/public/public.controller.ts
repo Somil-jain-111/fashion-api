@@ -1,34 +1,24 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Post, Body, Req } from '@nestjs/common';
+//
 import { PublicService } from './public.service';
-import { CreatePublicDto } from './dto/create-public.dto';
-import { UpdatePublicDto } from './dto/update-public.dto';
+import { DataSanitizer } from 'src/default/common/utils/sanitize.utils';
+import { NoCache } from 'src/default/cache/cache.decorator';
+import { ResponseMessage } from 'src/default/common/decorators/response-message.decorator';
+import { ApproveKycDto } from './dto';
+import { SUCCESS_MESSAGES } from 'src/default/common/constants/success-messages.constant';
 
 @Controller('public')
 export class PublicController {
   constructor(private readonly publicService: PublicService) {}
 
-  @Post()
-  create(@Body() createPublicDto: CreatePublicDto) {
-    return this.publicService.create(createPublicDto);
-  }
+  @NoCache()
+  @Post('approve-kyc')
+  @ResponseMessage(SUCCESS_MESSAGES.ADMIN.KYC_VERIFIED)
+  async approveKycOfUser(@Req() req, @Body() body: ApproveKycDto) {
+    const privateKey = req.headers?.['x-secret-key'];
 
-  @Get()
-  findAll() {
-    return this.publicService.findAll();
-  }
+    const response = await this.publicService.approveManualKyc(privateKey, body.userId, body.type);
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.publicService.findOne(+id);
-  }
-
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updatePublicDto: UpdatePublicDto) {
-    return this.publicService.update(+id, updatePublicDto);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.publicService.remove(+id);
+    return DataSanitizer.sanitizeData(response);
   }
 }
