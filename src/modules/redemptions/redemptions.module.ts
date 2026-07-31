@@ -1,8 +1,9 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { RedemptionsService } from './redemptions.service';
 import { RedemptionsController } from './redemptions.controller';
 import {
   OrderRepository,
+  OrderItemRepository,
   PointHistoryRepository,
   ShippingDetailRepository,
   VoucherRepository,
@@ -21,6 +22,7 @@ import { KycModule } from '../kyc/kyc.module';
 import { AddressesModule } from '../addresses/addresses.module';
 import { RewardsModule } from '../rewards/rewards.module';
 import { DynamicConfigModule } from '../dynamic-config/dynamic-config.module';
+import { RedemptionCartModule } from '../redemption-cart/redemption-cart.module';
 
 @Module({
   imports: [
@@ -30,12 +32,30 @@ import { DynamicConfigModule } from '../dynamic-config/dynamic-config.module';
     AddressesModule,
     RewardsModule,
     DynamicConfigModule,
+    forwardRef(() => RedemptionCartModule),
   ],
   controllers: [RedemptionsController],
   providers: [
     RedemptionsService,
     TransactionService,
     OrderRepository,
+    OrderItemRepository,
+    PointHistoryRepository,
+    ShippingDetailRepository,
+    VoucherRepository,
+    ProductProvider,
+    IdempotencyService,
+    RedemptionOtpValidator,
+    RedemptionProviderResponseHandler,
+    RedemptionProviderPayloadBuilder,
+    OrderPlaceProvider,
+    AppConfigService,
+  ],
+  exports: [
+    RedemptionsService,
+    TransactionService,
+    OrderRepository,
+    OrderItemRepository,
     PointHistoryRepository,
     ShippingDetailRepository,
     VoucherRepository,

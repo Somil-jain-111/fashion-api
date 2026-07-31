@@ -29,4 +29,6 @@ export enum OrderStatus {
   OTP_VERIFIED = 'otp_verified',
   OTP_EXPIRED = 'otp_expired',
   CANCELLED = 'cancelled',
+  FAILED = 'failed',
+  PARTIAL = 'partial',
 }

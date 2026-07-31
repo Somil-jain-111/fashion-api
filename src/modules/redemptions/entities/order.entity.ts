@@ -1,47 +1,23 @@
-import {
-  Entity,
-  PrimaryGeneratedColumn,
-  Column,
-  CreateDateColumn,
-  UpdateDateColumn,
-  BaseEntity,
-  OneToOne,
-  JoinColumn,
-  ManyToOne,
-  OneToMany,
-  Index,
-} from 'typeorm';
-
-import {
-  Voucher,
-  PointHistory,
-  User,
-  ShippingDetail,
-  OrderStatusHistory,
-} from '../../auth/entities';
+import { Entity, Column, JoinColumn, ManyToOne, OneToMany, Index } from 'typeorm';
+import { PointHistory, User, OrderStatusHistory, OrderItem } from '../../auth/entities';
 
 import { OrderStatus } from '../enum/order-status.enum';
+import { BaseEntity } from '../../../default/common/entities';
+import { ParentOrderType } from '../enum/order-type.enum';
 
 @Entity({ name: 'orders' })
 @Index('idx_order_user', ['user'])
 @Index('idx_order_status', ['status'])
-@Index('idx_order_created', ['created_at'])
-@Index('idx_order_number', ['order_number'])
+@Index('idx_order_created', ['createdAt'])
 export class Order extends BaseEntity {
-  @PrimaryGeneratedColumn('increment', { type: 'bigint' })
-  id!: string;
-
   @Column({ type: 'varchar', length: 100, nullable: true })
   order_number!: string;
 
-  @Column({ type: 'float', default: 0 })
-  total_points!: number;
+  @Column({ type: 'int', default: 0, name: 'total_items' })
+  totalItems!: number;
 
-  @Column({ type: 'int', default: 1 })
-  quantity!: number;
-
-  @Column({ type: 'varchar', length: 100, nullable: false })
-  order_type!: string;
+  @Column({ type: 'enum', enum: ParentOrderType, default: ParentOrderType.SINGLE })
+  order_type!: ParentOrderType;
 
   @Column({ type: 'date', nullable: true })
   order_date?: Date | null;
@@ -52,41 +28,11 @@ export class Order extends BaseEntity {
   @Column({ type: 'text', nullable: true })
   remarks?: string | null;
 
-  @Column({ type: 'varchar', length: 255, nullable: false })
-  product_id!: string;
-
-  @Column({ type: 'varchar', length: 255, nullable: false })
-  product_name!: string;
-
-  @Column({ type: 'text', nullable: true })
-  product_remarks?: string | null;
-
-  @Column({ type: 'varchar', length: 255, nullable: true })
-  product_sku?: string | null;
-
-  @Column({ type: 'float', default: 0 })
-  price_point!: number;
-
-  @Column({ type: 'varchar', length: 500, nullable: true })
-  short_desc?: string | null;
-
-  @Column({ type: 'varchar', length: 50, nullable: true })
-  rating?: string | null;
-
-  @Column({ type: 'varchar', length: 500, nullable: true })
-  product_image_url?: string | null;
-
-  @Column({ type: 'float', default: 0 })
-  cost!: number;
-
-  @Column({ type: 'float', default: 0 })
-  mrp!: number;
-
-  @Column({ type: 'bigint', nullable: true })
-  parent_id?: bigint | null;
-
   @Column({ type: 'float', default: 0 })
   user_remaining_points!: number;
+
+  @Column({ type: 'float', default: 0 })
+  total_points!: number;
 
   @Column({ type: 'tinyint', default: 0 })
   tds_percentage!: number;
@@ -95,10 +41,10 @@ export class Order extends BaseEntity {
   taxable_points!: number;
 
   @Column({ type: 'float', default: 0 })
-  grand_total_points!: number;
+  tds_points!: number;
 
   @Column({ type: 'float', default: 0 })
-  tds_points!: number;
+  grand_total_points!: number;
 
   @Column({ type: 'varchar', length: 100, nullable: true })
   transaction_id?: string | null;
@@ -113,8 +59,6 @@ export class Order extends BaseEntity {
   @Column({ type: 'varchar', name: 'error_message', nullable: true })
   errorMessage?: string | null;
 
-  @Column({ type: 'bigint' })
-  user_id!: string;
   @ManyToOne(() => User, (user) => user.orders, {
     nullable: false,
   })
@@ -127,27 +71,14 @@ export class Order extends BaseEntity {
   @JoinColumn({ name: 'created_by' })
   order_placedBy?: User | null;
 
-  @OneToOne(() => ShippingDetail, (shipping) => shipping.order, {
-    cascade: true,
-  })
-  shippingDetail!: ShippingDetail;
-
-  @OneToOne(() => Voucher, (voucher) => voucher.order, {
-    nullable: true,
-  })
-  voucher?: Voucher | null;
-
   @OneToMany(() => PointHistory, (pointHistory) => pointHistory.order)
   pointHistory?: PointHistory[];
 
+  @OneToMany(() => OrderItem, (item) => item.order, { cascade: true })
+  items!: OrderItem[];
+
   @OneToMany(() => OrderStatusHistory, (history) => history.order)
   statusHistory?: OrderStatusHistory[];
-
-  @CreateDateColumn({ type: 'datetime' })
-  created_at!: Date;
-
-  @UpdateDateColumn({ type: 'datetime' })
-  updated_at!: Date;
 
   @Column({ name: 'redemption_otp', type: 'varchar', length: 10, nullable: true })
   redemption_otp: string;

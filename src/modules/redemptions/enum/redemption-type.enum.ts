@@ -1,7 +1,8 @@
 export enum RedemptionType {
-  UPI = 'upi',
-  DIGITAL = 'digital',
-  PHYSICAL = 'physical',
+  REDEMPTION = 'redemption',
+  //
   EARN = 'earn',
+  //
+  UPI = 'upi',
   BANK = 'bank',
 }

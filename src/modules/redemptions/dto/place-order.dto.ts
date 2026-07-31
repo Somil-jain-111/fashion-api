@@ -1,9 +1,9 @@
 import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
 
 export class PlaceOrderDto {
-  @IsNotEmpty()
+  @IsOptional()
   @IsString()
-  productId: string;
+  productId?: string;
 
   @IsOptional()
   @IsString()

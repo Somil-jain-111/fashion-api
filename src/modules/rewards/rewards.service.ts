@@ -257,10 +257,10 @@ export class RewardsService {
         },
       });
 
-      await this.apiResponseRepository.updateResponseByTransactionId(
-        data.transactionId,
-        { ...errorData, responseMessage: error?.message }
-      );
+      await this.apiResponseRepository.updateResponseByTransactionId(data.transactionId, {
+        ...errorData,
+        responseMessage: error?.message,
+      });
 
       throw new BusinessException(ERROR_CODES.PAYMENT.PAYMENT_FAILED);
     }
