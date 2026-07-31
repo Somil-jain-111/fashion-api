@@ -37,6 +37,18 @@ export class AadhaarProvider {
     private readonly apiResponseRepository: ApiResponseRepository
   ) {}
 
+  maskAadhaarNumber(aadhaarNumber: string) {
+    const cleanedAadhaar = aadhaarNumber.replace(/\D/g, '');
+
+    if (cleanedAadhaar.length !== 12) {
+      throw new Error('Invalid Aadhaar number length. Must be exactly 12 digits.');
+    }
+
+    const lastFour = cleanedAadhaar.slice(8);
+
+    return `XXXX-XXXX-${lastFour}`;
+  }
+
   async generateOtp(data: GenerateAadhaarOtpInput): Promise<KycProviderResult> {
     const payload = {
       type: 'kyc_adhaar_otp_send',

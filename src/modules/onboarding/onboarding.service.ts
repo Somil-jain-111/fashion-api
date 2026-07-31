@@ -377,6 +377,10 @@ export class OnboardingService {
   async submitProfile(userId: number) {
     const status = await this.getStatus(userId);
 
+    if (status.isSubmitted) {
+      throw new BusinessException(ERROR_CODES.ONBOARD.ALREADY_SUBMITTED_FOR_APPROVAL);
+    }
+
     if (!status.basicInfoComplete) {
       throw new BusinessException(ERROR_CODES.ONBOARD.INCOMPLETE_BASIC_INFO);
     }
@@ -425,8 +429,9 @@ export class OnboardingService {
     });
 
     return {
-      message: 'Profile submitted for L1 approval successfully',
       applicationId: status.applicationId,
+      status: status.overallStatus,
+      isSubmitted: status.isSubmitted,
     };
   }
 

@@ -330,18 +330,30 @@ export class KycService {
     /**
      * 6. Save verified Aadhaar only in kyc_verifications
      */
+    const aadhaarName = aadhaarData.full_name || aadhaarData.name || user.username;
+
     const encryptedProviderResponse = this.encryptKycData(providerResult.responseData);
     const encryptedProfileImage = this.encryptKycData(uploadedAadhaarImage || '');
-    const encryptedVerifiedName = this.encryptKycData(
-      aadhaarData.full_name || aadhaarData.name || user.username
-    );
+    const encryptedVerifiedName = this.encryptKycData(aadhaarName);
+
+    const maskedDocumentNumber =
+      aadhaarData.masked_aadhaar ||
+      aadhaarData.maskedAadhaar ||
+      this.aadhaarProvider.maskAadhaarNumber(aadhaarName);
+
+    const metadata = {
+      profileImage: encryptedProfileImage,
+      maskedDocumentNumber: maskedDocumentNumber,
+      dob: aadhaarData?.dob,
+      gender: aadhaarData?.gender,
+    };
 
     await this.kycVerificationRepository.upsertVerifiedKyc({
       userId: userId,
       type: KycType.AADHAAR,
       referenceId,
       documentNumber: otpLog.documentNumber,
-      maskedDocumentNumber: aadhaarData.masked_aadhaar || aadhaarData.maskedAadhaar || null,
+      maskedDocumentNumber: maskedDocumentNumber,
       verifiedName: encryptedVerifiedName,
       provider: 'REWARDS_API',
       providerRequest: {
@@ -350,12 +362,7 @@ export class KycService {
         otp: '******',
       },
       providerResponse: encryptedProviderResponse,
-      metadata: {
-        profileImage: encryptedProfileImage,
-        dob: aadhaarData.dob ? this.encryptKycData(aadhaarData.dob) : null,
-        gender: aadhaarData.gender ? this.encryptKycData(aadhaarData.gender) : null,
-        address: aadhaarData.address ? this.encryptKycData(aadhaarData.address) : null,
-      },
+      metadata: metadata,
     });
 
     /**
@@ -375,6 +382,7 @@ export class KycService {
       verified: true,
       referenceId,
       message: 'Aadhaar verified successfully',
+      metadata,
     };
   }
 
@@ -491,6 +499,15 @@ export class KycService {
       this.encryptKycData(panProviderResult.responseData),
     ]);
 
+    const maskedDocumentNumber = this.panProvider.maskPanNumber(pan);
+
+    const metadata = {
+      matchScore,
+      maskedDocumentNumber: maskedDocumentNumber,
+      panImage: encryptedPanImage,
+      aadhaarLinked: panApiData?.aadhaar_linked,
+    };
+
     await this.kycVerificationRepository.upsertVerifiedKyc({
       userId: userId,
       type: KycType.PAN,
@@ -498,14 +515,10 @@ export class KycService {
       documentNumber: encryptedPan,
       verifiedName: encryptedUserName,
       provider: 'REWARDS_API',
-      maskedDocumentNumber: this.panProvider.maskPanNumber(pan),
+      maskedDocumentNumber: maskedDocumentNumber,
       providerRequest: panProviderResult.requestPayload,
       providerResponse: encryptedApiData,
-      metadata: {
-        matchScore,
-        panImage: encryptedPanImage,
-        aadhaarLinked: panApiData?.aadhaar_linked,
-      },
+      metadata: metadata,
     });
 
     ConsoleLogger.log('VERIFY_PAN_SUCCESS', {
@@ -518,7 +531,8 @@ export class KycService {
 
     return {
       verified: true,
-      matchScore,
+      referenceId: transactionId,
+      metadata,
     };
   }
 
@@ -601,13 +615,15 @@ export class KycService {
     const gstApiData = gstProviderResult.responseData?.data || {};
 
     const encryptedApiData = await this.encryptKycData(gstProviderResult.responseData);
+    const maskedDocumentNumber = this.gstProvider.maskGstNumber(gst);
 
     const metadata = {
-      tradeName: gstApiData.business_name,
-      legalName: gstApiData.legal_name,
-      address: gstApiData.address,
-      status: gstApiData.gstin_status,
-      dateOfRegistration: gstApiData.date_of_registration,
+      maskedDocumentNumber: maskedDocumentNumber,
+      tradeName: gstApiData?.business_name,
+      legalName: gstApiData?.legal_name,
+      address: gstApiData?.address,
+      status: gstApiData?.gstin_status,
+      dateOfRegistration: gstApiData?.date_of_registration,
     };
 
     await this.kycVerificationRepository.upsertVerifiedKyc({
@@ -615,7 +631,7 @@ export class KycService {
       type: KycType.GST,
       referenceId: transactionId,
       documentNumber: encryptedGst,
-      maskedDocumentNumber: this.gstProvider.maskGstNumber(gst),
+      maskedDocumentNumber: metadata.maskedDocumentNumber,
       verifiedName: this.encryptKycData(
         gstApiData.trade_name || gstApiData.legal_name || user.username
       ),
@@ -640,7 +656,8 @@ export class KycService {
 
     return {
       verified: true,
-      ...metadata,
+      referenceId: transactionId,
+      metadata,
     };
   }
 
