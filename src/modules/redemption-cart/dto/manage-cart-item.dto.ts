@@ -1,4 +1,6 @@
-import { IsNotEmpty, IsNumber, IsString, Min } from 'class-validator';
+import { IsEnum, IsNotEmpty, IsNumber, IsString, Min } from 'class-validator';
+//
+import { CartAction } from '../enum';
 
 export class ManageCartItemDto {
   @IsString()
@@ -6,6 +8,10 @@ export class ManageCartItemDto {
   productId: string;
 
   @IsNumber({}, { message: 'Quantity must be a valid number' })
-  @Min(0, { message: 'Quantity cannot be negative' })
+  @Min(1, { message: 'Quantity must be at least 1' })
   quantity: number;
+
+  @IsNotEmpty({ message: 'Action is required' })
+  @IsEnum(CartAction, { message: 'Action must be either add or remove' })
+  action: CartAction;
 }

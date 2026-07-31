@@ -18,10 +18,7 @@ import { NoCache } from 'src/default/cache/cache.decorator';
 import { DataSanitizer } from 'src/default/common/utils/sanitize.utils';
 import { IdempotencyInterceptor } from 'src/default/common/interceptors/idempotency-check.interceptor';
 import { RedemptionCartService } from './redemption-cart.service';
-import { ManageCartItemDto } from './dto/manage-cart-item.dto';
-import { PlaceCartOrderDto } from '../redemptions/dto/place-cart-order.dto';
-import { VerifyOrderDto } from '../redemptions/dto/verify-order.dto';
-import { RemoveCartItemDto } from '../redemptions/dto';
+import { ManageCartItemDto, RemoveCartItemDto } from './dto';
 
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles([UserRole.RETAILER])
