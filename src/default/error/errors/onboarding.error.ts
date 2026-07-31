@@ -39,4 +39,9 @@ export const ONBOARD_ERRORS = {
     message: 'Location (latitude & longitude) does not match the provided pincode.',
     statusCode: 400,
   },
+  ALREADY_SUBMITTED_FOR_APPROVAL: {
+    code: 'ONBOARD_009',
+    message: 'Your profile is not needing any submission for approval',
+    statusCode: 400,
+  },
 } as const;
