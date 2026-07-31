@@ -10,14 +10,13 @@ import { KycVerificationRepository } from 'src/modules/kyc/repository';
 import { UserAuthValidator } from 'src/modules/auth/validators/user-auth.validator';
 import { RewardsService } from '../rewards/rewards.service';
 import { RedemptionsService } from '../redemptions/redemptions.service';
-import { PlaceCartOrderDto, VerifyOrderDto } from '../redemptions/dto';
+import { VerifyOrderDto } from '../redemptions/dto';
 import {
   RedemptionCartRepository,
   RedemptionCartItemRepository,
 } from './repository/redemption-cart.repository';
 import { RedemptionCart } from 'src/modules/auth/entities';
-import { ManageCartItemDto } from './dto/manage-cart-item.dto';
-import { CartItemResponseDto, CartResponseDto } from './dto/cart-response.dto';
+import { ManageCartItemDto, CartItemResponseDto, CartResponseDto, PlaceCartOrderDto } from './dto';
 
 @Injectable()
 export class RedemptionCartService {
@@ -196,7 +195,7 @@ export class RedemptionCartService {
     await this.userAuthValidator.validateActiveUserById(userId);
     const cart = await this.getOrCreateActiveCart(userId);
 
-    const existingItem = (cart.items || []).find((item) => item.productId === dto.productId);
+    const existingItem = (cart.items || []).find((item) => item.productId === dto.projectProductId);
     const action = String(dto.action || CartAction.ADD).toLowerCase();
     const qty = Number(dto.quantity || 1);
 
@@ -229,7 +228,7 @@ export class RedemptionCartService {
 
     // Fetch product details from RewardsService to ensure catalog validity and get metadata
     const rewardProductResponse = await this.rewardsService.getAllProducts(userId, {
-      projectProductId: dto.productId,
+      projectProductId: dto.projectProductId,
       page: 1,
       limit: 1,
     });
@@ -263,7 +262,7 @@ export class RedemptionCartService {
     } else {
       await this.redemptionCartItemRepository.save({
         cart: { id: cart.id } as any,
-        productId: dto.productId,
+        productId: dto.projectProductId,
         productName,
         quantity: targetQuantity,
         pricePoint,

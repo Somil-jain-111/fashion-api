@@ -5,7 +5,7 @@ import { CartAction } from '../enum';
 export class ManageCartItemDto {
   @IsString()
   @IsNotEmpty({ message: 'Product ID is required' })
-  productId: string;
+  projectProductId: string;
 
   @IsNumber({}, { message: 'Quantity must be a valid number' })
   @Min(1, { message: 'Quantity must be at least 1' })

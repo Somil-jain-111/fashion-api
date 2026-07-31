@@ -18,7 +18,7 @@ import { RewardsService } from '../rewards/rewards.service';
 import { OrderStatus, ShippingStatus } from './enum/order-status.enum';
 import { PointHistoryCalculationStrategy } from 'src/default/common/stratagy/tds.stratagy.interface';
 import { PlaceOrderDto } from './dto/place-order.dto';
-import { PlaceCartOrderDto } from './dto/place-cart-order.dto';
+import { PlaceCartOrderDto } from '../redemption-cart/dto';
 import { OrderSummaryResponseDto } from './dto/order-summary-response.dto';
 import { PlaceOrderResponseDto } from './dto/place-order-response.dto';
 import { UserAuthValidator } from '../auth/validators/user-auth.validator';
@@ -70,7 +70,7 @@ export class RedemptionsService {
   async placeOrder(userId: number, dto: PlaceOrderDto): Promise<PlaceOrderResponseDto> {
     const tag = 'RedemptionService.placeOrder';
 
-    if (!dto.productId) {
+    if (!dto.projectProductId) {
       throw new BusinessException(ERROR_CODES.COMMON.BAD_REQUEST_RESON, {
         reason: 'Product ID is required for placing a single redemption order.',
       });
@@ -79,7 +79,7 @@ export class RedemptionsService {
     return this.transactionUtils.runInTransaction(async (queryRunner) => {
       ConsoleLogger.log('PLACE_ORDER_START', {
         tag,
-        data: { userId, productId: dto.productId, addressId: dto.addressId },
+        data: { userId, productId: dto.projectProductId, addressId: dto.addressId },
       });
 
       const user = await this.userAuthValidator.validateActiveUserById(userId);
@@ -115,7 +115,7 @@ export class RedemptionsService {
 
       // Verify product catalog directly
       const rewardProductResponse = await this.rewardsService.getAllProducts(userId, {
-        projectProductId: dto.productId,
+        projectProductId: dto.projectProductId,
         page: 1,
         limit: 1,
       });
@@ -237,7 +237,7 @@ export class RedemptionsService {
         {
           order: { id: savedOrder.id } as any,
           orderNumber: '',
-          productId: dto.productId,
+          productId: dto.projectProductId,
           productName: product.name || product.brand || 'Reward Product',
           productType: productType,
           pricePoint: pricePoint,
