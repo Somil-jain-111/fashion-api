@@ -36,6 +36,7 @@ import { AppConfigService } from 'src/default/config/config.service';
 import { DateHelper } from 'src/default/common/helper/date.helper';
 import { ParentOrderType } from './enum/order-type.enum';
 import { RedemptionType } from './enum/redemption-type.enum';
+import { OtpHelper } from 'src/default/common/helper/otp.helper';
 
 @Injectable()
 export class RedemptionsService {
@@ -195,9 +196,7 @@ export class RedemptionsService {
       }
 
       const isProd = this.appConfigService.isProduction() || this.appConfigService.isQa();
-      const otp = isProd
-        ? Math.floor(100000 + Math.random() * 900000).toString()
-        : this.appConfigService.getNonProdRewardsOtp();
+      const otp = isProd ? OtpHelper.generateOtp() : this.appConfigService.getNonProdOtp();
       const otpRefId = await CommonUtils.generateTransactionID();
 
       const otpExpiryDate = new Date();
@@ -453,9 +452,7 @@ export class RedemptionsService {
       }
 
       const isProd = this.appConfigService.isProduction() || this.appConfigService.isQa();
-      const otp = isProd
-        ? Math.floor(100000 + Math.random() * 900000).toString()
-        : this.appConfigService.getNonProdRewardsOtp();
+      const otp = isProd ? OtpHelper.generateOtp() : this.appConfigService.getNonProdOtp();
       const otpRefId = await CommonUtils.generateTransactionID();
 
       const otpExpiryDate = new Date();
@@ -950,9 +947,7 @@ export class RedemptionsService {
 
     if (isExpired) {
       const isProd = this.appConfigService.isProduction() || this.appConfigService.isQa();
-      otp = isProd
-        ? Math.floor(100000 + Math.random() * 900000).toString()
-        : this.appConfigService.getNonProdRewardsOtp().toString();
+      otp = isProd ? OtpHelper.generateOtp() : this.appConfigService.getNonProdOtp().toString();
       otpRefId = await CommonUtils.generateTransactionID();
 
       otpExpiryDate = new Date();
