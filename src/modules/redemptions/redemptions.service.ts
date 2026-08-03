@@ -255,14 +255,14 @@ export class RedemptionsService {
         queryRunner
       );
 
-      await this.orderStatusHistoryRepository.save(
-        {
-          orderItem: { id: savedOrderItem.id } as any,
-          status: OrderStatus.ORDER_REVIEW,
-          remark: 'ORDER_REVIEW',
-        },
-        queryRunner
-      );
+      // await this.orderStatusHistoryRepository.save(
+      //   {
+      //     orderItem: { id: savedOrderItem.id } as any,
+      //     status: OrderStatus.ORDER_REVIEW,
+      //     remark: 'ORDER_REVIEW',
+      //   },
+      //   queryRunner
+      // );
 
       // Create shipping detail if physical product
       let shippingDetail: any = null;
@@ -527,14 +527,14 @@ export class RedemptionsService {
             queryRunner
           );
 
-          await this.orderStatusHistoryRepository.save(
-            {
-              orderItem: { id: savedOrderItem.id } as any,
-              status: OrderStatus.ORDER_REVIEW,
-              remark: 'ORDER_REVIEW',
-            },
-            queryRunner
-          );
+          // await this.orderStatusHistoryRepository.save(
+          //   {
+          //     orderItem: { id: savedOrderItem.id } as any,
+          //     status: OrderStatus.ORDER_REVIEW,
+          //     remark: 'ORDER_REVIEW',
+          //   },
+          //   queryRunner
+          // );
 
           if (itemProductType === 'physical' && address) {
             await this.shippingDetailRepository.save(
