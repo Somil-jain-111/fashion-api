@@ -36,7 +36,9 @@ export class OrderSummaryResponseDto {
       cost: Number(item.cost || 0),
       mrp: Number(item.mrp || 0),
       status: item.status || '',
-      shippingStatus: item.shippingDetail?.delivery_status || null,
+      shippingDetailStatus: item.shippingDetail?.delivery_status || '',
+      shippingDetailMobile: item.shippingDetail.mobile || '',
+      shippingDetailName: item.shippingDetail.fullname || '',
       statusHistory: (item.statusHistory || []).map((sh: any) => ({
         id: sh.id?.toString() || '',
         status: sh.status || '',
