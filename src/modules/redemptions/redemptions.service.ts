@@ -6,6 +6,7 @@ import {
   OrderItemRepository,
   PointHistoryRepository,
   ShippingDetailRepository,
+  OrderStatusHistoryRepository,
 } from 'src/modules/redemptions/repository';
 import { RedemptionCartService } from '../redemption-cart/redemption-cart.service';
 import { DynamicConfigRepository } from 'src/modules/dynamic-config/repository';
@@ -51,6 +52,7 @@ export class RedemptionsService {
     @Inject(forwardRef(() => RedemptionCartService))
     private redemptionCartService: RedemptionCartService,
     private shippingDetailRepository: ShippingDetailRepository,
+    private orderStatusHistoryRepository: OrderStatusHistoryRepository,
     private userAuthValidator: UserAuthValidator,
     private transactionUtils: TransactionService,
     private redemptionOtpValidator: RedemptionOtpValidator,
@@ -249,6 +251,15 @@ export class RedemptionsService {
           mrp: Number(product.mrp || 0),
           status: OrderStatus.ORDER_REVIEW,
           transactionId: itemTxnId,
+        },
+        queryRunner
+      );
+
+      await this.orderStatusHistoryRepository.save(
+        {
+          orderItem: { id: savedOrderItem.id } as any,
+          status: OrderStatus.ORDER_REVIEW,
+          remark: 'ORDER_REVIEW',
         },
         queryRunner
       );
@@ -516,6 +527,15 @@ export class RedemptionsService {
             queryRunner
           );
 
+          await this.orderStatusHistoryRepository.save(
+            {
+              orderItem: { id: savedOrderItem.id } as any,
+              status: OrderStatus.ORDER_REVIEW,
+              remark: 'ORDER_REVIEW',
+            },
+            queryRunner
+          );
+
           if (itemProductType === 'physical' && address) {
             await this.shippingDetailRepository.save(
               {
@@ -681,21 +701,34 @@ export class RedemptionsService {
           providerResponse?.data?.order_number ||
           null;
 
+        const itemStatus = isSuccess ? OrderStatus.PLACED : OrderStatus.FAILED;
+        const itemRemark = !isSuccess
+          ? providerResponse?.message ||
+            providerResponse?.responseData?.message ||
+            'Provider request failed'
+          : 'Order placed';
+
         const itemRepo = queryRunner.manager.getRepository('order_items');
         await itemRepo.update(
           { id: item.id },
           {
             orderNumber: rewardsOrderNumber || item.transactionId,
-            status: isSuccess ? OrderStatus.PLACED : OrderStatus.FAILED,
+            status: itemStatus,
             ...(isSuccess
               ? {}
               : {
-                  errorMessage:
-                    providerResponse?.message ||
-                    providerResponse?.responseData?.message ||
-                    'Provider request failed',
+                  errorMessage: itemRemark,
                 }),
           }
+        );
+
+        await this.orderStatusHistoryRepository.save(
+          {
+            orderItem: { id: item.id } as any,
+            status: itemStatus,
+            remark: itemRemark,
+          },
+          queryRunner
         );
 
         itemResults.push({
@@ -811,7 +844,7 @@ export class RedemptionsService {
     if (query.orderId) {
       const order = await this.orderRepository.findOne(
         { id: Number(query.orderId), user: { id: userId } as any },
-        ['items', 'items.shippingDetail', 'items.voucher']
+        ['items', 'items.shippingDetail', 'items.voucher', 'items.statusHistory']
       );
 
       if (!order) {
@@ -875,6 +908,12 @@ export class RedemptionsService {
                 expiryDate: item.voucher.expiry_date,
               }
             : null,
+          statusHistory: (item.statusHistory || []).map((sh) => ({
+            id: sh.id.toString(),
+            status: sh.status,
+            remark: sh.remark || null,
+            created_at: sh.created_at,
+          })),
         })),
       };
     }
@@ -888,7 +927,7 @@ export class RedemptionsService {
       order: { createdAt: 'DESC' },
       skip,
       take: limit,
-      relations: ['items', 'items.shippingDetail'],
+      relations: ['items', 'items.shippingDetail', 'items.statusHistory'],
     });
 
     const items = orders.map(

@@ -37,6 +37,12 @@ export class OrderSummaryResponseDto {
       mrp: Number(item.mrp || 0),
       status: item.status || '',
       shippingStatus: item.shippingDetail?.delivery_status || null,
+      statusHistory: (item.statusHistory || []).map((sh: any) => ({
+        id: sh.id?.toString() || '',
+        status: sh.status || '',
+        remark: sh.remark || null,
+        created_at: sh.created_at || null,
+      })),
     }));
   }
 }
