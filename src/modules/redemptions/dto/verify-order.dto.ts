@@ -7,6 +7,6 @@ export class VerifyOrderDto {
 
   @IsNotEmpty()
   @IsString()
-  @Length(6, 6)
+  @Length(4, 4)
   otp: string;
 }

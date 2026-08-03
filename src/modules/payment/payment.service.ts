@@ -23,6 +23,7 @@ import { PointPurchaseRepository } from './repository';
 import { RazorpayIntegration } from './integrations/razorpay.integration';
 import { calculatePaymentSplit } from './helper/payment-split.helper';
 import { PointPurchaseStatus } from './entities';
+import { OtpHelper } from 'src/default/common/helper/otp.helper';
 
 @Injectable()
 export class PaymentService {
@@ -411,8 +412,8 @@ export class PaymentService {
           const transaction_id = await CommonUtils.generateUniqueRefCode();
 
           const plainOtp = isLive
-            ? Math.floor(1000 + Math.random() * 9000).toString()
-            : this.appConfigService.getNonProdRewardsOtp();
+            ? OtpHelper.generateOtp()
+            : this.appConfigService.getNonProdOtp().toString();
 
           const otpEncrypted = CommonUtils.encrypt(String(plainOtp));
           const otpExpiry = DateHelper.getOtpExpiryDate();
@@ -507,8 +508,8 @@ export class PaymentService {
         plainOtp = CommonUtils.decrypt(payout.otp);
       } catch (e) {
         plainOtp = isLive
-          ? Math.floor(1000 + Math.random() * 9000).toString()
-          : this.appConfigService.getNonProdRewardsOtp()?.toString() || '9988';
+          ? OtpHelper.generateOtp()
+          : this.appConfigService.getNonProdOtp().toString();
 
         payout.otp = CommonUtils.encrypt(String(plainOtp));
         payout.otp_expiry = DateHelper.getOtpExpiryDate();
@@ -517,8 +518,8 @@ export class PaymentService {
       }
     } else {
       plainOtp = isLive
-        ? Math.floor(1000 + Math.random() * 9000).toString()
-        : this.appConfigService.getNonProdRewardsOtp()?.toString() || '9988';
+        ? OtpHelper.generateOtp()
+        : this.appConfigService.getNonProdOtp().toString();
 
       const otpEncrypted = CommonUtils.encrypt(String(plainOtp));
 
@@ -592,7 +593,7 @@ export class PaymentService {
 
     // OTP validation
     const isProduction = this.appConfigService.isProduction() || this.appConfigService.isQa();
-    const defaultOtp = this.appConfigService.getNonProdRewardsOtp()?.toString() || '9988';
+    const defaultOtp = this.appConfigService.getNonProdOtp().toString();
     const encryptedOtp = CommonUtils.encrypt(String(otp));
 
     if (isProduction) {
