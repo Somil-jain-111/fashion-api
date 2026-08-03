@@ -1,5 +1,5 @@
 import { Entity, Column, JoinColumn, ManyToOne, OneToMany, Index } from 'typeorm';
-import { PointHistory, User, OrderStatusHistory, OrderItem } from '../../auth/entities';
+import { PointHistory, User, OrderItem } from '../../auth/entities';
 
 import { OrderStatus } from '../enum/order-status.enum';
 import { BaseEntity } from '../../../default/common/entities';
@@ -76,9 +76,6 @@ export class Order extends BaseEntity {
 
   @OneToMany(() => OrderItem, (item) => item.order, { cascade: true })
   items!: OrderItem[];
-
-  @OneToMany(() => OrderStatusHistory, (history) => history.order)
-  statusHistory?: OrderStatusHistory[];
 
   @Column({ name: 'redemption_otp', type: 'varchar', length: 10, nullable: true })
   redemption_otp: string;

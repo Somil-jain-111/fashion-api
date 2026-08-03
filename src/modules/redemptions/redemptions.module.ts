@@ -7,6 +7,7 @@ import {
   PointHistoryRepository,
   ShippingDetailRepository,
   VoucherRepository,
+  OrderStatusHistoryRepository,
 } from 'src/modules/redemptions/repository';
 import { TransactionService } from 'src/default/databases/transaction';
 import { ProductProvider } from '../rewards/provider/products.provider';
@@ -43,6 +44,7 @@ import { RedemptionCartModule } from '../redemption-cart/redemption-cart.module'
     PointHistoryRepository,
     ShippingDetailRepository,
     VoucherRepository,
+    OrderStatusHistoryRepository,
     ProductProvider,
     IdempotencyService,
     RedemptionOtpValidator,
@@ -59,6 +61,7 @@ import { RedemptionCartModule } from '../redemption-cart/redemption-cart.module'
     PointHistoryRepository,
     ShippingDetailRepository,
     VoucherRepository,
+    OrderStatusHistoryRepository,
     ProductProvider,
     IdempotencyService,
     RedemptionOtpValidator,
