@@ -278,6 +278,7 @@ export class RedemptionsService {
             stateName: address.stateName || null,
             zoneName: address.zoneName || null,
             delivery_status: ShippingStatus.PENDING,
+            fullname: address?.name,
             mobile: address.mobile,
           },
           queryRunner
@@ -548,6 +549,7 @@ export class RedemptionsService {
                 stateName: address.stateName || null,
                 zoneName: address.zoneName || null,
                 delivery_status: ShippingStatus.PENDING,
+                fullname: address?.name,
                 mobile: address.mobile,
               },
               queryRunner
