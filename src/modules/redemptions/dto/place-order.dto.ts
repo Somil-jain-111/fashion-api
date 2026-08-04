@@ -8,4 +8,12 @@ export class PlaceOrderDto {
   @IsOptional()
   @IsString()
   addressId?: string;
+
+  @IsOptional()
+  @IsString()
+  name?: string;
+
+  @IsOptional()
+  @IsString()
+  mobile?: string;
 }
