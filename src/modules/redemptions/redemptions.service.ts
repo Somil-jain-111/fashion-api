@@ -966,21 +966,24 @@ export class RedemptionsService {
           shippingDetail: item.shippingDetail
             ? {
                 id: item.shippingDetail.id.toString(),
-                shipDate: item.shippingDetail.ship_date || null,
-                trackingNumber: item.shippingDetail.tracking_number || null,
-                trackingUrl: item.shippingDetail.tracking_url || null,
-                podLink: item.shippingDetail.pod_link || null,
-                deliveryPartner: item.shippingDetail.delivery_partner || null,
-                addressLine1: item.shippingDetail.addressLine1,
-                addressLine2: item.shippingDetail.addressLine2 || null,
-                landmark: item.shippingDetail.landmark || null,
-                pincode: item.shippingDetail.pincode,
-                cityName: item.shippingDetail.cityName || null,
-                stateName: item.shippingDetail.stateName || null,
-                zoneName: item.shippingDetail.zoneName || null,
                 name: item.shippingDetail?.fullname || null,
                 deliveryStatus: item.shippingDetail.delivery_status,
                 mobile: item.shippingDetail.mobile,
+
+                ...(item.productType == ProductType.PHYSICAL && {
+                  shipDate: item.shippingDetail.ship_date || null,
+                  trackingNumber: item.shippingDetail.tracking_number || null,
+                  trackingUrl: item.shippingDetail.tracking_url || null,
+                  podLink: item.shippingDetail.pod_link || null,
+                  deliveryPartner: item.shippingDetail.delivery_partner || null,
+                  addressLine1: item.shippingDetail.addressLine1,
+                  addressLine2: item.shippingDetail.addressLine2 || null,
+                  landmark: item.shippingDetail.landmark || null,
+                  pincode: item.shippingDetail.pincode,
+                  cityName: item.shippingDetail.cityName || null,
+                  stateName: item.shippingDetail.stateName || null,
+                  zoneName: item.shippingDetail.zoneName || null,
+                }),
               }
             : null,
           voucher: item.voucher
