@@ -38,6 +38,7 @@ import { DateHelper } from 'src/default/common/helper/date.helper';
 import { ParentOrderType } from './enum/order-type.enum';
 import { RedemptionType } from './enum/redemption-type.enum';
 import { OtpHelper } from 'src/default/common/helper/otp.helper';
+import { ProductType } from './enum/product-type.enum';
 
 @Injectable()
 export class RedemptionsService {
@@ -129,10 +130,17 @@ export class RedemptionsService {
         throw new BusinessException(ERROR_CODES.REWARDS.PRODUCT_NOT_FOUND);
       }
 
-      const productType = String(product.type || 'digital').toLowerCase();
+      const productType = String(product.type).toLowerCase();
+
+      if (!productType) {
+        throw new BusinessException(ERROR_CODES.COMMON.BAD_REQUEST_RESON, {
+          reason: 'Invalid Product.',
+        });
+      }
+
       let hasPhysicalProduct = false;
 
-      if (productType === 'physical') {
+      if (productType === ProductType.PHYSICAL) {
         hasPhysicalProduct = true;
         if (!config.physicalRedemptionEnabled) {
           throw new BusinessException(ERROR_CODES.REWARDS.PHYSICAL_REDEMPTION_DISABLED);
@@ -161,6 +169,17 @@ export class RedemptionsService {
 
         if (!address) {
           throw new BusinessException(ERROR_CODES.ADDRESS.ADDRESS_NOT_FOUND);
+        }
+      } else {
+        if (!dto.name) {
+          throw new BusinessException(ERROR_CODES.COMMON.BAD_REQUEST_RESON, {
+            reason: 'Name is required for digital redemption.',
+          });
+        }
+        if (!dto.mobile) {
+          throw new BusinessException(ERROR_CODES.COMMON.BAD_REQUEST_RESON, {
+            reason: 'Mobile number is required for digital redemption.',
+          });
         }
       }
 
@@ -191,6 +210,9 @@ export class RedemptionsService {
         }
         otpMobile = address.mobile;
         otpReceiverType = 'SHIPPING';
+      } else {
+        otpMobile = dto.mobile || user.mobile;
+        otpReceiverType = 'USER';
       }
 
       if (!otpMobile) {
@@ -264,7 +286,7 @@ export class RedemptionsService {
       //   queryRunner
       // );
 
-      // Create shipping detail if physical product
+      // Create shipping detail
       let shippingDetail: any = null;
       if (hasPhysicalProduct && address) {
         shippingDetail = await this.shippingDetailRepository.save(
@@ -278,8 +300,20 @@ export class RedemptionsService {
             stateName: address.stateName || null,
             zoneName: address.zoneName || null,
             delivery_status: ShippingStatus.PENDING,
-            fullname: address?.name,
+            fullname: address?.name || dto.name,
             mobile: address.mobile,
+          },
+          queryRunner
+        );
+      } else {
+        shippingDetail = await this.shippingDetailRepository.save(
+          {
+            orderItem: { id: savedOrderItem.id },
+            addressLine1: '',
+            pincode: '',
+            delivery_status: ShippingStatus.PENDING,
+            fullname: dto.name,
+            mobile: dto.mobile,
           },
           queryRunner
         );
@@ -298,8 +332,17 @@ export class RedemptionsService {
         },
       });
 
+      const orderDetails = await this.orderRepository.findOne(
+        {
+          id: savedOrder.id,
+          user: { id: userId },
+        },
+        ['items', 'items.shippingDetail'],
+        queryRunner
+      );
+
       return new PlaceOrderResponseDto({
-        order: savedOrder,
+        order: orderDetails,
         // shippingDetail,
         otpDetails: {
           otpRefId,
@@ -392,8 +435,9 @@ export class RedemptionsService {
           throw new BusinessException(ERROR_CODES.REWARDS.PRODUCT_NOT_FOUND);
         }
 
-        const productType = String(product.type || cartItem.productType || 'digital').toLowerCase();
-        if (productType === 'physical') {
+        const productType = String(product.type).toLowerCase();
+
+        if (productType === ProductType.PHYSICAL) {
           hasPhysicalProduct = true;
           if (!config.physicalRedemptionEnabled) {
             throw new BusinessException(ERROR_CODES.REWARDS.PHYSICAL_REDEMPTION_DISABLED);
@@ -428,6 +472,17 @@ export class RedemptionsService {
         if (!address) {
           throw new BusinessException(ERROR_CODES.ADDRESS.ADDRESS_NOT_FOUND);
         }
+      } else {
+        if (!dto.name) {
+          throw new BusinessException(ERROR_CODES.COMMON.BAD_REQUEST_RESON, {
+            reason: 'Name is required for digital redemption.',
+          });
+        }
+        if (!dto.mobile) {
+          throw new BusinessException(ERROR_CODES.COMMON.BAD_REQUEST_RESON, {
+            reason: 'Mobile number is required for digital redemption.',
+          });
+        }
       }
 
       // Calculate TDS
@@ -457,6 +512,9 @@ export class RedemptionsService {
         }
         otpMobile = address.mobile;
         otpReceiverType = 'SHIPPING';
+      } else {
+        otpMobile = dto.mobile || user.mobile;
+        otpReceiverType = 'USER';
       }
 
       if (!otpMobile) {
@@ -537,7 +595,7 @@ export class RedemptionsService {
           //   queryRunner
           // );
 
-          if (itemProductType === 'physical' && address) {
+          if (itemProductType === ProductType.PHYSICAL && address) {
             await this.shippingDetailRepository.save(
               {
                 orderItem: { id: savedOrderItem.id } as any,
@@ -549,8 +607,20 @@ export class RedemptionsService {
                 stateName: address.stateName || null,
                 zoneName: address.zoneName || null,
                 delivery_status: ShippingStatus.PENDING,
-                fullname: address?.name,
+                fullname: address?.name || dto.name,
                 mobile: address.mobile,
+              },
+              queryRunner
+            );
+          } else {
+            await this.shippingDetailRepository.save(
+              {
+                orderItem: { id: savedOrderItem.id } as any,
+                addressLine1: '',
+                pincode: '',
+                delivery_status: ShippingStatus.PENDING,
+                fullname: dto?.name || address?.name || user.username,
+                mobile: dto?.mobile || address?.mobile || user.mobile,
               },
               queryRunner
             );
@@ -576,8 +646,17 @@ export class RedemptionsService {
         },
       });
 
+      const orderDetails = await this.orderRepository.findOne(
+        {
+          id: savedOrder.id,
+          user: { id: userId },
+        },
+        ['items', 'items.shippingDetail'],
+        queryRunner
+      );
+
       return new PlaceOrderResponseDto({
-        order: savedOrder,
+        order: orderDetails,
         // shippingDetail,
         otpDetails: {
           otpRefId,
@@ -648,7 +727,7 @@ export class RedemptionsService {
 
     for (const item of orderItems) {
       let itemShippingDetail = item.shippingDetail;
-      if (!itemShippingDetail && item.productType === 'physical') {
+      if (!itemShippingDetail && item.productType === ProductType.PHYSICAL) {
         itemShippingDetail = await this.shippingDetailRepository.findOne({
           orderItem: { id: item.id },
         });
@@ -710,8 +789,7 @@ export class RedemptionsService {
             'Provider request failed'
           : 'Order placed';
 
-        const itemRepo = queryRunner.manager.getRepository('order_items');
-        await itemRepo.update(
+        await this.orderItemRepository.update(
           { id: item.id },
           {
             orderNumber: rewardsOrderNumber || item.transactionId,
@@ -721,7 +799,8 @@ export class RedemptionsService {
               : {
                   errorMessage: itemRemark,
                 }),
-          }
+          },
+          queryRunner
         );
 
         await this.orderStatusHistoryRepository.save(
@@ -899,6 +978,7 @@ export class RedemptionsService {
                 cityName: item.shippingDetail.cityName || null,
                 stateName: item.shippingDetail.stateName || null,
                 zoneName: item.shippingDetail.zoneName || null,
+                name: item.shippingDetail?.fullname || null,
                 deliveryStatus: item.shippingDetail.delivery_status,
                 mobile: item.shippingDetail.mobile,
               }

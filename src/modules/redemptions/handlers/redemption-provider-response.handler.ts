@@ -103,6 +103,14 @@ export class RedemptionProviderResponseHandler {
           queryRunner
         );
 
+        await this.shippingDetailRepository.update(
+          { orderItem: { id: order.id } as any },
+          {
+            delivery_status: ShippingStatus.DELIVERED,
+          },
+          queryRunner
+        );
+
         const coupon = providerResponse.data?.coupon_Codes?.[0];
 
         if (coupon) {
