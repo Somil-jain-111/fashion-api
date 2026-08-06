@@ -1,18 +1,20 @@
 import { Injectable } from '@nestjs/common';
-
 import { BusinessException } from 'src/default/error/business.exception';
 import { ERROR_CODES } from 'src/default/error/error.code';
 import { RolesRepository, UserRepository } from 'src/modules/auth/repository';
 import { UserStatus } from 'src/modules/auth/constants/auth.constants';
 import { UserAuthValidator } from 'src/modules/auth/validators/user-auth.validator';
 import { SendOtpDto } from 'src/modules/auth/dto/send-otp.dto';
-
 import { CommonUtils } from 'src/default/common/utils/common.utils';
 import { RedisService } from 'src/default/databases/redis/redis.service';
 import { DynamicConfigRepository } from 'src/modules/dynamic-config/repository';
 import { UserRole } from 'src/default/common/enums/user-type.enum';
 import { UserRoleConfig } from 'src/modules/dynamic-config/entities';
 import { OtpAttemptType } from '../enums/common.enum';
+import { KycStatus, KycType } from 'src/default/common/enums/kyc.enum';
+import { KycVerificationRepository } from 'src/modules/auth/repository';
+import { UserPartnerType } from 'src/default/common/enums/user-type.enum';
+import { RedemptionKYCRequirements } from 'src/default/common/constants/redemptions.option';
 
 export interface ValidateOtpAttemptsOptions {
   mobile: string | number;
@@ -37,8 +39,34 @@ export class UserValidator {
     private readonly roleRepository: RolesRepository,
     private readonly redisService: RedisService,
     private readonly userAuthValidator: UserAuthValidator,
-    private readonly dynamicConfigRepository: DynamicConfigRepository
+    private readonly dynamicConfigRepository: DynamicConfigRepository,
+    private readonly kycVerificationRepository: KycVerificationRepository
   ) {}
+
+  async validateUserKyc(user: any): Promise<{ isPanVerified: boolean }> {
+    const partnerType = user.partnerType || UserPartnerType.INDIVIDUAL;
+    const requiredKycs = RedemptionKYCRequirements[partnerType] || [KycType.PAN];
+
+    const verifiedKycs = await Promise.all(
+      requiredKycs.map((type: KycType) =>
+        this.kycVerificationRepository.findOne({
+          user: { id: user.id },
+          type: type as KycType,
+          status: KycStatus.VERIFIED,
+        })
+      )
+    );
+
+    const hasMissingKyc = verifiedKycs.some((kyc) => !kyc);
+    if (hasMissingKyc) {
+      throw new BusinessException(ERROR_CODES.KYC.KYC_REQUIRED_FOR_REDEMPTION);
+    }
+
+    const panIndex = requiredKycs.indexOf(KycType.PAN);
+    const isPanVerified = panIndex !== -1 ? Boolean(verifiedKycs[panIndex]) : false;
+
+    return { isPanVerified };
+  }
 
   async findOrCreateActiveUserByMobile(dto: SendOtpDto, createUser: boolean = true) {
     let user = await this.userRepository.findByMobile(dto.mobile);
