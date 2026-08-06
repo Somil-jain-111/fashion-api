@@ -1,5 +1,4 @@
 import { forwardRef, Inject, Injectable } from '@nestjs/common';
-import { KycStatus, KycType } from 'src/default/common/enums/kyc.enum';
 import { KycVerificationRepository } from 'src/modules/kyc/repository';
 import {
   OrderRepository,
@@ -100,24 +99,10 @@ export class RedemptionsService {
       // Validate KYC
       const skipKyc = config.additionalSettings?.skipKyc === true;
       let isPanVerified = false;
-      if (!skipKyc) {
-        const [aadhaarKyc, panKyc] = await Promise.all([
-          this.kycVerificationRepository.findOne({
-            user: { id: userId },
-            type: KycType.AADHAAR,
-            status: KycStatus.VERIFIED,
-          }),
-          this.kycVerificationRepository.findOne({
-            user: { id: userId },
-            type: KycType.PAN,
-            status: KycStatus.VERIFIED,
-          }),
-        ]);
 
-        if (!panKyc && !aadhaarKyc) {
-          throw new BusinessException(ERROR_CODES.KYC.KYC_REQUIRED_FOR_REDEMPTION);
-        }
-        isPanVerified = Boolean(panKyc);
+      if (!skipKyc) {
+        const kycResult = await this.userValidator.validateUserKyc(user);
+        isPanVerified = kycResult.isPanVerified;
       }
 
       // Verify product catalog directly
@@ -406,23 +391,8 @@ export class RedemptionsService {
       let isPanVerified = false;
 
       if (!skipKyc) {
-        const [aadhaarKyc, panKyc] = await Promise.all([
-          this.kycVerificationRepository.findOne({
-            user: { id: userId },
-            type: KycType.AADHAAR,
-            status: KycStatus.VERIFIED,
-          }),
-          this.kycVerificationRepository.findOne({
-            user: { id: userId },
-            type: KycType.PAN,
-            status: KycStatus.VERIFIED,
-          }),
-        ]);
-
-        if (!panKyc && !aadhaarKyc) {
-          throw new BusinessException(ERROR_CODES.KYC.KYC_REQUIRED_FOR_REDEMPTION);
-        }
-        isPanVerified = Boolean(panKyc);
+        const kycResult = await this.userValidator.validateUserKyc(user);
+        isPanVerified = kycResult.isPanVerified;
       }
 
       // Re-verify catalog and check item types
