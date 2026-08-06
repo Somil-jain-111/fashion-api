@@ -235,8 +235,7 @@ export class RedemptionsService {
       const otpRefId = await CommonUtils.generateTransactionID();
 
       const expirySeconds = otpValidation.expirySeconds;
-      const otpExpiryDate = new Date();
-      otpExpiryDate.setSeconds(otpExpiryDate.getSeconds() + expirySeconds);
+      const otpExpiryDate = OtpHelper.generateExpiryDate(expirySeconds);
 
       const orderType = productType;
       const masterOrderNumber = `ORD_${user.id}_${Date.now()}`;
@@ -546,8 +545,7 @@ export class RedemptionsService {
       const otpRefId = await CommonUtils.generateTransactionID();
 
       const expirySeconds = otpValidation.expirySeconds;
-      const otpExpiryDate = new Date();
-      otpExpiryDate.setSeconds(otpExpiryDate.getSeconds() + expirySeconds);
+      const otpExpiryDate = OtpHelper.generateExpiryDate(expirySeconds);
 
       const masterOrderNumber = `ORD_${user.id}_${Date.now()}`;
 
@@ -1105,8 +1103,7 @@ export class RedemptionsService {
       otpRefId = await CommonUtils.generateTransactionID();
 
       const expirySeconds = otpValidation.expirySeconds;
-      otpExpiryDate = new Date();
-      otpExpiryDate.setSeconds(otpExpiryDate.getSeconds() + expirySeconds);
+      otpExpiryDate = OtpHelper.generateExpiryDate(expirySeconds);
 
       await this.orderRepository.update(
         { id: order.id },

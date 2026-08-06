@@ -67,7 +67,7 @@ export class AuthService {
     }
 
     const expirySeconds = otpValidation.expirySeconds;
-    const otpExpiry = new Date(Date.now() + expirySeconds * 1000);
+    const otpExpiry = OtpHelper.generateExpiryDate(expirySeconds);
     const otp = CommonUtils.encrypt(otpPlain);
 
     await this.userRepository.updateOtp(user.id, otp, otpExpiry);
