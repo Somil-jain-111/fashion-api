@@ -6,6 +6,8 @@ import { AppConfigService } from 'src/default/config/config.service';
 import axios from 'axios';
 import { ConflictException } from '@nestjs/common';
 import { ConsoleLogger } from 'src/default/logger/console/console.service';
+import { MailerHelper } from '../helper/mailer.helper';
+import { OtpRateLimitTemplateData, OtpRateLimitUserData } from '../dto/mailer.dto';
 
 export class CommonUtils {
   private static appConfigService: AppConfigService;
@@ -437,54 +439,35 @@ export class CommonUtils {
 
   static async sendEmailOtp(data: { email: string; otp: string; name?: string }): Promise<any> {
     try {
-      const emailStr = String(data.email ?? '').trim();
-      if (!emailStr) {
-        ConsoleLogger.log('Email OTP skipped | reason=no email', 'CommonUtils');
-        return null;
-      }
-
-      const subject = 'Your OTP for Campus Shoes Loyalty Program';
-      const html =
-        `<p>Dear ${data.name ?? 'User'},</p>` +
-        `<p>Your OTP for verifying your email address is: <strong>${data.otp}</strong></p>` +
-        `<p>This OTP is valid for 5 minutes. Do not share it with anyone.</p>` +
-        `<p>Regards,<br/>Campus Shoes Loyalty Program</p>`;
-
-      const mailPayload = {
-        mailName: subject,
-        mailSubject: subject,
-        from: 'no-reply@almonds.ai',
-        to: [emailStr],
-        htmlContent: html,
-      };
-
-      ConsoleLogger.log(`Sending Email OTP | email=${emailStr}`, 'CommonUtils');
-
-      const response = await axios.post(
-        'https://communicationapi2.almond.solutions/api/mail',
-        mailPayload,
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: 'Bearer CAMPUS_EMAIL_AUTH_TOKEN',
-          },
-          maxBodyLength: Infinity,
-        }
-      );
-
-      ConsoleLogger.log(
-        `Email OTP sent | status=${response?.status} | email=${emailStr}`,
-        'CommonUtils'
-      );
-
-      return response.data;
+      return await MailerHelper.sendOtpVerificationEmail(data);
     } catch (err: any) {
       ConsoleLogger.error(
-        `Email OTP failed | email=${data.email} | message=${err?.message}`,
+        `Email OTP failed | email=${data?.email} | message=${err?.message}`,
         err?.stack,
         'CommonUtils'
       );
       return null;
     }
+  }
+
+  static async sendMaliciousOTPEmail(data: OtpRateLimitTemplateData): Promise<any> {
+    try {
+      return await MailerHelper.sendOtpRateLimitEmail(data);
+    } catch (err: any) {
+      ConsoleLogger.error(
+        `Email OTP failed | mobile=${data?.user?.mobile} | attempts=${data?.user?.attempts} | message=${err?.message}`,
+        err?.stack,
+        'CommonUtils'
+      );
+      return null;
+    }
+  }
+
+  static getLocalTimeString(date?: Date) {
+    return new Date(date ? date : Date.now()).toLocaleString('en-IN', {
+      timeZone: 'Asia/Kolkata',
+      dateStyle: 'full',
+      timeStyle: 'medium',
+    });
   }
 }
