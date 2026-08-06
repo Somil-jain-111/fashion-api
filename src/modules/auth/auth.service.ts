@@ -27,6 +27,7 @@ import { TokenHashHelper } from 'src/default/common/helper/token-hash.helper';
 import { UserValidator } from 'src/default/common/validators';
 import { AppConfigService } from 'src/default/config/config.service';
 import { KycType } from 'src/default/common/enums/kyc.enum';
+import { OtpAttemptType } from 'src/default/common/enums/common.enum';
 
 @Injectable()
 export class AuthService {
@@ -50,13 +51,23 @@ export class AuthService {
   async sendOtp(dto: SendOtpDto): Promise<{ mobile: string; otp_expiry_in_minutes: number }> {
     const user = await this.userValidator.findOrCreateActiveUserByMobile(dto, true);
 
+    const otpValidation = await this.userValidator.validateOtpAttempts({
+      mobile: dto.mobile,
+      otpType: OtpAttemptType.LOGIN,
+      userRole: dto.role,
+      increment: true,
+    });
+
     let otpPlain = await OtpHelper.generateOtp();
 
-    if (!this.appConfigService.isProduction()) {
+    const isProd = this.appConfigService.isProduction() || this.appConfigService.isQa();
+
+    if (!isProd) {
       otpPlain = this.appConfigService.getNonProdOtp().toString();
     }
 
-    const otpExpiry = await DateHelper.getOtpExpiryDate();
+    const expirySeconds = otpValidation.expirySeconds;
+    const otpExpiry = new Date(Date.now() + expirySeconds * 1000);
     const otp = CommonUtils.encrypt(otpPlain);
 
     await this.userRepository.updateOtp(user.id, otp, otpExpiry);
@@ -68,7 +79,7 @@ export class AuthService {
 
     return {
       mobile: OtpHelper.maskMobile(dto.mobile),
-      otp_expiry_in_minutes: 5,
+      otp_expiry_in_minutes: Math.ceil(expirySeconds / 60),
     };
   }
 
@@ -82,6 +93,8 @@ export class AuthService {
     if (OtpHelper.isOtpExpired(user.otp_expiry)) {
       throw new BusinessException(ERROR_CODES.AUTH.OTP_EXPIRED);
     }
+
+    // await this.userValidator.clearOtpAttempts(dto.mobile, OtpAttemptType.LOGIN);
 
     const tokens = await AuthTokenHelper.generateTokens(this.jwtService, user);
 
@@ -200,7 +213,9 @@ export class AuthService {
     });
 
     if (!user) {
-      throw new BadRequestException('Invalid or expired reset token');
+      throw new BusinessException(ERROR_CODES.COMMON.BAD_REQUEST_RESON, {
+        reason: 'Invalid or expired reset token',
+      });
     }
 
     const hashedPassword = await bcrypt.hash(dto.password, 10);

@@ -39,6 +39,8 @@ import { ParentOrderType } from './enum/order-type.enum';
 import { RedemptionType } from './enum/redemption-type.enum';
 import { OtpHelper } from 'src/default/common/helper/otp.helper';
 import { ProductType } from './enum/product-type.enum';
+import { UserValidator } from 'src/default/common/validators';
+import { OtpAttemptType } from 'src/default/common/enums/common.enum';
 
 @Injectable()
 export class RedemptionsService {
@@ -55,6 +57,7 @@ export class RedemptionsService {
     private shippingDetailRepository: ShippingDetailRepository,
     private orderStatusHistoryRepository: OrderStatusHistoryRepository,
     private userAuthValidator: UserAuthValidator,
+    private userValidator: UserValidator,
     private transactionUtils: TransactionService,
     private redemptionOtpValidator: RedemptionOtpValidator,
     private readonly redemptionProviderResponseHandler: RedemptionProviderResponseHandler,
@@ -219,12 +222,21 @@ export class RedemptionsService {
         throw new BusinessException(ERROR_CODES.USER.MOBILE_NOT_FOUND);
       }
 
+      const otpValidation = await this.userValidator.validateOtpAttempts({
+        mobile: otpMobile,
+        otpType: OtpAttemptType.REDEMPTION,
+        userRole: user.role?.name,
+        userId: user.id,
+        increment: true,
+      });
+
       const isProd = this.appConfigService.isProduction() || this.appConfigService.isQa();
       const otp = isProd ? OtpHelper.generateOtp() : this.appConfigService.getNonProdOtp();
       const otpRefId = await CommonUtils.generateTransactionID();
 
+      const expirySeconds = otpValidation.expirySeconds;
       const otpExpiryDate = new Date();
-      otpExpiryDate.setMinutes(otpExpiryDate.getMinutes() + 5);
+      otpExpiryDate.setSeconds(otpExpiryDate.getSeconds() + expirySeconds);
 
       const orderType = productType;
       const masterOrderNumber = `ORD_${user.id}_${Date.now()}`;
@@ -521,12 +533,21 @@ export class RedemptionsService {
         throw new BusinessException(ERROR_CODES.USER.MOBILE_NOT_FOUND);
       }
 
+      const otpValidation = await this.userValidator.validateOtpAttempts({
+        mobile: otpMobile,
+        otpType: OtpAttemptType.REDEMPTION,
+        userRole: user.role?.name,
+        userId: user.id,
+        increment: true,
+      });
+
       const isProd = this.appConfigService.isProduction() || this.appConfigService.isQa();
       const otp = isProd ? OtpHelper.generateOtp() : this.appConfigService.getNonProdOtp();
       const otpRefId = await CommonUtils.generateTransactionID();
 
+      const expirySeconds = otpValidation.expirySeconds;
       const otpExpiryDate = new Date();
-      otpExpiryDate.setMinutes(otpExpiryDate.getMinutes() + 5);
+      otpExpiryDate.setSeconds(otpExpiryDate.getSeconds() + expirySeconds);
 
       const masterOrderNumber = `ORD_${user.id}_${Date.now()}`;
 
@@ -1070,12 +1091,22 @@ export class RedemptionsService {
     let otpExpiryDate = order.redemption_otp_expired_at;
 
     if (isExpired) {
+      const user = await this.userAuthValidator.validateActiveUserById(userId);
+      const otpValidation = await this.userValidator.validateOtpAttempts({
+        mobile: order.redemption_otp_mobile,
+        otpType: OtpAttemptType.REDEMPTION,
+        userRole: user.role?.name,
+        userId: user.id,
+        increment: true,
+      });
+
       const isProd = this.appConfigService.isProduction() || this.appConfigService.isQa();
       otp = isProd ? OtpHelper.generateOtp() : this.appConfigService.getNonProdOtp().toString();
       otpRefId = await CommonUtils.generateTransactionID();
 
+      const expirySeconds = otpValidation.expirySeconds;
       otpExpiryDate = new Date();
-      otpExpiryDate.setMinutes(otpExpiryDate.getMinutes() + 5);
+      otpExpiryDate.setSeconds(otpExpiryDate.getSeconds() + expirySeconds);
 
       await this.orderRepository.update(
         { id: order.id },

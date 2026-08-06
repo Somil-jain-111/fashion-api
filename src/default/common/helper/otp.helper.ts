@@ -33,4 +33,8 @@ export class OtpHelper {
 
     return new Date() > new Date(expiryDate);
   }
+
+  static generateExpiryDate(seconds: number) {
+    
+  }
 }
