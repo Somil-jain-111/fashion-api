@@ -1,6 +1,7 @@
 import { Injectable, Inject, forwardRef } from '@nestjs/common';
 import { DataSource, QueryRunner } from 'typeorm';
 //
+import { CartAction } from './enum';
 import { ERROR_CODES } from 'src/default/error/error.code';
 import { BusinessException } from 'src/default/error/business.exception';
 import { PointHistoryCalculationStrategy } from 'src/default/common/stratagy/tds.stratagy.interface';
@@ -9,15 +10,13 @@ import { KycVerificationRepository } from 'src/modules/kyc/repository';
 import { UserAuthValidator } from 'src/modules/auth/validators/user-auth.validator';
 import { RewardsService } from '../rewards/rewards.service';
 import { RedemptionsService } from '../redemptions/redemptions.service';
-import { PlaceCartOrderDto } from '../redemptions/dto/place-cart-order.dto';
-import { VerifyOrderDto } from '../redemptions/dto/verify-order.dto';
+import { VerifyOrderDto } from '../redemptions/dto';
 import {
   RedemptionCartRepository,
   RedemptionCartItemRepository,
 } from './repository/redemption-cart.repository';
 import { RedemptionCart } from 'src/modules/auth/entities';
-import { ManageCartItemDto } from './dto/manage-cart-item.dto';
-import { CartItemResponseDto, CartResponseDto } from './dto/cart-response.dto';
+import { ManageCartItemDto, CartItemResponseDto, CartResponseDto, PlaceCartOrderDto } from './dto';
 
 @Injectable()
 export class RedemptionCartService {
@@ -196,9 +195,30 @@ export class RedemptionCartService {
     await this.userAuthValidator.validateActiveUserById(userId);
     const cart = await this.getOrCreateActiveCart(userId);
 
-    const existingItem = (cart.items || []).find((item) => item.productId === dto.productId);
+    const existingItem = (cart.items || []).find((item) => item.productId === dto.projectProductId);
+    const action = String(dto.action || CartAction.ADD).toLowerCase();
+    const qty = Number(dto.quantity || 1);
 
-    if (dto.quantity <= 0) {
+    if (action === CartAction.REMOVE) {
+      if (!existingItem) {
+        return this.getCart(userId);
+      }
+
+      const newQuantity = existingItem.quantity - qty;
+
+      if (newQuantity <= 0) {
+        await this.redemptionCartItemRepository.deleteById(existingItem.id);
+      } else {
+        existingItem.quantity = newQuantity;
+        await this.redemptionCartItemRepository.save(existingItem);
+      }
+
+      return this.getCart(userId);
+    }
+
+    const targetQuantity = existingItem ? existingItem.quantity + qty : qty;
+
+    if (targetQuantity <= 0) {
       if (existingItem) {
         await this.redemptionCartItemRepository.deleteById(existingItem.id);
       }
@@ -208,7 +228,7 @@ export class RedemptionCartService {
 
     // Fetch product details from RewardsService to ensure catalog validity and get metadata
     const rewardProductResponse = await this.rewardsService.getAllProducts(userId, {
-      projectProductId: dto.productId,
+      projectProductId: dto.projectProductId,
       page: 1,
       limit: 1,
     });
@@ -232,7 +252,7 @@ export class RedemptionCartService {
     };
 
     if (existingItem) {
-      existingItem.quantity = dto.quantity;
+      existingItem.quantity = targetQuantity;
       existingItem.pricePoint = pricePoint;
       existingItem.productName = productName;
       existingItem.productType = productType;
@@ -242,9 +262,9 @@ export class RedemptionCartService {
     } else {
       await this.redemptionCartItemRepository.save({
         cart: { id: cart.id } as any,
-        productId: dto.productId,
+        productId: dto.projectProductId,
         productName,
-        quantity: dto.quantity,
+        quantity: targetQuantity,
         pricePoint,
         productType,
         metadata,

@@ -3,9 +3,17 @@ import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
 export class PlaceOrderDto {
   @IsOptional()
   @IsString()
-  productId?: string;
+  projectProductId?: string;
 
   @IsOptional()
   @IsString()
   addressId?: string;
+
+  @IsOptional()
+  @IsString()
+  name?: string;
+
+  @IsOptional()
+  @IsString()
+  mobile?: string;
 }

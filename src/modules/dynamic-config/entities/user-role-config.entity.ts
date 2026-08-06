@@ -47,4 +47,22 @@ export class UserRoleConfig extends BaseEntity {
 
   @Column({ type: 'json', nullable: true, name: 'additional_settings' })
   additionalSettings?: Record<string, any>;
+
+  @Column({ type: 'int', default: 3, name: 'login_max_otp_attempts' })
+  loginMaxOtpAttempts!: number;
+
+  @Column({ type: 'bigint', default: 3600, name: 'login_otp_timeout_seconds' })
+  loginOtpTimeoutSeconds!: number;
+
+  @Column({ type: 'bigint', default: 300, name: 'login_otp_expiry_seconds' })
+  loginOtpExpirySeconds!: number;
+
+  @Column({ type: 'int', default: 3, name: 'redemption_max_otp_attempts' })
+  redemptionMaxOtpAttempts!: number;
+
+  @Column({ type: 'bigint', default: 3600, name: 'redemption_otp_timeout_seconds' })
+  redemptionOtpTimeoutSeconds!: number;
+
+  @Column({ type: 'bigint', default: 300, name: 'redemption_otp_expiry_seconds' })
+  redemptionOtpExpirySeconds!: number;
 }

@@ -58,6 +58,9 @@ export class ShippingDetail extends BaseEntity {
   })
   delivery_status!: ShippingStatus;
 
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  fullname!: string;
+
   @Column({ type: 'varchar', length: 15, nullable: false })
   mobile!: string;
 

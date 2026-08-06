@@ -6,6 +6,7 @@ import {
   OrderItemRepository,
   PointHistoryRepository,
   ShippingDetailRepository,
+  OrderStatusHistoryRepository,
 } from 'src/modules/redemptions/repository';
 import { RedemptionCartService } from '../redemption-cart/redemption-cart.service';
 import { DynamicConfigRepository } from 'src/modules/dynamic-config/repository';
@@ -18,7 +19,7 @@ import { RewardsService } from '../rewards/rewards.service';
 import { OrderStatus, ShippingStatus } from './enum/order-status.enum';
 import { PointHistoryCalculationStrategy } from 'src/default/common/stratagy/tds.stratagy.interface';
 import { PlaceOrderDto } from './dto/place-order.dto';
-import { PlaceCartOrderDto } from './dto/place-cart-order.dto';
+import { PlaceCartOrderDto } from '../redemption-cart/dto';
 import { OrderSummaryResponseDto } from './dto/order-summary-response.dto';
 import { PlaceOrderResponseDto } from './dto/place-order-response.dto';
 import { UserAuthValidator } from '../auth/validators/user-auth.validator';
@@ -36,6 +37,10 @@ import { AppConfigService } from 'src/default/config/config.service';
 import { DateHelper } from 'src/default/common/helper/date.helper';
 import { ParentOrderType } from './enum/order-type.enum';
 import { RedemptionType } from './enum/redemption-type.enum';
+import { OtpHelper } from 'src/default/common/helper/otp.helper';
+import { ProductType } from './enum/product-type.enum';
+import { UserValidator } from 'src/default/common/validators';
+import { OtpAttemptType } from 'src/default/common/enums/common.enum';
 
 @Injectable()
 export class RedemptionsService {
@@ -50,7 +55,9 @@ export class RedemptionsService {
     @Inject(forwardRef(() => RedemptionCartService))
     private redemptionCartService: RedemptionCartService,
     private shippingDetailRepository: ShippingDetailRepository,
+    private orderStatusHistoryRepository: OrderStatusHistoryRepository,
     private userAuthValidator: UserAuthValidator,
+    private userValidator: UserValidator,
     private transactionUtils: TransactionService,
     private redemptionOtpValidator: RedemptionOtpValidator,
     private readonly redemptionProviderResponseHandler: RedemptionProviderResponseHandler,
@@ -70,7 +77,7 @@ export class RedemptionsService {
   async placeOrder(userId: number, dto: PlaceOrderDto): Promise<PlaceOrderResponseDto> {
     const tag = 'RedemptionService.placeOrder';
 
-    if (!dto.productId) {
+    if (!dto.projectProductId) {
       throw new BusinessException(ERROR_CODES.COMMON.BAD_REQUEST_RESON, {
         reason: 'Product ID is required for placing a single redemption order.',
       });
@@ -79,7 +86,7 @@ export class RedemptionsService {
     return this.transactionUtils.runInTransaction(async (queryRunner) => {
       ConsoleLogger.log('PLACE_ORDER_START', {
         tag,
-        data: { userId, productId: dto.productId, addressId: dto.addressId },
+        data: { userId, productId: dto.projectProductId, addressId: dto.addressId },
       });
 
       const user = await this.userAuthValidator.validateActiveUserById(userId);
@@ -115,7 +122,7 @@ export class RedemptionsService {
 
       // Verify product catalog directly
       const rewardProductResponse = await this.rewardsService.getAllProducts(userId, {
-        projectProductId: dto.productId,
+        projectProductId: dto.projectProductId,
         page: 1,
         limit: 1,
       });
@@ -126,10 +133,17 @@ export class RedemptionsService {
         throw new BusinessException(ERROR_CODES.REWARDS.PRODUCT_NOT_FOUND);
       }
 
-      const productType = String(product.type || 'digital').toLowerCase();
+      const productType = String(product.type).toLowerCase();
+
+      if (!productType) {
+        throw new BusinessException(ERROR_CODES.COMMON.BAD_REQUEST_RESON, {
+          reason: 'Invalid Product.',
+        });
+      }
+
       let hasPhysicalProduct = false;
 
-      if (productType === 'physical') {
+      if (productType === ProductType.PHYSICAL) {
         hasPhysicalProduct = true;
         if (!config.physicalRedemptionEnabled) {
           throw new BusinessException(ERROR_CODES.REWARDS.PHYSICAL_REDEMPTION_DISABLED);
@@ -158,6 +172,17 @@ export class RedemptionsService {
 
         if (!address) {
           throw new BusinessException(ERROR_CODES.ADDRESS.ADDRESS_NOT_FOUND);
+        }
+      } else {
+        if (!dto.name) {
+          throw new BusinessException(ERROR_CODES.COMMON.BAD_REQUEST_RESON, {
+            reason: 'Name is required for digital redemption.',
+          });
+        }
+        if (!dto.mobile) {
+          throw new BusinessException(ERROR_CODES.COMMON.BAD_REQUEST_RESON, {
+            reason: 'Mobile number is required for digital redemption.',
+          });
         }
       }
 
@@ -188,20 +213,29 @@ export class RedemptionsService {
         }
         otpMobile = address.mobile;
         otpReceiverType = 'SHIPPING';
+      } else {
+        otpMobile = dto.mobile || user.mobile;
+        otpReceiverType = 'USER';
       }
 
       if (!otpMobile) {
         throw new BusinessException(ERROR_CODES.USER.MOBILE_NOT_FOUND);
       }
 
+      const otpValidation = await this.userValidator.validateOtpAttempts({
+        mobile: otpMobile,
+        otpType: OtpAttemptType.REDEMPTION,
+        userRole: user.role?.name,
+        userId: user.id,
+        increment: true,
+      });
+
       const isProd = this.appConfigService.isProduction() || this.appConfigService.isQa();
-      const otp = isProd
-        ? Math.floor(100000 + Math.random() * 900000).toString()
-        : this.appConfigService.getNonProdRewardsOtp();
+      const otp = isProd ? OtpHelper.generateOtp() : this.appConfigService.getNonProdOtp();
       const otpRefId = await CommonUtils.generateTransactionID();
 
-      const otpExpiryDate = new Date();
-      otpExpiryDate.setMinutes(otpExpiryDate.getMinutes() + 5);
+      const expirySeconds = otpValidation.expirySeconds;
+      const otpExpiryDate = OtpHelper.generateExpiryDate(expirySeconds);
 
       const orderType = productType;
       const masterOrderNumber = `ORD_${user.id}_${Date.now()}`;
@@ -237,7 +271,7 @@ export class RedemptionsService {
         {
           order: { id: savedOrder.id } as any,
           orderNumber: '',
-          productId: dto.productId,
+          productId: dto.projectProductId,
           productName: product.name || product.brand || 'Reward Product',
           productType: productType,
           pricePoint: pricePoint,
@@ -254,7 +288,16 @@ export class RedemptionsService {
         queryRunner
       );
 
-      // Create shipping detail if physical product
+      // await this.orderStatusHistoryRepository.save(
+      //   {
+      //     orderItem: { id: savedOrderItem.id } as any,
+      //     status: OrderStatus.ORDER_REVIEW,
+      //     remark: 'ORDER_REVIEW',
+      //   },
+      //   queryRunner
+      // );
+
+      // Create shipping detail
       let shippingDetail: any = null;
       if (hasPhysicalProduct && address) {
         shippingDetail = await this.shippingDetailRepository.save(
@@ -268,7 +311,20 @@ export class RedemptionsService {
             stateName: address.stateName || null,
             zoneName: address.zoneName || null,
             delivery_status: ShippingStatus.PENDING,
+            fullname: address?.name || dto.name,
             mobile: address.mobile,
+          },
+          queryRunner
+        );
+      } else {
+        shippingDetail = await this.shippingDetailRepository.save(
+          {
+            orderItem: { id: savedOrderItem.id },
+            addressLine1: '',
+            pincode: '',
+            delivery_status: ShippingStatus.PENDING,
+            fullname: dto.name,
+            mobile: dto.mobile,
           },
           queryRunner
         );
@@ -287,8 +343,17 @@ export class RedemptionsService {
         },
       });
 
+      const orderDetails = await this.orderRepository.findOne(
+        {
+          id: savedOrder.id,
+          user: { id: userId },
+        },
+        ['items', 'items.shippingDetail'],
+        queryRunner
+      );
+
       return new PlaceOrderResponseDto({
-        order: savedOrder,
+        order: orderDetails,
         // shippingDetail,
         otpDetails: {
           otpRefId,
@@ -381,8 +446,9 @@ export class RedemptionsService {
           throw new BusinessException(ERROR_CODES.REWARDS.PRODUCT_NOT_FOUND);
         }
 
-        const productType = String(product.type || cartItem.productType || 'digital').toLowerCase();
-        if (productType === 'physical') {
+        const productType = String(product.type).toLowerCase();
+
+        if (productType === ProductType.PHYSICAL) {
           hasPhysicalProduct = true;
           if (!config.physicalRedemptionEnabled) {
             throw new BusinessException(ERROR_CODES.REWARDS.PHYSICAL_REDEMPTION_DISABLED);
@@ -417,6 +483,17 @@ export class RedemptionsService {
         if (!address) {
           throw new BusinessException(ERROR_CODES.ADDRESS.ADDRESS_NOT_FOUND);
         }
+      } else {
+        if (!dto.name) {
+          throw new BusinessException(ERROR_CODES.COMMON.BAD_REQUEST_RESON, {
+            reason: 'Name is required for digital redemption.',
+          });
+        }
+        if (!dto.mobile) {
+          throw new BusinessException(ERROR_CODES.COMMON.BAD_REQUEST_RESON, {
+            reason: 'Mobile number is required for digital redemption.',
+          });
+        }
       }
 
       // Calculate TDS
@@ -446,20 +523,29 @@ export class RedemptionsService {
         }
         otpMobile = address.mobile;
         otpReceiverType = 'SHIPPING';
+      } else {
+        otpMobile = dto.mobile || user.mobile;
+        otpReceiverType = 'USER';
       }
 
       if (!otpMobile) {
         throw new BusinessException(ERROR_CODES.USER.MOBILE_NOT_FOUND);
       }
 
+      const otpValidation = await this.userValidator.validateOtpAttempts({
+        mobile: otpMobile,
+        otpType: OtpAttemptType.REDEMPTION,
+        userRole: user.role?.name,
+        userId: user.id,
+        increment: true,
+      });
+
       const isProd = this.appConfigService.isProduction() || this.appConfigService.isQa();
-      const otp = isProd
-        ? Math.floor(100000 + Math.random() * 900000).toString()
-        : this.appConfigService.getNonProdRewardsOtp();
+      const otp = isProd ? OtpHelper.generateOtp() : this.appConfigService.getNonProdOtp();
       const otpRefId = await CommonUtils.generateTransactionID();
 
-      const otpExpiryDate = new Date();
-      otpExpiryDate.setMinutes(otpExpiryDate.getMinutes() + 5);
+      const expirySeconds = otpValidation.expirySeconds;
+      const otpExpiryDate = OtpHelper.generateExpiryDate(expirySeconds);
 
       const masterOrderNumber = `ORD_${user.id}_${Date.now()}`;
 
@@ -519,7 +605,16 @@ export class RedemptionsService {
             queryRunner
           );
 
-          if (itemProductType === 'physical' && address) {
+          // await this.orderStatusHistoryRepository.save(
+          //   {
+          //     orderItem: { id: savedOrderItem.id } as any,
+          //     status: OrderStatus.ORDER_REVIEW,
+          //     remark: 'ORDER_REVIEW',
+          //   },
+          //   queryRunner
+          // );
+
+          if (itemProductType === ProductType.PHYSICAL && address) {
             await this.shippingDetailRepository.save(
               {
                 orderItem: { id: savedOrderItem.id } as any,
@@ -531,7 +626,20 @@ export class RedemptionsService {
                 stateName: address.stateName || null,
                 zoneName: address.zoneName || null,
                 delivery_status: ShippingStatus.PENDING,
+                fullname: address?.name || dto.name,
                 mobile: address.mobile,
+              },
+              queryRunner
+            );
+          } else {
+            await this.shippingDetailRepository.save(
+              {
+                orderItem: { id: savedOrderItem.id } as any,
+                addressLine1: '',
+                pincode: '',
+                delivery_status: ShippingStatus.PENDING,
+                fullname: dto?.name || address?.name || user.username,
+                mobile: dto?.mobile || address?.mobile || user.mobile,
               },
               queryRunner
             );
@@ -557,8 +665,17 @@ export class RedemptionsService {
         },
       });
 
+      const orderDetails = await this.orderRepository.findOne(
+        {
+          id: savedOrder.id,
+          user: { id: userId },
+        },
+        ['items', 'items.shippingDetail'],
+        queryRunner
+      );
+
       return new PlaceOrderResponseDto({
-        order: savedOrder,
+        order: orderDetails,
         // shippingDetail,
         otpDetails: {
           otpRefId,
@@ -629,7 +746,7 @@ export class RedemptionsService {
 
     for (const item of orderItems) {
       let itemShippingDetail = item.shippingDetail;
-      if (!itemShippingDetail && item.productType === 'physical') {
+      if (!itemShippingDetail && item.productType === ProductType.PHYSICAL) {
         itemShippingDetail = await this.shippingDetailRepository.findOne({
           orderItem: { id: item.id },
         });
@@ -684,21 +801,34 @@ export class RedemptionsService {
           providerResponse?.data?.order_number ||
           null;
 
-        const itemRepo = queryRunner.manager.getRepository('order_items');
-        await itemRepo.update(
+        const itemStatus = isSuccess ? OrderStatus.PLACED : OrderStatus.FAILED;
+        const itemRemark = !isSuccess
+          ? providerResponse?.message ||
+            providerResponse?.responseData?.message ||
+            'Provider request failed'
+          : 'Order placed';
+
+        await this.orderItemRepository.update(
           { id: item.id },
           {
             orderNumber: rewardsOrderNumber || item.transactionId,
-            status: isSuccess ? OrderStatus.PLACED : OrderStatus.FAILED,
+            status: itemStatus,
             ...(isSuccess
               ? {}
               : {
-                  errorMessage:
-                    providerResponse?.message ||
-                    providerResponse?.responseData?.message ||
-                    'Provider request failed',
+                  errorMessage: itemRemark,
                 }),
-          }
+          },
+          queryRunner
+        );
+
+        await this.orderStatusHistoryRepository.save(
+          {
+            orderItem: { id: item.id } as any,
+            status: itemStatus,
+            remark: itemRemark,
+          },
+          queryRunner
         );
 
         itemResults.push({
@@ -814,7 +944,7 @@ export class RedemptionsService {
     if (query.orderId) {
       const order = await this.orderRepository.findOne(
         { id: Number(query.orderId), user: { id: userId } as any },
-        ['items', 'items.shippingDetail', 'items.voucher']
+        ['items', 'items.shippingDetail', 'items.voucher', 'items.statusHistory']
       );
 
       if (!order) {
@@ -855,20 +985,24 @@ export class RedemptionsService {
           shippingDetail: item.shippingDetail
             ? {
                 id: item.shippingDetail.id.toString(),
-                shipDate: item.shippingDetail.ship_date || null,
-                trackingNumber: item.shippingDetail.tracking_number || null,
-                trackingUrl: item.shippingDetail.tracking_url || null,
-                podLink: item.shippingDetail.pod_link || null,
-                deliveryPartner: item.shippingDetail.delivery_partner || null,
-                addressLine1: item.shippingDetail.addressLine1,
-                addressLine2: item.shippingDetail.addressLine2 || null,
-                landmark: item.shippingDetail.landmark || null,
-                pincode: item.shippingDetail.pincode,
-                cityName: item.shippingDetail.cityName || null,
-                stateName: item.shippingDetail.stateName || null,
-                zoneName: item.shippingDetail.zoneName || null,
+                name: item.shippingDetail?.fullname || null,
                 deliveryStatus: item.shippingDetail.delivery_status,
                 mobile: item.shippingDetail.mobile,
+
+                ...(item.productType == ProductType.PHYSICAL && {
+                  shipDate: item.shippingDetail.ship_date || null,
+                  trackingNumber: item.shippingDetail.tracking_number || null,
+                  trackingUrl: item.shippingDetail.tracking_url || null,
+                  podLink: item.shippingDetail.pod_link || null,
+                  deliveryPartner: item.shippingDetail.delivery_partner || null,
+                  addressLine1: item.shippingDetail.addressLine1,
+                  addressLine2: item.shippingDetail.addressLine2 || null,
+                  landmark: item.shippingDetail.landmark || null,
+                  pincode: item.shippingDetail.pincode,
+                  cityName: item.shippingDetail.cityName || null,
+                  stateName: item.shippingDetail.stateName || null,
+                  zoneName: item.shippingDetail.zoneName || null,
+                }),
               }
             : null,
           voucher: item.voucher
@@ -878,6 +1012,12 @@ export class RedemptionsService {
                 expiryDate: item.voucher.expiry_date,
               }
             : null,
+          statusHistory: (item.statusHistory || []).map((sh) => ({
+            id: sh.id.toString(),
+            status: sh.status,
+            remark: sh.remark || null,
+            created_at: sh.created_at,
+          })),
         })),
       };
     }
@@ -891,7 +1031,7 @@ export class RedemptionsService {
       order: { createdAt: 'DESC' },
       skip,
       take: limit,
-      relations: ['items', 'items.shippingDetail'],
+      relations: ['items', 'items.shippingDetail', 'items.statusHistory'],
     });
 
     const items = orders.map(
@@ -949,14 +1089,21 @@ export class RedemptionsService {
     let otpExpiryDate = order.redemption_otp_expired_at;
 
     if (isExpired) {
+      const user = await this.userAuthValidator.validateActiveUserById(userId);
+      const otpValidation = await this.userValidator.validateOtpAttempts({
+        mobile: order.redemption_otp_mobile,
+        otpType: OtpAttemptType.REDEMPTION,
+        userRole: user.role?.name,
+        userId: user.id,
+        increment: true,
+      });
+
       const isProd = this.appConfigService.isProduction() || this.appConfigService.isQa();
-      otp = isProd
-        ? Math.floor(100000 + Math.random() * 900000).toString()
-        : this.appConfigService.getNonProdRewardsOtp().toString();
+      otp = isProd ? OtpHelper.generateOtp() : this.appConfigService.getNonProdOtp().toString();
       otpRefId = await CommonUtils.generateTransactionID();
 
-      otpExpiryDate = new Date();
-      otpExpiryDate.setMinutes(otpExpiryDate.getMinutes() + 5);
+      const expirySeconds = otpValidation.expirySeconds;
+      otpExpiryDate = OtpHelper.generateExpiryDate(expirySeconds);
 
       await this.orderRepository.update(
         { id: order.id },

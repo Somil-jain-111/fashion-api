@@ -1,6 +1,6 @@
-import { Entity, Column, ManyToOne, OneToOne, JoinColumn, Index } from 'typeorm';
+import { Entity, Column, ManyToOne, OneToOne, OneToMany, JoinColumn, Index } from 'typeorm';
 
-import { Order, ShippingDetail, Voucher } from '../../auth/entities';
+import { Order, ShippingDetail, Voucher, OrderStatusHistory } from '../../auth/entities';
 import { OrderStatus } from '../enum/order-status.enum';
 import { BaseEntity } from '../../../default/common/entities';
 
@@ -81,4 +81,9 @@ export class OrderItem extends BaseEntity {
     cascade: true,
   })
   shippingDetail!: ShippingDetail;
+
+  @OneToMany(() => OrderStatusHistory, (history) => history.orderItem, {
+    cascade: true,
+  })
+  statusHistory?: OrderStatusHistory[];
 }

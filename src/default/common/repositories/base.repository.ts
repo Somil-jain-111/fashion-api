@@ -30,30 +30,40 @@ export class BaseRepository<T extends object> {
     return await repo.save(entity);
   }
 
-  async saveMany(data: DeepPartial<T>[]): Promise<T[]> {
-    const entities = this.repository.create(data);
-    return await this.repository.save(entities);
+  async saveMany(data: DeepPartial<T>[], queryRunner?: QueryRunner): Promise<T[]> {
+    const repo = this.getRepository(queryRunner);
+    const entities = repo.create(data);
+    return await repo.save(entities);
   }
 
-  async findOne(where: FindOptionsWhere<T>, relations?: string[]): Promise<T | null> {
-    return await this.repository.findOne({
+  async findOne(
+    where: FindOptionsWhere<T>,
+    relations?: string[],
+    queryRunner?: QueryRunner
+  ): Promise<T | null> {
+    return await this.getRepository(queryRunner).findOne({
       where,
       relations,
     });
   }
 
-  async findMany(options?: FindManyOptions<T>): Promise<T[]> {
-    return await this.repository.find(options);
+  async findMany(options?: FindManyOptions<T>, queryRunner?: QueryRunner): Promise<T[]> {
+    return await this.getRepository(queryRunner).find(options);
   }
 
-  async findById(id: string | number | bigint, relations?: string[]): Promise<T | null> {
-    return await this.repository.findOne({
+  async findById(
+    id: string | number | bigint,
+    relations?: string[],
+    queryRunner?: QueryRunner
+  ): Promise<T | null> {
+    return await this.getRepository(queryRunner).findOne({
       where: {
         id,
       } as unknown as FindOptionsWhere<T>,
       relations,
     });
   }
+
   async findByIdWithRole(id: string | number | bigint): Promise<T | null> {
     return await this.repository.findOne({
       where: {
@@ -62,6 +72,7 @@ export class BaseRepository<T extends object> {
       relations: ['role'],
     });
   }
+
   async updateById(
     id: string | number | bigint,
     data: Partial<T>,
@@ -98,20 +109,14 @@ export class BaseRepository<T extends object> {
   }
 
   async count(options?: FindManyOptions<T>, queryRunner?: QueryRunner): Promise<number> {
-    const repo = this.getRepository(queryRunner);
-
-    return await repo.count(options);
+    return await this.getRepository(queryRunner).count(options);
   }
 
   createQueryBuilder(alias: string, queryRunner?: QueryRunner): SelectQueryBuilder<T> {
-    const repo = this.getRepository(queryRunner);
-
-    return repo.createQueryBuilder(alias);
+    return this.getRepository(queryRunner).createQueryBuilder(alias);
   }
 
   async update(where: any, data: any, queryRunner?: QueryRunner) {
-    const repo = this.getRepository(queryRunner);
-
-    return repo.update(where, data);
+    return await this.getRepository(queryRunner).update(where, data);
   }
 }

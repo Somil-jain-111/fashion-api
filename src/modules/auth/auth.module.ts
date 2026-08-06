@@ -19,6 +19,7 @@ import {
 import { UserRepository, RolesRepository, UserStoreInfoRepository } from '../auth/repository';
 import { AddressesModule } from '../addresses/addresses.module';
 import { ApprovalRepository } from '../approvals/repository';
+import { DynamicConfigModule } from '../dynamic-config/dynamic-config.module';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { ApprovalRepository } from '../approvals/repository';
     }),
     RedisModule,
     AddressesModule,
+    DynamicConfigModule,
   ],
   providers: [
     AuthService,
@@ -53,6 +55,7 @@ import { ApprovalRepository } from '../approvals/repository';
   exports: [
     AuthService,
     UserAuthValidator,
+    UserValidator,
     UserRepository,
     ApprovalRepository,
     RolesRepository,
