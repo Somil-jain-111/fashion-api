@@ -15,6 +15,7 @@ import { KycStatus, KycType } from 'src/default/common/enums/kyc.enum';
 import { KycVerificationRepository } from 'src/modules/auth/repository';
 import { UserPartnerType } from 'src/default/common/enums/user-type.enum';
 import { RedemptionKYCRequirements } from 'src/default/common/constants/redemptions.option';
+import { User } from 'src/modules/auth/entities';
 
 export interface ValidateOtpAttemptsOptions {
   mobile: string | number;
@@ -135,16 +136,16 @@ export class UserValidator {
     const { mobile, otpType, increment = false } = options;
     let { userRole } = options;
 
+    let userDetails: User | null = null;
+
+    if (options.userId) {
+      userDetails = await this.userRepository.findById(options.userId, ['role']);
+    } else if (mobile) {
+      userDetails = await this.userRepository.findByMobile(String(mobile));
+    }
+
     if (!userRole) {
-      if (options.userId) {
-        const user = await this.userRepository.findById(options.userId, ['role']);
-
-        userRole = user?.role?.name;
-      } else if (mobile) {
-        const user = await this.userRepository.findByMobile(String(mobile));
-
-        userRole = user?.role?.name;
-      }
+      userRole = userDetails?.role?.name;
     }
 
     const config = await this.getOtpConfig(userRole, otpType);
@@ -160,6 +161,16 @@ export class UserValidator {
           : 0;
 
     if (currentCount >= config.maxAttempts) {
+      CommonUtils.sendMaliciousOTPEmail({
+        user: {
+          attempts: Number(currentCount),
+          id: userDetails.id,
+          mobile: userDetails.mobile,
+          timeframeSeconds: Number(config.timeoutSeconds),
+          username: userDetails.username,
+        },
+      });
+
       throw new BusinessException(ERROR_CODES.AUTH.TOO_MANY_REQUESTS);
     }
 
@@ -169,6 +180,16 @@ export class UserValidator {
       await this.redisService.set(redisKey, currentCount, config.timeoutSeconds);
 
       if (currentCount > config.maxAttempts) {
+        CommonUtils.sendMaliciousOTPEmail({
+          user: {
+            attempts: Number(currentCount),
+            id: userDetails.id,
+            mobile: userDetails.mobile,
+            timeframeSeconds: Number(config.timeoutSeconds),
+            username: userDetails.username,
+          },
+        });
+
         throw new BusinessException(ERROR_CODES.AUTH.TOO_MANY_REQUESTS);
       }
     }
