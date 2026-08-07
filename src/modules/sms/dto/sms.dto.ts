@@ -1,5 +1,5 @@
-import { OtpAttemptType } from '../enums/common.enum';
-import { SMSTemplateType } from '../enums/sms-template.enum';
+import { OtpAttemptType } from 'src/default/common/enums/common.enum';
+import { SMSTemplateType } from 'src/default/common/enums/sms-template.enum';
 
 export interface SMSPayload {
   filetype: number;

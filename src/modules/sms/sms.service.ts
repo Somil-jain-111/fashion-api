@@ -1,25 +1,25 @@
+import { Injectable } from '@nestjs/common';
 import axios from 'axios';
-import { ConsoleLogger } from 'src/default/logger/console/console.service';
-import { ERROR_CODES } from 'src/default/error/error.code';
+//
+import { ParticipationOTPSmsTemplate, SMSPayload, SMSTemplateDataMap } from './dto/sms.dto';
+import { OTPAttemptLogsRepository } from '../auth/repository';
 import { BusinessException } from 'src/default/error/business.exception';
-import { ParticipationOTPSmsTemplate, SMSPayload, SMSTemplateDataMap } from '../dto/sms.dto';
-import { SMSTemplateType } from '../enums/sms-template.enum';
-import { SMS_TEMPLATES } from '../constants/sms-templates.constant';
-import { OTPAttemptLogsRepository } from 'src/modules/auth/repository/otp-attempt-logs.repository';
+import { ERROR_CODES } from 'src/default/error/error.code';
+import { SMSTemplateType } from 'src/default/common/enums/sms-template.enum';
+import { ConsoleLogger } from 'src/default/logger/console/console.service';
+import { SMS_TEMPLATES } from 'src/default/common/constants/sms-templates.constant';
 
-export class SMSSenderHelper {
-  private static otpAttemptsRepository: OTPAttemptLogsRepository;
-  private static readonly communicationUrl: string =
+@Injectable()
+export class SmsService {
+  private readonly communicationUrl: string =
     'http://125.16.147.178/VoicenSMS/webresources/CreateSMSCampaignPost';
 
-  static init(otpAttemptsRepository: OTPAttemptLogsRepository) {
-    this.otpAttemptsRepository = otpAttemptsRepository;
-  }
+  constructor(private readonly otpAttemptsRepository: OTPAttemptLogsRepository) {}
 
   /**
    * Validate raw MailPayload to ensure no null or undefined or empty required fields pass through.
    */
-  public static validatePayload(payload: SMSPayload): void {
+  private validatePayload(payload: SMSPayload): void {
     if (!payload) {
       throw new BusinessException(ERROR_CODES.COMMON.BAD_REQUEST_RESON, {
         reason: 'Email payload must be provided',
@@ -90,7 +90,7 @@ export class SMSSenderHelper {
   /**
    * Validate required fields for template data based on template type.
    */
-  public static validateTemplateData<T extends SMSTemplateType>(
+  private validateTemplateData<T extends SMSTemplateType>(
     templateType: T,
     data: SMSTemplateDataMap[T]
   ): void {
@@ -136,10 +136,8 @@ export class SMSSenderHelper {
   /**
    * Core method to send email payload to communication API.
    */
-  public static async sendSMS(
-    payload: SMSPayload
-  ): Promise<{ status: string; [key: string]: any }> {
-    SMSSenderHelper.validatePayload(payload);
+  private async sendSMS(payload: SMSPayload): Promise<{ status: string; [key: string]: any }> {
+    this.validatePayload(payload);
 
     try {
       ConsoleLogger.log(
@@ -147,7 +145,7 @@ export class SMSSenderHelper {
         'SMSSenderHelper'
       );
 
-      const response = await axios.post(SMSSenderHelper.communicationUrl, payload, {
+      const response = await axios.post(this.communicationUrl, payload, {
         headers: {
           'Content-Type': 'application/json',
         },
@@ -183,11 +181,11 @@ export class SMSSenderHelper {
   /**
    * Render template and send email with strict typing and validation.
    */
-  public static async sendSMSByTemplate<T extends SMSTemplateType>(
+  private async sendSMSByTemplate<T extends SMSTemplateType>(
     templateType: T,
     data: SMSTemplateDataMap[T]
   ): Promise<any> {
-    SMSSenderHelper.validateTemplateData(templateType, data);
+    this.validateTemplateData(templateType, data);
 
     const templateGenerator = SMS_TEMPLATES[templateType];
 
@@ -198,7 +196,7 @@ export class SMSSenderHelper {
     }
 
     const payload = templateGenerator(data as any);
-    const smsResponse = await SMSSenderHelper.sendSMS(payload);
+    const smsResponse = await this.sendSMS(payload);
 
     const isSuccess = smsResponse.status === 'success';
 
@@ -217,7 +215,16 @@ export class SMSSenderHelper {
   /**
    * Helper method to send OTP Verification SMS.
    */
-  public static async sendParticipationOTPSms(data: ParticipationOTPSmsTemplate): Promise<any> {
-    return SMSSenderHelper.sendSMSByTemplate(SMSTemplateType.PARTICIPATION_OTP, data);
+  public async sendParticipationOTPSms(data: ParticipationOTPSmsTemplate): Promise<any> {
+    try {
+      return await this.sendSMSByTemplate(SMSTemplateType.PARTICIPATION_OTP, data);
+    } catch (err: any) {
+      ConsoleLogger.error(
+        `SMS OTP failed | mobile=${data?.mobile} | message=${err?.message}`,
+        err?.stack,
+        'CommonUtils'
+      );
+      return null;
+    }
   }
 }

@@ -1,4 +1,4 @@
-import { ParticipationOTPSmsTemplate, SMSPayload } from '../dto/sms.dto';
+import { ParticipationOTPSmsTemplate, SMSPayload } from 'src/modules/sms/dto/sms.dto';
 import { SMSTemplateType } from '../enums/sms-template.enum';
 
 const SMSConfigs = {

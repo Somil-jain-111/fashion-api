@@ -1,4 +1,4 @@
-import { Injectable, OnModuleInit } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 
@@ -32,11 +32,10 @@ import { UserValidator } from 'src/default/common/validators';
 import { AppConfigService } from 'src/default/config/config.service';
 import { KycType } from 'src/default/common/enums/kyc.enum';
 import { OtpAttemptType } from 'src/default/common/enums/common.enum';
-import { SMSUtils } from 'src/default/common/utils/sms.utils';
-import { SMSSenderHelper } from 'src/default/common/helper/sms.helper';
+import { SmsService } from '../sms/sms.service';
 
 @Injectable()
-export class AuthService implements OnModuleInit {
+export class AuthService {
   constructor(
     private userRepository: UserRepository,
     private revokedTokenRepository: RevokedTokenRepository,
@@ -47,12 +46,9 @@ export class AuthService implements OnModuleInit {
     private readonly jwtService: JwtService,
     private readonly userAuthValidator: UserAuthValidator,
     private readonly userValidator: UserValidator,
-    private readonly appConfigService: AppConfigService
+    private readonly appConfigService: AppConfigService,
+    private readonly smsService: SmsService
   ) {}
-
-  onModuleInit() {
-    SMSSenderHelper.init(this.otpAttemptLogsRepository);
-  }
 
   async sendOtp(dto: SendOtpDto): Promise<{ mobile: string; otp_expiry_in_minutes: number }> {
     const user = await this.userValidator.findOrCreateActiveUserByMobile(dto, true);
@@ -78,7 +74,7 @@ export class AuthService implements OnModuleInit {
 
     await this.userRepository.updateOtp(user.id, otp, otpExpiry);
 
-    await SMSUtils.sendParticipationOTP({
+    await this.smsService.sendParticipationOTPSms({
       type: OtpAttemptType.LOGIN,
       mobile: dto.mobile,
       otp: otpPlain,
