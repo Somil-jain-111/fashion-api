@@ -311,9 +311,10 @@ export class OnboardingService {
         KycType.AADHAAR
       );
       aadhaarKycComplete = !!aadhaarKyc;
-    } else {
-      aadhaarKycComplete = true;
     }
+    // else {
+    //   aadhaarKycComplete = true;
+    // }
 
     // GST only for entity Partner Type
     let gstKycComplete = false;
@@ -327,9 +328,10 @@ export class OnboardingService {
       );
 
       gstKycComplete = !!gstKyc;
-    } else {
-      gstKycComplete = true;
     }
+    // else {
+    //   gstKycComplete = true;
+    // }
 
     // ---- Approval & routing info (merged from SO flow) ----
     const approvals = await this.approvalRepository.findByUserId(userId, ApprovalType.PROFILE);
