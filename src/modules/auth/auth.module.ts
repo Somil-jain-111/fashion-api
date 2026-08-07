@@ -15,6 +15,7 @@ import {
   KycVerificationRepository,
   LoginHistoriesRepository,
   RevokedTokenRepository,
+  OTPAttemptLogsRepository,
 } from './repository';
 import { UserRepository, RolesRepository, UserStoreInfoRepository } from '../auth/repository';
 import { AddressesModule } from '../addresses/addresses.module';
@@ -50,6 +51,7 @@ import { DynamicConfigModule } from '../dynamic-config/dynamic-config.module';
     RevokedTokenRepository,
     LoginHistoriesRepository,
     KycVerificationRepository,
+    OTPAttemptLogsRepository,
   ],
   controllers: [AuthController],
   exports: [
@@ -63,6 +65,7 @@ import { DynamicConfigModule } from '../dynamic-config/dynamic-config.module';
     RevokedTokenRepository,
     LoginHistoriesRepository,
     KycVerificationRepository,
+    OTPAttemptLogsRepository,
   ],
 })
 export class AuthModule {}

@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, OnModuleInit } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 
@@ -8,7 +8,11 @@ import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
-import { KycVerificationRepository, LoginHistoriesRepository } from 'src/modules/auth/repository';
+import {
+  KycVerificationRepository,
+  LoginHistoriesRepository,
+  OTPAttemptLogsRepository,
+} from 'src/modules/auth/repository';
 import { UserRepository } from 'src/modules/auth/repository';
 import { OtpHelper } from 'src/default/common/helper/otp.helper';
 import { DateHelper } from 'src/default/common/helper/date.helper';
@@ -28,25 +32,27 @@ import { UserValidator } from 'src/default/common/validators';
 import { AppConfigService } from 'src/default/config/config.service';
 import { KycType } from 'src/default/common/enums/kyc.enum';
 import { OtpAttemptType } from 'src/default/common/enums/common.enum';
+import { SMSUtils } from 'src/default/common/utils/sms.utils';
+import { SMSSenderHelper } from 'src/default/common/helper/sms.helper';
 
 @Injectable()
-export class AuthService {
+export class AuthService implements OnModuleInit {
   constructor(
     private userRepository: UserRepository,
     private revokedTokenRepository: RevokedTokenRepository,
     private loginHistoryRepository: LoginHistoriesRepository,
     private kycVerificationRepository: KycVerificationRepository,
+    private otpAttemptLogsRepository: OTPAttemptLogsRepository,
 
     private readonly jwtService: JwtService,
     private readonly userAuthValidator: UserAuthValidator,
     private readonly userValidator: UserValidator,
     private readonly appConfigService: AppConfigService
-    // private readonly AuthTokenHelper,
   ) {}
-  // async onModuleInit() {
-  //   this.userRepository = RepositoryFactory.get("user");
-  //   // this.loginHistoryRepository = RepositoryFactory.get("loginhistories");
-  // }
+
+  onModuleInit() {
+    SMSSenderHelper.init(this.otpAttemptLogsRepository);
+  }
 
   async sendOtp(dto: SendOtpDto): Promise<{ mobile: string; otp_expiry_in_minutes: number }> {
     const user = await this.userValidator.findOrCreateActiveUserByMobile(dto, true);
@@ -72,10 +78,12 @@ export class AuthService {
 
     await this.userRepository.updateOtp(user.id, otp, otpExpiry);
 
-    /**
-     * TODO:
-     * await this.smsService.sendOtp(dto.mobile, otp);
-     */
+    await SMSUtils.sendParticipationOTP({
+      type: OtpAttemptType.LOGIN,
+      mobile: dto.mobile,
+      otp: otpPlain,
+      userId: user.id,
+    });
 
     return {
       mobile: OtpHelper.maskMobile(dto.mobile),
