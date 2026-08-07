@@ -303,12 +303,17 @@ export class OnboardingService {
     );
     const panKycComplete = !!panKyc;
 
-    const aadhaarKyc = await this.kycVerificationRepository.findVerifiedByUserIdAndType(
-      userId,
-      KycType.AADHAAR
-    );
+    let aadhaarKycComplete = false;
 
-    const aadhaarKycComplete = !!aadhaarKyc;
+    if (user.partnerType === UserPartnerType.INDIVIDUAL) {
+      const aadhaarKyc = await this.kycVerificationRepository.findVerifiedByUserIdAndType(
+        userId,
+        KycType.AADHAAR
+      );
+      aadhaarKycComplete = !!aadhaarKyc;
+    } else {
+      aadhaarKycComplete = true;
+    }
 
     // GST only for entity Partner Type
     let gstKycComplete = false;
@@ -391,6 +396,12 @@ export class OnboardingService {
 
     if (!status.storeInfoComplete) {
       throw new BusinessException(ERROR_CODES.ONBOARD.INCOMPLETE_STORE_INFO);
+    }
+
+    if (status.partnerType === UserPartnerType.INDIVIDUAL) {
+      if (!status.aadhaarKycComplete) {
+        throw new BusinessException(ERROR_CODES.ONBOARD.INCOMPLETE_AADHAAR_KYC);
+      }
     }
 
     if (status.partnerType === UserPartnerType.ENTITY) {

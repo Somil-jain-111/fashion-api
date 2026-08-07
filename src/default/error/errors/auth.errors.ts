@@ -134,4 +134,10 @@ export const AUTH_ERRORS = {
     message: 'Email is required',
     statusCode: 400,
   },
+
+  TOO_MANY_REQUESTS: {
+    code: 'AUTH_026',
+    message: 'Too many requests, please try again after sometime',
+    statusCode: 429,
+  },
 } as const;

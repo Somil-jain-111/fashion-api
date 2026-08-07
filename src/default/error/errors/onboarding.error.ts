@@ -44,4 +44,9 @@ export const ONBOARD_ERRORS = {
     message: 'Your profile is not needing any submission for approval',
     statusCode: 400,
   },
+  INCOMPLETE_AADHAAR_KYC: {
+    code: 'ONBOARD_010',
+    message: 'Please complete your Aadhaar KYC verification first.',
+    statusCode: 400,
+  },
 } as const;
