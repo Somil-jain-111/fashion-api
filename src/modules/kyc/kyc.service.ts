@@ -32,7 +32,7 @@ import { VerifyAadhaarOtpDto } from './dto/verify-aadhar-otp.dto';
 import { LocalStorageContextUtil } from 'src/default/common/utils/local-storage.util';
 import { ContextType } from 'src/default/common/constants/context.option';
 import { UserRepository } from '../auth/repository';
-import { UserPartnerType } from 'src/default/common/enums/user-type.enum';
+import { RedemptionKYCRequirements } from 'src/default/common/constants/redemptions.option';
 
 @Injectable()
 export class KycService {
@@ -131,6 +131,16 @@ export class KycService {
      * 1. Validate user
      */
     const user = await this.userAuthValidator.getAllowedUserById(userId);
+
+    const shouldVerifyAadhaar = RedemptionKYCRequirements[user.partnerType]?.includes(
+      KycType.AADHAAR
+    );
+
+    if (!shouldVerifyAadhaar) {
+      throw new BusinessException(ERROR_CODES.COMMON.BAD_REQUEST_RESON, {
+        reason: 'AADHAAR not required for this user',
+      });
+    }
 
     if (!user.username) {
       throw new BusinessException(ERROR_CODES.KYC.USER_PROFILE_NAME_REQUIRED);
@@ -407,6 +417,14 @@ export class KycService {
 
     const user = await this.userAuthValidator.getAllowedUserById(userId);
 
+    const shouldVerifyPan = RedemptionKYCRequirements[user.partnerType]?.includes(KycType.PAN);
+
+    if (!shouldVerifyPan) {
+      throw new BusinessException(ERROR_CODES.COMMON.BAD_REQUEST_RESON, {
+        reason: 'PAN not required for this user',
+      });
+    }
+
     if (!user.username) {
       throw new BusinessException(ERROR_CODES.KYC.USER_PROFILE_NAME_REQUIRED);
     }
@@ -557,6 +575,14 @@ export class KycService {
     const user = await this.userRepository.findOne({ id: Number(userId) });
 
     await this.userAuthValidator.validateUserStatus(user.status);
+
+    const shouldVerifyGst = RedemptionKYCRequirements[user.partnerType]?.includes(KycType.GST);
+
+    if (!shouldVerifyGst) {
+      throw new BusinessException(ERROR_CODES.COMMON.BAD_REQUEST_RESON, {
+        reason: 'GST not required for this user',
+      });
+    }
 
     // if (user.partnerType !== UserPartnerType.INDIVIDUAL) {
     //   throw new BusinessException(ERROR_CODES.KYC.INVALID_PARTNER_TYPE_FOR_GST);
