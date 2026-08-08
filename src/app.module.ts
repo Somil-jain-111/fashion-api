@@ -49,6 +49,7 @@ import { CartModule } from './modules/cart/cart.module';
 import { EmployeeModule } from './modules/employee/employee.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { RedemptionCartModule } from './modules/redemption-cart/redemption-cart.module';
+import { SmsModule } from './modules/sms/sms.module';
 
 @Module({
   imports: [
@@ -99,6 +100,7 @@ import { RedemptionCartModule } from './modules/redemption-cart/redemption-cart.
     EmployeeModule,
     AdminModule,
     RedemptionCartModule,
+    SmsModule,
   ],
   providers: [
     {
