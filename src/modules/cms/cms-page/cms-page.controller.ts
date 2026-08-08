@@ -12,6 +12,10 @@ import {
 } from '@nestjs/common';
 import { JwtAuthGuard } from 'src/default/common/guards/jwt-auth.guard';
 // import { UserStatusGuard } from 'src/default/common/guards/user-status.guard';
+import { RolesGuard } from 'src/default/common/guards/roles.guard';
+import { Roles } from 'src/default/common/decorators/roles.decorator';
+import { UserRole } from 'src/default/common/enums/user-type.enum';
+import { RolesRepository } from 'src/modules/auth/repository';
 import { CmsPageService } from './cms-page.service';
 import { CreateCmsPageDto } from './dto/create-cms-page.dto';
 import { DataSanitizer } from 'src/default/common/utils/sanitize.utils';
@@ -22,9 +26,14 @@ import { UpdateCmsPageDto } from './dto/update-cms-page.dto';
 @Controller('cms-page')
 @UseGuards(JwtAuthGuard)
 export class CmsPageController {
-  constructor(private readonly cmsPageService: CmsPageService) {}
+  constructor(
+    private readonly cmsPageService: CmsPageService,
+    private readonly roleRepository: RolesRepository
+  ) {}
 
   @Post()
+  @UseGuards(RolesGuard)
+  @Roles([UserRole.SUPERADMIN])
   async create(@Body() dto: CreateCmsPageDto) {
     const response = await this.cmsPageService.create(dto);
 
@@ -42,14 +51,15 @@ export class CmsPageController {
     const pageSize = Number(limit);
     const offset = (pageNumber - 1) * pageSize;
 
-    const response = await this.cmsPageService.findAll(query, offset, pageSize, req.usert.role);
+    const response = await this.cmsPageService.findAll(query, offset, pageSize, req.user.role);
 
     return DataSanitizer.sanitizeData(response);
   }
 
   @Get('active')
   async getActiveCmsPages(@Req() req: any, @Query('type') type?: CmsType) {
-    const roleIds = req.user?.roles?.map((role: any) => role.id?.toString()) ?? [];
+    const roleEntity = req.user?.role ? await this.roleRepository.findByName(req.user.role) : null;
+    const roleIds = roleEntity ? [roleEntity.id.toString()] : [];
 
     const response = await this.cmsPageService.getActiveCmsPagesByRoleIds(roleIds, type);
 
@@ -64,6 +74,8 @@ export class CmsPageController {
   }
 
   @Patch(':id')
+  @UseGuards(RolesGuard)
+  @Roles([UserRole.SUPERADMIN])
   async update(@Param('id') id: string, @Body() dto: UpdateCmsPageDto) {
     const response = await this.cmsPageService.update(id, dto);
 
@@ -71,6 +83,8 @@ export class CmsPageController {
   }
 
   @Delete(':id')
+  @UseGuards(RolesGuard)
+  @Roles([UserRole.SUPERADMIN])
   async remove(@Param('id') id: string) {
     const response = await this.cmsPageService.remove(id);
 

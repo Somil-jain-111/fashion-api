@@ -79,10 +79,14 @@ export class AllExceptionsFilter implements ExceptionFilter {
       };
     }
 
+    // Unrecognized (non-HttpException) errors can carry raw internals (DB driver text, SDK
+    // errors, etc.) in `exception.message` — only surface that to clients outside production.
+    const isProduction = process.env.NODE_ENV === 'production';
+    const rawMessage = exception instanceof Error && exception.message;
+
     return {
       errorCode: defaultError.code,
-      message:
-        exception instanceof Error && exception.message ? exception.message : defaultError.message,
+      message: !isProduction && rawMessage ? rawMessage : defaultError.message,
       data: null,
     };
   }

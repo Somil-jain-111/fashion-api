@@ -141,7 +141,7 @@ export class SmsService {
 
     try {
       ConsoleLogger.log(
-        `Sending SMS | mobile=${payload.msisdn} | message=${payload.message}`,
+        `Sending SMS | mobile=${payload.msisdn} | templateId=${payload.templateid}`,
         'SMSSenderHelper'
       );
 
@@ -166,7 +166,7 @@ export class SmsService {
           tag: 'SMSSenderHelper.sendSMS',
           data: {
             mobile: payload.msisdn,
-            message: payload.message,
+            templateId: payload.templateid,
           },
         }
       );

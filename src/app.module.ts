@@ -9,7 +9,10 @@ import { SwaggerModule } from './default/swagger/swagger.module';
 import { HttpModule } from '@nestjs/axios';
 import { ErrorHandlingModule } from './default/error/error.module';
 import { NotFoundMiddleware } from './default/common/middleware/not-found.middleware';
-import { ValidationPipe } from '@nestjs/common';
+import { ValidationPipe, ValidationError } from '@nestjs/common';
+import { BusinessException } from './default/error/business.exception';
+import { ERROR_CODES } from './default/error/error.code';
+import { ConsoleLogger } from './default/logger/console/console.service';
 import { ScheduleModule } from '@nestjs/schedule';
 import { UnifiedResponseInterceptor } from './default/common/interceptors/unified-response.interceptor';
 import { EventEmitterModule } from '@nestjs/event-emitter';
@@ -105,12 +108,26 @@ import { SmsModule } from './modules/sms/sms.module';
   providers: [
     {
       provide: APP_PIPE,
-      useClass: ValidationPipe,
-      useValue: {
-        whitelist: true,
-        forbidNonWhitelisted: true,
-        transform: true,
-      },
+      useFactory: () =>
+        new ValidationPipe({
+          whitelist: true,
+          forbidNonWhitelisted: true,
+          transform: true,
+          transformOptions: {
+            enableImplicitConversion: true,
+          },
+          // Never leak per-field validation details (constraint names, property
+          // names/values) to the client — log them internally and return a single
+          // generic error instead.
+          exceptionFactory: (errors: ValidationError[]) => {
+            ConsoleLogger.error(
+              'DTO validation failed',
+              JSON.stringify(errors),
+              'ValidationPipe'
+            );
+            return new BusinessException(ERROR_CODES.VALIDATION.INVALID_PAYLOAD);
+          },
+        }),
     },
     {
       provide: APP_GUARD,

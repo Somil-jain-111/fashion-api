@@ -5,11 +5,18 @@ import { AuthModule } from '../auth/auth.module';
 import { UserRepository } from '../user/repository';
 import { PointHistoryRepository } from '../redemptions/repository';
 import { RolesRepository } from '../auth/repository';
+import { TransactionService } from 'src/default/databases/transaction';
 
 @Module({
   imports: [AuthModule],
   controllers: [EmployeeController],
-  providers: [EmployeeService, UserRepository, RolesRepository, PointHistoryRepository],
+  providers: [
+    EmployeeService,
+    UserRepository,
+    RolesRepository,
+    PointHistoryRepository,
+    TransactionService,
+  ],
   exports: [EmployeeService],
 })
 export class EmployeeModule {}

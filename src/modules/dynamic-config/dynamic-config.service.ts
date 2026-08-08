@@ -5,10 +5,14 @@ import { UserRoleConfig } from './entities';
 import { UserRole } from 'src/default/common/enums/user-type.enum';
 import { CreateDynamicConfigDto } from './dto/create-dynamic-config.dto';
 import { EditDynamicConfigDto } from './dto/edit-dynamic-config.dto';
+import { TransactionService } from 'src/default/databases/transaction';
 
 @Injectable()
 export class DynamicConfigService {
-  constructor(private readonly dynamicConfigRepository: DynamicConfigRepository) {}
+  constructor(
+    private readonly dynamicConfigRepository: DynamicConfigRepository,
+    private readonly transactionUtils: TransactionService
+  ) {}
 
   private getObjectDiff(oldObj: any, newObj: any) {
     const previousChanges: Record<string, any> = {};
@@ -336,21 +340,26 @@ export class DynamicConfigService {
 
     const newValues = JSON.parse(JSON.stringify(existing));
 
-    await this.dynamicConfigRepository.updateUserRoleConfig(existing.id, existing);
-
     const { previousChanges, newChanges, hasChanges } = this.getObjectDiff(
       previousValues,
       newValues
     );
 
-    if (hasChanges) {
-      await this.dynamicConfigRepository.saveConfigLog({
-        previousValues: previousChanges,
-        newValues: newChanges,
-        userRole: dto.userRole,
-        userId: Number(userId),
-      });
-    }
+    await this.transactionUtils.runInTransaction(async (queryRunner) => {
+      await this.dynamicConfigRepository.updateUserRoleConfig(existing.id, existing, queryRunner);
+
+      if (hasChanges) {
+        await this.dynamicConfigRepository.saveConfigLog(
+          {
+            previousValues: previousChanges,
+            newValues: newChanges,
+            userRole: dto.userRole,
+            userId: Number(userId),
+          },
+          queryRunner
+        );
+      }
+    });
 
     return await this.getConfigByUserRole(existing.userRole, true);
   }

@@ -283,11 +283,13 @@ export class RedemptionCartService {
    */
   async removeItem(userId: number, itemId: number): Promise<CartResponseDto> {
     const cart = await this.getOrCreateActiveCart(userId);
-    // const itemToDelete = (cart.items || []).find((item) => String(item.id) === String(itemId));
+    const itemToDelete = (cart.items || []).find((item) => String(item.id) === String(itemId));
 
-    // if (itemToDelete) {
+    if (!itemToDelete) {
+      throw new BusinessException(ERROR_CODES.CART.CART_ITEM_NOT_FOUND);
+    }
+
     await this.redemptionCartItemRepository.deleteById(itemId);
-    // }
 
     return this.getCart(userId);
   }

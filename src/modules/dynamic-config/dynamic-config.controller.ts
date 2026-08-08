@@ -33,7 +33,7 @@ export class DynamicConfigController {
   @SkipThrottle()
   @Get('role')
   async getConfig(@Req() req) {
-    const role = req.user.roles?.[0];
+    const role = req.user.role;
 
     if (!role) {
       throw new BadRequestException('Invalid User Role');
@@ -52,7 +52,7 @@ export class DynamicConfigController {
   @Get()
   async getAllConfigs(@Req() req, @Query('role') role?: UserRole) {
     const isSuperAdmin =
-      String(req.user.roles?.[0])?.toLowerCase() === UserRole.SUPERADMIN.toLowerCase();
+      String(req.user.role)?.toLowerCase() === UserRole.SUPERADMIN.toLowerCase();
 
     if (role) {
       return DataSanitizer.sanitizeData(
@@ -86,7 +86,7 @@ export class DynamicConfigController {
   @SkipThrottle()
   @Post('update')
   async updateConfig(@Req() req, @Body() dto: EditDynamicConfigDto) {
-    const userId = req.user.userId;
+    const userId = req.user.id;
     const result = await this.configService.updateUserRoleConfig(dto, userId);
     return DataSanitizer.sanitizeData(result);
   }

@@ -244,19 +244,19 @@ export class PaymentService {
         },
         queryRunner
       );
-      // await this.pointPurchaseRepository.markPaid(
-      //   purchase.id,
-      //   paymentId,
-      //   {
-      //     event: String(event.event),
-      //     paymentLinkId,
-      //     paymentId,
-      //     amount: paidAmount,
-      //     currency: String(payment.currency),
-      //     status: String(payment.status),
-      //   },
-      //   queryRunner
-      // );
+      await this.pointPurchaseRepository.markPaid(
+        purchase.id,
+        paymentId,
+        {
+          event: String(event.event),
+          paymentLinkId,
+          paymentId,
+          amount: paidAmount,
+          currency: String(payment.currency),
+          status: String(payment.status),
+        },
+        queryRunner
+      );
 
       return {
         accepted: true,
@@ -584,13 +584,6 @@ export class PaymentService {
       throw new BusinessException(ERROR_CODES.OTP.OTP_NOT_FOUND);
     }
 
-    // Deduct points from user
-    const user = await this.userRepository.findOne({ id: userId }, ['role']);
-
-    if (!user) {
-      throw new BusinessException(ERROR_CODES.USER.USER_NOT_FOUND);
-    }
-
     // OTP validation
     const isProduction = this.appConfigService.isProduction() || this.appConfigService.isQa();
     const defaultOtp = this.appConfigService.getNonProdOtp().toString();
@@ -621,6 +614,14 @@ export class PaymentService {
     try {
       const transactionResult = await this.transactionUtils.runInTransaction(
         async (queryRunner) => {
+          // Lock the user row to serialize concurrent OTP verifications for the same user
+          // and prevent double-spending points across simultaneous payouts.
+          const user = await this.userRepository.findByIdForUpdate(userId, queryRunner);
+
+          if (!user) {
+            throw new BusinessException(ERROR_CODES.USER.USER_NOT_FOUND);
+          }
+
           payout.otp_verified = 1;
           payout.otp = null;
           payout.otp_expiry = null;

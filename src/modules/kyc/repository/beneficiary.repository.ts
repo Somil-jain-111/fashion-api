@@ -79,47 +79,42 @@ export class BeneficiaryRepository extends BaseRepository<UserBeneficiary> {
     });
   }
 
+  /**
+   * Looks up an active bank beneficiary by account number + IFSC across ALL users
+   * (not just the requesting user), mirroring how PAN/Aadhaar duplicate checks work
+   * in KycService. Returns the owning record (with `user` loaded) so callers can
+   * distinguish "already used by me" vs "already used by another account".
+   */
   async isAccountInfoExist(
     accountNumberENC: string,
     ifscENC: string,
-    userId?: number,
     queryRunner?: QueryRunner
-  ): Promise<boolean> {
-    const whereCondition: any = {
-      type: BeneficiaryType.BANK,
-      accountNumber: accountNumberENC,
-      ifsc: ifscENC,
-      active: true,
-      status: 1,
-    };
-
-    if (userId) {
-      whereCondition.user = { id: userId };
-    }
-
-    const existing = await this.getRepository(queryRunner).findOne({
-      where: whereCondition,
+  ): Promise<UserBeneficiary | null> {
+    return await this.getRepository(queryRunner).findOne({
+      where: {
+        type: BeneficiaryType.BANK,
+        accountNumber: accountNumberENC,
+        ifsc: ifscENC,
+        active: true,
+        status: 1,
+      } as any,
+      relations: { user: true } as any,
     });
-
-    return Boolean(existing);
   }
 
-  async isUpiExist(upiENC: string, userId?: number, queryRunner?: QueryRunner): Promise<boolean> {
-    const whereCondition: any = {
-      type: BeneficiaryType.UPI,
-      upi: upiENC,
-      active: true,
-      status: 1,
-    };
-
-    if (userId) {
-      whereCondition.user = { id: userId };
-    }
-
-    const existing = await this.getRepository(queryRunner).findOne({
-      where: whereCondition,
+  /**
+   * Looks up an active UPI beneficiary across ALL users (not just the requesting
+   * user) — see isAccountInfoExist for rationale.
+   */
+  async isUpiExist(upiENC: string, queryRunner?: QueryRunner): Promise<UserBeneficiary | null> {
+    return await this.getRepository(queryRunner).findOne({
+      where: {
+        type: BeneficiaryType.UPI,
+        upi: upiENC,
+        active: true,
+        status: 1,
+      } as any,
+      relations: { user: true } as any,
     });
-
-    return Boolean(existing);
   }
 }

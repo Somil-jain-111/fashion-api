@@ -21,7 +21,7 @@ export class IdempotencyInterceptor implements NestInterceptor {
     const isDuplicate = await this.idempotencyService.checkDuplicateRequest({
       ...request.body,
       userId: request.user.uuid,
-      role: request.user?.roles?.[0],
+      role: request.user?.role,
       path: request.route?.path || request.url,
     });
 
