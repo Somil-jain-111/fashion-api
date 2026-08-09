@@ -7,6 +7,7 @@ import { PairScanHistoryEntity } from '../entities/pair-scan-history.entity';
 import { InvoiceScanAuditEntity } from '../entities/invoice-scan-audit.entity';
 import { InvoicePairDetailEntity } from '../entities/invoice-pair-detail.entity';
 import { PairHistoryStatus, ScanSessionStatus } from '../enum/invoice-scan-session.enum';
+import { InvoicePairScanStatus } from '../enum/invoice-pair-scan-status.enum';
 import { User } from 'src/modules/auth/entities';
 import { PointHistory } from 'src/modules/redemptions/entities/point-history.entity';
 import { PointStatusEnum } from 'src/modules/redemptions/enum/point-history-status.enum.';
@@ -174,6 +175,16 @@ export class PairHistoryRepository extends BaseRepository<PairScanHistoryEntity>
       order: { id: 'ASC' },
     });
   }
+
+  /**
+   * Purges the per-pair scan log for a session. Only call this once the session is
+   * COMPLETED — countBySession()/pendingValid() both read every row for a session to
+   * track cumulative progress across partial submits, so deleting mid-session would
+   * corrupt an in-progress MULTIPLE-type invoice's scanned/valid counts.
+   */
+  async deleteBySession(sessionId: string, manager: EntityManager): Promise<void> {
+    await manager.getRepository(PairScanHistoryEntity).delete({ sessionId });
+  }
 }
 
 @Injectable()
@@ -227,6 +238,16 @@ export class InvoiceHistoryRepository extends BaseRepository<InvoiceScanAuditEnt
       .getManyAndCount();
     return { items, total };
   }
+
+  /**
+   * Purges every audit entry (STARTED/PARTIALLY_SUBMITTED/COMPLETED/...) recorded for a
+   * session. Only call once the session is COMPLETED — this removes the invoice from the
+   * retailer's GET /invoices/history and /history/:id views, by design (per product
+   * decision to not retain history for fully-completed invoices).
+   */
+  async deleteBySession(sessionId: string, manager: EntityManager): Promise<void> {
+    await manager.getRepository(InvoiceScanAuditEntity).delete({ sessionId });
+  }
 }
 
 @Injectable()
@@ -243,6 +264,35 @@ export class InvoicePairRepository extends BaseRepository<InvoicePairDetailEntit
       .where('assortment.invoice_id = :invoiceId', { invoiceId })
       .andWhere('pair.pair_uid IN (:...pairUids)', { pairUids })
       .getMany();
+  }
+
+  /**
+   * Marks the given physical pairs as consumed on invoice_pair_details itself (the
+   * source-of-truth table with its own scanned_by/scanned_at audit columns), rather than
+   * relying solely on pair_scan_history for anti-replay protection. Scoped by invoiceId so a
+   * pair_uid string can never be marked against the wrong invoice.
+   */
+  async markStatusByUids(
+    invoiceId: string,
+    pairUids: string[],
+    status: InvoicePairScanStatus,
+    scannedBy: string,
+    manager?: EntityManager
+  ): Promise<void> {
+    if (!pairUids.length) return;
+    const repository = manager?.getRepository(InvoicePairDetailEntity) ?? this.repository;
+    const pairs = await repository
+      .createQueryBuilder('pair')
+      .select(['pair.id'])
+      .innerJoin('pair.assortment', 'assortment')
+      .where('assortment.invoice_id = :invoiceId', { invoiceId })
+      .andWhere('pair.pair_uid IN (:...pairUids)', { pairUids })
+      .getMany();
+    if (!pairs.length) return;
+    await repository.update(
+      { id: In(pairs.map((pair) => pair.id)) },
+      { status, scanned_by: scannedBy, scanned_at: new Date() }
+    );
   }
 }
 

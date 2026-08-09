@@ -27,4 +27,9 @@ export const INVOICE_SCAN_ERRORS = {
     message: 'All expected pairs must be scanned before submitting a single invoice',
     statusCode: 422,
   },
+  INVOICE_ALREADY_SCANNED: {
+    code: 'ISC_013',
+    message: 'This invoice has already been fully scanned and rewarded',
+    statusCode: 409,
+  },
 } as const;
