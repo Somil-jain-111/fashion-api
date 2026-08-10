@@ -88,8 +88,8 @@ export class ApprovalsService {
           approval.id,
           {
             status: ApprovalStatus.BLOCKED,
-            approved_by: { id: approverId } as any,
-            approved_at: new Date(),
+            actionBy: { id: approverId } as any,
+            actionAt: new Date(),
             remarks: remarks || 'Blocked in approval pipeline',
           },
           queryRunner
@@ -114,8 +114,8 @@ export class ApprovalsService {
           approval.id,
           {
             status: ApprovalStatus.REJECTED,
-            approved_by: { id: approverId } as any,
-            approved_at: new Date(),
+            actionBy: { id: approverId } as any,
+            actionAt: new Date(),
             remarks: remarks || 'Rejected',
           },
           queryRunner
@@ -199,8 +199,8 @@ export class ApprovalsService {
           approval.id,
           {
             status: ApprovalStatus.APPROVED,
-            approved_by: { id: approverId } as any,
-            approved_at: new Date(),
+            actionBy: { id: approverId } as any,
+            actionAt: new Date(),
             remarks: remarks || 'Approved',
           },
           queryRunner
@@ -315,7 +315,7 @@ export class ApprovalsService {
       .leftJoinAndSelect('approval.user', 'user')
       .leftJoinAndSelect('user.storeInformation', 'storeInformation')
       .leftJoinAndSelect('approval.assignedTo', 'assignedTo')
-      .leftJoinAndSelect('approval.approved_by', 'approvedBy')
+      .leftJoinAndSelect('approval.actionBy', 'actionBy')
       .where('approval.approval_type = :type', { type: ApprovalType.PROFILE });
 
     if (approverRole !== UserRole.SUPERADMIN) {
@@ -339,7 +339,7 @@ export class ApprovalsService {
       level: approval.level,
       status: approval.status,
       remarks: approval.remarks ?? null,
-      approvedAt: approval.approved_at ? new Date(approval.approved_at).toISOString() : null,
+      actionAt: approval.actionAt ? new Date(approval.actionAt).toISOString() : null,
       assignedTo: approval.assignedTo
         ? {
             id: approval.assignedTo.id,
@@ -347,11 +347,11 @@ export class ApprovalsService {
             mobile: approval.assignedTo.mobile ?? null,
           }
         : null,
-      approvedBy: approval.approved_by
+      actionBy: approval.actionBy
         ? {
-            id: approval.approved_by.id,
-            name: approval.approved_by.username ?? null,
-            mobile: approval.approved_by.mobile ?? null,
+            id: approval.actionBy.id,
+            name: approval.actionBy.username ?? null,
+            mobile: approval.actionBy.mobile ?? null,
           }
         : null,
       retailer: {

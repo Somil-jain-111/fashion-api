@@ -453,7 +453,7 @@ export class SoVerificationService {
           activeApproval.level === 1 ? 'L1' : activeApproval.level === 2 ? 'L2' : 'Sales Officer',
         reason: activeApproval.remarks ?? 'Your profile was rejected. Please review and resubmit.',
         remarks: soEvidence?.remarks,
-        rejectedAt: activeApproval.approved_at.toISOString(),
+        rejectedAt: activeApproval.actionAt.toISOString(),
       };
     }
 
