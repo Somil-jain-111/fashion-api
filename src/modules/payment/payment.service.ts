@@ -19,7 +19,11 @@ import { DateHelper } from 'src/default/common/helper/date.helper';
 import { BusinessException } from 'src/default/error/business.exception';
 import { ERROR_CODES } from 'src/default/error/error.code';
 import { GetPaymentsQueryDto } from './dto';
-import { DataSanitizer } from 'src/default/common/utils/sanitize.utils';
+import { PointPurchaseRepository } from './repository';
+import { RazorpayIntegration } from './integrations/razorpay.integration';
+import { calculatePaymentSplit } from './helper/payment-split.helper';
+import { PointPurchaseStatus } from './entities';
+import { OtpHelper } from 'src/default/common/helper/otp.helper';
 
 @Injectable()
 export class PaymentService {
@@ -34,8 +38,233 @@ export class PaymentService {
     private readonly redisService: RedisService,
     private readonly appConfigService: AppConfigService,
     private readonly kycService: KycService,
-    private readonly rewardsService: RewardsService
+    private readonly rewardsService: RewardsService,
+    private readonly pointPurchaseRepository: PointPurchaseRepository,
+    private readonly razorpay: RazorpayIntegration
   ) {}
+
+  async createPointPurchase(userId: number, points: number, requestedCallbackUrl?: string) {
+    ConsoleLogger.log('Creating Razorpay payment link for point purchase.', {
+      tag: 'PaymentService.createPointPurchase',
+      data: { userId, points },
+    });
+
+    const user = await this.userRepository.findOne({ id: userId, active: true });
+    if (!user) throw new BusinessException(ERROR_CODES.USER.USER_NOT_FOUND);
+
+    const split = calculatePaymentSplit({ userPoints: 0, requiredPoints: points });
+    // Razorpay reference_id has a strict length limit; keep this compact and unique.
+    const referenceId = `PP_${userId}_${await CommonUtils.generateUniqueUUIDCode()}`;
+    const configuredCallbackUrl =
+      this.appConfigService.get<string>('POINT_PURCHASE_CALLBACK_URL') ||
+      (this.appConfigService.get<string>('FRONTEND_URL')
+        ? `${this.appConfigService.get<string>('FRONTEND_URL')}/payment-success`
+        : null);
+    const callbackUrl = requestedCallbackUrl
+      ? this.validatePointPurchaseCallbackUrl(requestedCallbackUrl)
+      : configuredCallbackUrl;
+    if (!callbackUrl) {
+      throw new BusinessException(ERROR_CODES.PAYMENT.RAZORPAY_CONFIGURATION_MISSING);
+    }
+    console.log('ssssss');
+
+    const purchase = await this.pointPurchaseRepository.createPending({
+      referenceId,
+      userId: String(userId),
+      points,
+      baseAmountPaise: Math.round(split.baseAmount * 100),
+      platformFeePaise: Math.round(split.platformFee * 100),
+      gstAmountPaise: Math.round(split.gstAmount * 100),
+      payableAmountPaise: split.payableAmountInPaise,
+    });
+
+    try {
+      const paymentLink = await this.razorpay.createPaymentLink({
+        amountPaise: split.payableAmountInPaise,
+        referenceId,
+        description: `Payment for ${points} points`,
+        callbackUrl,
+        customer: {
+          name: user.username || user.privateName || 'Customer',
+          contact: String(user.mobile || ''),
+          email: user.email || '',
+        },
+        notes: {
+          user_id: String(userId),
+          points: String(points),
+          base_amount_paise: String(Math.round(split.baseAmount * 100)),
+          platform_fee_paise: String(Math.round(split.platformFee * 100)),
+          gst_amount_paise: String(Math.round(split.gstAmount * 100)),
+          payable_amount_paise: String(split.payableAmountInPaise),
+          payment_type: 'POINTS_PAYMENT',
+          current_points: String(user.points || 0),
+        },
+      });
+      await this.pointPurchaseRepository.markLinkCreated(
+        purchase.id,
+        paymentLink.id,
+        paymentLink.short_url,
+        paymentLink as unknown as Record<string, unknown>
+      );
+      ConsoleLogger.log('Razorpay point-purchase payment link created.', {
+        tag: 'PaymentService.createPointPurchase',
+        data: {
+          userId,
+          points,
+          paymentLinkId: paymentLink.id,
+          payableAmountInPaise: split.payableAmountInPaise,
+        },
+      });
+
+      return {
+        payment_link_id: paymentLink.id,
+        payment_url: paymentLink.short_url,
+        points,
+        amount_without_gst: split.baseAmount,
+        platform_fee_percent: 2,
+        platform_fee: split.platformFee,
+        gst_percent: 18,
+        gst_amount: split.gstAmount,
+        payable_amount: split.payableAmount,
+        payable_amount_in_paise: split.payableAmountInPaise,
+        currency: 'INR',
+        current_points: Number(user.points),
+      };
+    } catch (error) {
+      console.log(error.stack);
+      await this.pointPurchaseRepository.markFailed(
+        purchase.id,
+        error?.message || 'Razorpay payment link creation failed'
+      );
+      ConsoleLogger.error(
+        `Razorpay point-purchase link creation failed for user ${userId}`,
+        error?.stack,
+        'PaymentService.createPointPurchase'
+      );
+      throw error;
+    }
+  }
+
+  private validatePointPurchaseCallbackUrl(callbackUrl: string): string {
+    let parsed: URL;
+    try {
+      parsed = new URL(callbackUrl);
+    } catch {
+      throw new BusinessException(ERROR_CODES.PAYMENT.INVALID_PAYMENT_CALLBACK_URL);
+    }
+
+    if (this.appConfigService.isProduction() && parsed.protocol !== 'https:') {
+      throw new BusinessException(ERROR_CODES.PAYMENT.INVALID_PAYMENT_CALLBACK_URL);
+    }
+
+    const configuredOrigins = [
+      ...this.appConfigService
+        .get<string>('POINT_PURCHASE_ALLOWED_CALLBACK_ORIGINS', '')
+        .split(',')
+        .map((value) => value.trim())
+        .filter(Boolean),
+      this.appConfigService.get<string>('POINT_PURCHASE_CALLBACK_URL'),
+      this.appConfigService.get<string>('FRONTEND_URL'),
+    ]
+      .filter(Boolean)
+      .map((value) => {
+        try {
+          return new URL(value).origin;
+        } catch {
+          return null;
+        }
+      })
+      .filter(Boolean);
+
+    if (!configuredOrigins.includes(parsed.origin)) {
+      throw new BusinessException(ERROR_CODES.PAYMENT.INVALID_PAYMENT_CALLBACK_URL);
+    }
+    return parsed.toString();
+  }
+
+  async processRazorpayWebhook(
+    rawBody: Buffer,
+    signature: string | undefined,
+    event: Record<string, any>
+  ) {
+    if (!this.razorpay.verifyWebhook(rawBody, signature)) {
+      throw new BusinessException(ERROR_CODES.PAYMENT.INVALID_RAZORPAY_SIGNATURE);
+    }
+
+    if (event?.event !== 'payment_link.paid') {
+      return { accepted: true, processed: false };
+    }
+
+    const paymentLink = event?.payload?.payment_link?.entity;
+    const payment = event?.payload?.payment?.entity;
+    const paymentLinkId = String(paymentLink?.id || '');
+    const paymentId = String(payment?.id || '');
+    if (!paymentLinkId || !paymentId) {
+      throw new BusinessException(ERROR_CODES.PAYMENT.INVALID_RAZORPAY_WEBHOOK);
+    }
+
+    return this.transactionUtils.runInTransaction(async (queryRunner) => {
+      const purchase = await this.pointPurchaseRepository.findByPaymentLinkId(
+        paymentLinkId,
+        queryRunner,
+        true
+      );
+      if (!purchase) {
+        throw new BusinessException(ERROR_CODES.PAYMENT.POINT_PURCHASE_NOT_FOUND);
+      }
+      if (purchase.status === PointPurchaseStatus.PAID) {
+        return { accepted: true, processed: false, idempotent: true };
+      }
+
+      const paidAmount = Number(payment?.amount ?? paymentLink?.amount_paid ?? 0);
+      if (
+        payment?.status !== 'captured' ||
+        payment?.currency !== 'INR' ||
+        paidAmount !== purchase.payableAmountPaise
+      ) {
+        throw new BusinessException(ERROR_CODES.PAYMENT.RAZORPAY_AMOUNT_MISMATCH);
+      }
+
+      const user = await this.userRepository.findByIdForUpdate(
+        Number(purchase.userId),
+        queryRunner
+      );
+      if (!user) throw new BusinessException(ERROR_CODES.USER.USER_NOT_FOUND);
+
+      await this.pointHistoryRepository.save(
+        {
+          user: { id: Number(purchase.userId) } as any,
+          description: `Purchased ${purchase.points} points via Razorpay`,
+          date: new Date(),
+          status: PointStatusEnum.added,
+          type: RedemptionType.EARN,
+          transaction_id: `razorpay:${paymentId}`,
+          points: purchase.points,
+          user_remaining_points: Number(user.points),
+        },
+        queryRunner
+      );
+      await this.pointPurchaseRepository.markPaid(
+        purchase.id,
+        paymentId,
+        {
+          event: String(event.event),
+          paymentLinkId,
+          paymentId,
+          amount: paidAmount,
+          currency: String(payment.currency),
+          status: String(payment.status),
+        },
+        queryRunner
+      );
+
+      return {
+        accepted: true,
+        processed: true,
+        pointsAdded: purchase.points,
+      };
+    });
+  }
 
   /**
    * Places a DBT order
@@ -183,8 +412,8 @@ export class PaymentService {
           const transaction_id = await CommonUtils.generateUniqueRefCode();
 
           const plainOtp = isLive
-            ? Math.floor(1000 + Math.random() * 9000).toString()
-            : this.appConfigService.getNonProdRewardsOtp();
+            ? OtpHelper.generateOtp()
+            : this.appConfigService.getNonProdOtp().toString();
 
           const otpEncrypted = CommonUtils.encrypt(String(plainOtp));
           const otpExpiry = DateHelper.getOtpExpiryDate();
@@ -279,8 +508,8 @@ export class PaymentService {
         plainOtp = CommonUtils.decrypt(payout.otp);
       } catch (e) {
         plainOtp = isLive
-          ? Math.floor(1000 + Math.random() * 9000).toString()
-          : this.appConfigService.getNonProdRewardsOtp()?.toString() || '9988';
+          ? OtpHelper.generateOtp()
+          : this.appConfigService.getNonProdOtp().toString();
 
         payout.otp = CommonUtils.encrypt(String(plainOtp));
         payout.otp_expiry = DateHelper.getOtpExpiryDate();
@@ -289,8 +518,8 @@ export class PaymentService {
       }
     } else {
       plainOtp = isLive
-        ? Math.floor(1000 + Math.random() * 9000).toString()
-        : this.appConfigService.getNonProdRewardsOtp()?.toString() || '9988';
+        ? OtpHelper.generateOtp()
+        : this.appConfigService.getNonProdOtp().toString();
 
       const otpEncrypted = CommonUtils.encrypt(String(plainOtp));
 
@@ -355,16 +584,9 @@ export class PaymentService {
       throw new BusinessException(ERROR_CODES.OTP.OTP_NOT_FOUND);
     }
 
-    // Deduct points from user
-    const user = await this.userRepository.findOne({ id: userId }, ['role']);
-
-    if (!user) {
-      throw new BusinessException(ERROR_CODES.USER.USER_NOT_FOUND);
-    }
-
     // OTP validation
     const isProduction = this.appConfigService.isProduction() || this.appConfigService.isQa();
-    const defaultOtp = this.appConfigService.getNonProdRewardsOtp()?.toString() || '9988';
+    const defaultOtp = this.appConfigService.getNonProdOtp().toString();
     const encryptedOtp = CommonUtils.encrypt(String(otp));
 
     if (isProduction) {
@@ -392,6 +614,14 @@ export class PaymentService {
     try {
       const transactionResult = await this.transactionUtils.runInTransaction(
         async (queryRunner) => {
+          // Lock the user row to serialize concurrent OTP verifications for the same user
+          // and prevent double-spending points across simultaneous payouts.
+          const user = await this.userRepository.findByIdForUpdate(userId, queryRunner);
+
+          if (!user) {
+            throw new BusinessException(ERROR_CODES.USER.USER_NOT_FOUND);
+          }
+
           payout.otp_verified = 1;
           payout.otp = null;
           payout.otp_expiry = null;

@@ -16,21 +16,15 @@ export class IdempotencyService {
 
   async checkDuplicateRequest(data: any): Promise<boolean> {
     const hash = this.generateHash(data);
-    const isDuplicate = await this.redisService.get(hash);
-
-    if (isDuplicate) {
-      return true; // Duplicate request detected
-    }
-
-    // Store hash in Redis with a TTL
-    await this.redisService.set(hash, 'exists', this.hashTTL);
-    return false; // No duplicate found
+    // Atomic set-if-not-exists: only the first caller for a given hash gets `created === true`,
+    // so concurrent identical requests can't both observe "not a duplicate".
+    const created = await this.redisService.setNX(hash, 'exists', this.hashTTL);
+    return !created; // If we didn't create it, it already existed => duplicate
   }
 
   async acquireLock(idempotencyKey: string): Promise<boolean> {
     const lockKey = `idempotency-lock:${idempotencyKey}`;
-    const result = await this.redisService.set(lockKey, 'locked', this.lockTTL);
-    return result === 'OK'; // Check if lock is acquired
+    return this.redisService.setNX(lockKey, 'locked', this.lockTTL);
   }
 
   async releaseLock(idempotencyKey: string): Promise<void> {

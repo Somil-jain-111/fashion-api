@@ -28,7 +28,14 @@ export class UserAuthValidator {
       throw new BusinessException(ERROR_CODES.USER.USER_NOT_FOUND);
     }
 
-    // this.throwIfUserNotActive(user.status);
+    /**
+     * Use validateUserStatus (not throwIfUserNotActive) here: this method is also
+     * used on the OTP flow for users that are still IN_APPROVAL/PARTIAL_APPROVED
+     * (e.g. right after findOrCreateActiveUserByMobile creates a brand-new user),
+     * which must still be allowed to send/verify OTPs. It still blocks
+     * BLOCKED/INACTIVE/DELETED users, same as login().
+     */
+    this.validateUserStatus(user.status);
 
     return user;
   }

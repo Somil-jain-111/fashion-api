@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 
@@ -8,7 +8,11 @@ import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
-import { KycVerificationRepository, LoginHistoriesRepository } from 'src/modules/auth/repository';
+import {
+  KycVerificationRepository,
+  LoginHistoriesRepository,
+  OTPAttemptLogsRepository,
+} from 'src/modules/auth/repository';
 import { UserRepository } from 'src/modules/auth/repository';
 import { OtpHelper } from 'src/default/common/helper/otp.helper';
 import { DateHelper } from 'src/default/common/helper/date.helper';
@@ -20,13 +24,18 @@ import { PasswordHelper } from 'src/default/common/helper/password.helper';
 import { AuthTokenHelper } from 'src/default/common/helper/auth-token.helper';
 import { UserResponseMapper } from './mapper/user-response.mapper';
 import { ResetTokenHelper } from 'src/default/common/helper/reset-token.helper';
-import { RESET_TOKEN_EXPIRY_MINUTES } from './constants/auth.constants';
+import {
+  MAX_OTP_VERIFY_ATTEMPTS,
+  RESET_TOKEN_EXPIRY_MINUTES,
+} from './constants/auth.constants';
 import { RevokedTokenRepository } from 'src/modules/auth/repository';
 import { TokenType } from 'src/default/common/enums/token-type.enum';
 import { TokenHashHelper } from 'src/default/common/helper/token-hash.helper';
 import { UserValidator } from 'src/default/common/validators';
 import { AppConfigService } from 'src/default/config/config.service';
 import { KycType } from 'src/default/common/enums/kyc.enum';
+import { OtpAttemptType } from 'src/default/common/enums/common.enum';
+import { SmsService } from '../sms/sms.service';
 
 @Injectable()
 export class AuthService {
@@ -35,53 +44,87 @@ export class AuthService {
     private revokedTokenRepository: RevokedTokenRepository,
     private loginHistoryRepository: LoginHistoriesRepository,
     private kycVerificationRepository: KycVerificationRepository,
+    private otpAttemptLogsRepository: OTPAttemptLogsRepository,
 
     private readonly jwtService: JwtService,
     private readonly userAuthValidator: UserAuthValidator,
     private readonly userValidator: UserValidator,
-    private readonly appConfigService: AppConfigService
-    // private readonly AuthTokenHelper,
+    private readonly appConfigService: AppConfigService,
+    private readonly smsService: SmsService
   ) {}
-  // async onModuleInit() {
-  //   this.userRepository = RepositoryFactory.get("user");
-  //   // this.loginHistoryRepository = RepositoryFactory.get("loginhistories");
-  // }
 
   async sendOtp(dto: SendOtpDto): Promise<{ mobile: string; otp_expiry_in_minutes: number }> {
     const user = await this.userValidator.findOrCreateActiveUserByMobile(dto, true);
 
+    const otpValidation = await this.userValidator.validateOtpAttempts({
+      mobile: dto.mobile,
+      otpType: OtpAttemptType.LOGIN,
+      userRole: dto.role,
+      increment: true,
+    });
+
     let otpPlain = await OtpHelper.generateOtp();
 
-    if (!this.appConfigService.isProduction()) {
+    const isProd = this.appConfigService.isProduction() || this.appConfigService.isQa();
+
+    if (!isProd) {
       otpPlain = this.appConfigService.getNonProdOtp().toString();
     }
 
-    const otpExpiry = await DateHelper.getOtpExpiryDate();
+    const expirySeconds = otpValidation.expirySeconds;
+    const otpExpiry = OtpHelper.generateExpiryDate(expirySeconds);
     const otp = CommonUtils.encrypt(otpPlain);
 
     await this.userRepository.updateOtp(user.id, otp, otpExpiry);
 
+    const smsResult = await this.smsService.sendParticipationOTPSms({
+      type: OtpAttemptType.LOGIN,
+      mobile: dto.mobile,
+      otp: otpPlain,
+      userId: user.id,
+    });
+
     /**
-     * TODO:
-     * await this.smsService.sendOtp(dto.mobile, otp);
+     * sendParticipationOTPSms swallows dispatch errors: it resolves to `null` when an
+     * internal/validation error occurs, and to a `{ status: 'failed', ... }` payload when
+     * the SMS provider call itself fails. Check both so a failed dispatch surfaces as an
+     * honest error instead of a false "OTP sent successfully" response.
      */
+    if (!smsResult || smsResult.status !== 'success') {
+      throw new BusinessException(ERROR_CODES.AUTH.OTP_SEND_FAILED);
+    }
 
     return {
       mobile: OtpHelper.maskMobile(dto.mobile),
-      otp_expiry_in_minutes: 5,
+      otp_expiry_in_minutes: Math.ceil(expirySeconds / 60),
     };
   }
 
   async verifyOtp(dto: VerifyOtpDto, req: any) {
     const user = await this.userAuthValidator.validateActiveUserByMobile(dto.mobile);
 
+    /**
+     * Brute-force protection: cap verification attempts per generated OTP.
+     * The counter is reset whenever a new OTP is generated (updateOtp) and on
+     * successful verification below.
+     */
+    if (Number(user.otp_attempt_count) >= MAX_OTP_VERIFY_ATTEMPTS) {
+      throw new BusinessException(ERROR_CODES.AUTH.TOO_MANY_REQUESTS);
+    }
+
     if (!user.otp || user.otp !== CommonUtils.encrypt(dto.otp)) {
+      await this.userRepository.updateById(user.id, {
+        otp_attempt_count: Number(user.otp_attempt_count) + 1,
+      });
+
       throw new BusinessException(ERROR_CODES.AUTH.INVALID_OTP);
     }
 
     if (OtpHelper.isOtpExpired(user.otp_expiry)) {
       throw new BusinessException(ERROR_CODES.AUTH.OTP_EXPIRED);
     }
+
+    // await this.userValidator.clearOtpAttempts(dto.mobile, OtpAttemptType.LOGIN);
 
     const tokens = await AuthTokenHelper.generateTokens(this.jwtService, user);
 
@@ -196,17 +239,29 @@ export class AuthService {
 
   async resetPassword(dto: ResetPasswordDto) {
     const user = await this.userRepository.findOne({
-      otp: dto.token,
+      resetPasswordToken: dto.token,
     });
 
     if (!user) {
-      throw new BadRequestException('Invalid or expired reset token');
+      throw new BusinessException(ERROR_CODES.COMMON.BAD_REQUEST_RESON, {
+        reason: 'Invalid or expired reset token',
+      });
+    }
+
+    if (!user.resetPasswordTokenExpiry || new Date(user.resetPasswordTokenExpiry) < new Date()) {
+      throw new BusinessException(ERROR_CODES.AUTH.RESET_TOKEN_EXPIRED);
     }
 
     const hashedPassword = await bcrypt.hash(dto.password, 10);
 
     user.password = hashedPassword;
     user.otp = null;
+
+    /**
+     * Invalidate the reset token so it cannot be reused.
+     */
+    user.resetPasswordToken = null;
+    user.resetPasswordTokenExpiry = null;
 
     /**
      * Logout old sessions after password reset

@@ -76,6 +76,15 @@ export class InvoiceValidationService {
       throw new BusinessException(ERROR_CODES.INVOICE_SCAN.INVOICE_INACTIVE);
     if (invoice.expires_at && new Date(invoice.expires_at).getTime() <= Date.now())
       throw new BusinessException(ERROR_CODES.INVOICE_SCAN.INVOICE_EXPIRED);
+    // Once every pair has been scanned & rewarded there is nothing left to do — this is the
+    // hard "one-time only" gate: a SINGLE-type invoice can only ever complete this once, and a
+    // MULTIPLE-type invoice has nothing left to submit once it's fully scanned either way.
+    if (
+      invoice.scan_status === InvoiceScanStatus.FULLY_SCANNED ||
+      (invoice.total_pairs > 0 && invoice.scanned_pairs >= invoice.total_pairs)
+    ) {
+      throw new BusinessException(ERROR_CODES.INVOICE_SCAN.INVOICE_ALREADY_SCANNED);
+    }
     return invoice;
   }
 
@@ -218,6 +227,7 @@ export class ScanSessionService {
     private readonly pairHistory: PairHistoryRepository,
     private readonly histories: InvoiceHistoryRepository,
     private readonly invoiceRepository: InvoiceRepository,
+    private readonly pairRepository: InvoicePairRepository,
     private readonly lock: RedisLockService,
     private readonly redis: RedisService,
     private readonly audit: AuditService,
@@ -239,7 +249,10 @@ export class ScanSessionService {
 
   async start(invoiceNumber: string, userId: string) {
     const invoice = await this.invoiceValidation.getValidInvoice(invoiceNumber, userId);
-    return this.lock.withLock(`lock:invoice:${invoiceNumber}`, async () => {
+    // Scoped per-user: invoice_no is only unique per distributor (master_id), so the same
+    // invoiceNumber string can legitimately belong to different retailers. Locking on the
+    // number alone would serialize unrelated users against each other for no reason.
+    return this.lock.withLock(`lock:invoice:${invoiceNumber}:${userId}`, async () => {
       const existing = await this.sessions.findActive(invoice.id, userId);
       if (existing) return this.progress(existing);
       const session = await this.sessions.createSession({
@@ -332,6 +345,15 @@ export class ScanSessionService {
         })),
       ];
       await this.pairHistory.insertIgnore(rows);
+      // Belt-and-suspenders: also flip the physical pair's own status on
+      // invoice_pair_details (source of truth, with its own scanned_by/scanned_at audit
+      // trail), instead of relying solely on pair_scan_history for anti-replay protection.
+      await this.pairRepository.markStatusByUids(
+        session.invoiceId,
+        validation.valid,
+        InvoicePairScanStatus.SCANNED,
+        userId
+      );
       const counts = await this.pairHistory.countBySession(sessionId);
       session.scannedPairs = counts.scanned;
       session.validPairs = counts.valid;
@@ -358,9 +380,11 @@ export class ScanSessionService {
 
   async submit(sessionId: string, userId: string) {
     return this.lock.withLock(`lock:session:${sessionId}`, async () => {
+      let invoiceNumber: string;
       const response = await this.dataSource.transaction(async (manager) => {
         const session = await this.sessions.findOwned(sessionId, userId, manager, true);
         if (!session) throw new BusinessException(ERROR_CODES.INVOICE_SCAN.SESSION_NOT_FOUND);
+        invoiceNumber = session.invoiceNumber;
         if (session.status !== ScanSessionStatus.ACTIVE)
           throw new BusinessException(ERROR_CODES.INVOICE_SCAN.SESSION_NOT_ACTIVE);
         if (
@@ -386,6 +410,14 @@ export class ScanSessionService {
         );
         await this.pairHistory.markRewarded(
           pending.map((row) => row.id),
+          manager
+        );
+        // Final state on the source-of-truth pair table (see bulkScan's SCANNED marking).
+        await this.pairRepository.markStatusByUids(
+          session.invoiceId,
+          pending.map((row) => row.pairUid),
+          InvoicePairScanStatus.REDEEMED,
+          userId,
           manager
         );
         invoice.scanned_pairs = newInvoiceValid;
@@ -416,6 +448,15 @@ export class ScanSessionService {
           },
           manager
         );
+        // Per-pair and audit history are only ever needed while this session is still in
+        // progress (countBySession/pendingValid read every row to track cumulative
+        // progress across partial submits). Once truly COMPLETED, nothing will scan or
+        // submit against this session again, so it's safe to purge both logs now — the
+        // final tallies already live on the session/invoice rows themselves.
+        if (completed) {
+          await this.pairHistory.deleteBySession(sessionId, manager);
+          await this.histories.deleteBySession(sessionId, manager);
+        }
         return {
           pointsAwarded: points,
           validPairs: pending.length,
@@ -425,6 +466,10 @@ export class ScanSessionService {
       });
       await Promise.all([
         this.redis.delete(`session:${sessionId}:${userId}`),
+        // The invoice snapshot cached by InvoiceValidationService.getValidInvoice is now
+        // stale (scanned_pairs/scan_status just changed) — without this, a re-validate/start
+        // within the cache TTL would read pre-submit data and miss the already-scanned gate.
+        this.redis.delete(`invoice:${invoiceNumber}:${userId}`),
         this.audit.record('SESSION_SUBMITTED', { sessionId, userId, ...response }),
       ]);
       return response;

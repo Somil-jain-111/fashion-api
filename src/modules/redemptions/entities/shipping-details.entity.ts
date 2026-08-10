@@ -1,28 +1,16 @@
-import {
-  Entity,
-  PrimaryGeneratedColumn,
-  Column,
-  CreateDateColumn,
-  UpdateDateColumn,
-  OneToOne,
-  JoinColumn,
-  Index,
-} from 'typeorm';
+import { Entity, Column, OneToOne, JoinColumn, Index } from 'typeorm';
 
-import { Order } from '../../auth/entities';
+import { Order, OrderItem } from '../../auth/entities';
 import { ShippingStatus } from '../enum/order-status.enum';
 import { BaseEntity } from '../../../default/common/entities';
 
 @Entity({ name: 'shipping_details' })
-@Index('idx_shipping_order', ['order'])
+@Index('idx_shipping_order', ['orderItem'])
 @Index('idx_shipping_delivery_status', ['delivery_status'])
 export class ShippingDetail extends BaseEntity {
-  @Column({ type: 'bigint' })
-  order_id!: string;
-
-  @OneToOne(() => Order, (order) => order.shippingDetail)
-  @JoinColumn({ name: 'order_id' })
-  order!: Order;
+  @OneToOne(() => OrderItem, (orderItem) => orderItem.shippingDetail)
+  @JoinColumn({ name: 'order_item_id' })
+  orderItem!: OrderItem;
 
   @Column({ type: 'timestamp', nullable: true })
   ship_date?: Date | null;
@@ -69,6 +57,9 @@ export class ShippingDetail extends BaseEntity {
     default: ShippingStatus.PENDING,
   })
   delivery_status!: ShippingStatus;
+
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  fullname!: string;
 
   @Column({ type: 'varchar', length: 15, nullable: false })
   mobile!: string;

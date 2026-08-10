@@ -58,9 +58,6 @@ export class FaqRepository extends BaseRepository<FaqEntity> {
       .leftJoinAndSelect('faq.roles', 'role')
       .where('faq.isActive = :isActive', {
         isActive: true,
-      })
-      .andWhere('role.name = :userRole', {
-        userRole,
       });
 
     if (query.category) {

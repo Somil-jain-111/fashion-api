@@ -236,9 +236,9 @@ export class OnboardingService {
       });
 
       // Link store information to user
-      await this.userRepository.updateById(userId, {
-        storeInformation: { id: storeInfo.id } as any,
-      });
+      // await this.userRepository.updateById(userId, {
+      //   storeInformation: { id: storeInfo.id } as any,
+      // });
     }
 
     return {
@@ -303,12 +303,18 @@ export class OnboardingService {
     );
     const panKycComplete = !!panKyc;
 
-    const aadhaarKyc = await this.kycVerificationRepository.findVerifiedByUserIdAndType(
-      userId,
-      KycType.AADHAAR
-    );
+    let aadhaarKycComplete = false;
 
-    const aadhaarKycComplete = !!aadhaarKyc;
+    if (user.partnerType === UserPartnerType.INDIVIDUAL) {
+      const aadhaarKyc = await this.kycVerificationRepository.findVerifiedByUserIdAndType(
+        userId,
+        KycType.AADHAAR
+      );
+      aadhaarKycComplete = !!aadhaarKyc;
+    }
+    // else {
+    //   aadhaarKycComplete = true;
+    // }
 
     // GST only for entity Partner Type
     let gstKycComplete = false;
@@ -320,10 +326,12 @@ export class OnboardingService {
         userId,
         KycType.GST
       );
+
       gstKycComplete = !!gstKyc;
-    } else {
-      gstKycComplete = true;
     }
+    // else {
+    //   gstKycComplete = true;
+    // }
 
     // ---- Approval & routing info (merged from SO flow) ----
     const approvals = await this.approvalRepository.findByUserId(userId, ApprovalType.PROFILE);
@@ -376,6 +384,10 @@ export class OnboardingService {
   async submitProfile(userId: number) {
     const status = await this.getStatus(userId);
 
+    if (status.isSubmitted) {
+      throw new BusinessException(ERROR_CODES.ONBOARD.ALREADY_SUBMITTED_FOR_APPROVAL);
+    }
+
     if (!status.basicInfoComplete) {
       throw new BusinessException(ERROR_CODES.ONBOARD.INCOMPLETE_BASIC_INFO);
     }
@@ -386,6 +398,12 @@ export class OnboardingService {
 
     if (!status.storeInfoComplete) {
       throw new BusinessException(ERROR_CODES.ONBOARD.INCOMPLETE_STORE_INFO);
+    }
+
+    if (status.partnerType === UserPartnerType.INDIVIDUAL) {
+      if (!status.aadhaarKycComplete) {
+        throw new BusinessException(ERROR_CODES.ONBOARD.INCOMPLETE_AADHAAR_KYC);
+      }
     }
 
     if (status.partnerType === UserPartnerType.ENTITY) {
@@ -424,8 +442,9 @@ export class OnboardingService {
     });
 
     return {
-      message: 'Profile submitted for L1 approval successfully',
       applicationId: status.applicationId,
+      status: status.overallStatus,
+      isSubmitted: status.isSubmitted,
     };
   }
 

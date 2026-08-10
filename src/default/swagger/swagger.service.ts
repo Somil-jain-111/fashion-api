@@ -19,6 +19,11 @@ export class SwaggerService {
       throw new Error('SwaggerService: Application instance is not set.');
     }
 
+    if (this.configService.isProduction()) {
+      ConsoleLogger.log('Swagger setup skipped in production', 'SwaggerService');
+      return;
+    }
+
     // Load environment variables for Swagger
     const swaggerTitle =
       `${this.configService.get('APP_NAME')} - API Documentation` || 'API Documentation';

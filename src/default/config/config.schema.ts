@@ -43,6 +43,7 @@ export const validationSchema = Joi.object({
   REDIS_HOST: Joi.string().required(),
   REDIS_PORT: Joi.number().default(6379),
   REDIS_PASSWORD: Joi.string().optional().allow(''),
+  REDIS_TTL: Joi.number().default(5), // minutes
 
   // AWS Config (Required only in production)
   AWS_REGION: Joi.when('NODE_ENV', {

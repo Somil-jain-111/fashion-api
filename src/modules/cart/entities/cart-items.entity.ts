@@ -50,7 +50,9 @@ export class CartItem extends BaseEntity {
   })
   mrp: number;
 
-  @Column({
+  @Column('decimal', {
+    precision: 10,
+    scale: 2,
     default: 0,
   })
   discount: number;

@@ -145,7 +145,43 @@ export class AnnouncementService {
 
     const announcement = await this.announcementRepository.findByIdOrThrow(id);
 
-    // update logic...
+    if (dto.roleIds?.length) {
+      const roles = await this.roleRepository.findMany({
+        where: {
+          id: In(dto.roleIds),
+        },
+      });
+
+      const foundRoleIds = roles.map((role) => role.id.toString());
+
+      const missingRoleIds = dto.roleIds.filter(
+        (roleId) => !foundRoleIds.includes(roleId.toString())
+      );
+
+      if (missingRoleIds.length) {
+        ConsoleLogger.warn('ANNOUNCEMENT_ROLES_NOT_FOUND', {
+          tag,
+          data: { missingRoleIds },
+        });
+
+        throw new BusinessException(ERROR_CODES.ANNOUNCEMENT.ROLES_NOT_FOUND);
+      }
+
+      announcement.roles = roles;
+    }
+
+    Object.assign(announcement, {
+      title: dto.title ?? announcement.title,
+      message: dto.message ?? announcement.message,
+      type: dto.type ?? announcement.type,
+      image: dto.image ?? announcement.image,
+      redirectUrl: dto.redirectUrl ?? announcement.redirectUrl,
+      priority: dto.priority ?? announcement.priority,
+      isDismissible: dto.isDismissible ?? announcement.isDismissible,
+      isActive: dto.isActive ?? announcement.isActive,
+      startDate: dto.startDate ? new Date(dto.startDate) : announcement.startDate,
+      endDate: dto.endDate ? new Date(dto.endDate) : announcement.endDate,
+    });
 
     const updatedAnnouncement = await this.announcementRepository.save(announcement);
 

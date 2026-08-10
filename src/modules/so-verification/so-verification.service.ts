@@ -15,6 +15,7 @@ import { SoVerificationRepository } from './so-verification.repository';
 import { ApprovalRepository } from '../approvals/repository';
 import { DynamicConfigRepository } from '../dynamic-config/repository';
 import { UserRepository } from '../auth/repository';
+import { UserRole } from 'src/default/common/enums/user-type.enum';
 
 // Default radius in meters. Overridden by ApplicationConfig if set.
 const DEFAULT_GEOFENCE_RADIUS_METERS = 200;
@@ -98,13 +99,26 @@ export class SoVerificationService {
    * Returns the SO's queue — all level-3 PENDING approvals assigned to them.
    * Groups counts for the dashboard analytics (total, completed, pending, rejected).
    */
-  async getQueue(soUserId: number, soLat?: number, soLng?: number, statusFilter?: string) {
+  async getQueue(
+    soUserId: number,
+    soLat?: number,
+    soLng?: number,
+    statusFilter?: string,
+    soRole?: UserRole
+  ) {
+    const where: Record<string, any> = {
+      approval_type: ApprovalType.PROFILE,
+      level: 3,
+    };
+
+    // SUPERADMIN sees the full level-3 queue, not just approvals assigned to them —
+    // mirrors ApprovalsService.getApprovalQueue's SUPERADMIN bypass.
+    if (soRole !== UserRole.SUPERADMIN) {
+      where.assignedTo = { id: soUserId } as any;
+    }
+
     const allAssigned = await this.approvalRepository.findMany({
-      where: {
-        assignedTo: { id: soUserId } as any,
-        approval_type: ApprovalType.PROFILE,
-        level: 3,
-      },
+      where,
       relations: ['user', 'user.storeInformation'],
     });
 
@@ -380,21 +394,17 @@ export class SoVerificationService {
 
     // ── Delegate to existing approval service (level 3 reject → back to L2) ──
     const rejectionLabel = this.getRejectionLabel(dto.rejectionReason);
-    await this.approvalRepository.updateById(approval.id, {
-      status: ApprovalStatus.REJECTED,
-      approved_by: { id: soUserId } as any,
-      approved_at: new Date(),
-      remarks: `Rejected by SO — Reason: ${rejectionLabel}${dto.remarks ? `. Remarks: ${dto.remarks}` : ''}`,
-    });
-
-    await this.userRepository.updateById(approval.user.id, {
-      status: UserStatus.BLOCKED,
-    });
+    await this.approvalsService.handleApprovalAction(
+      soUserId,
+      approvalId,
+      ApprovalAction.REJECT,
+      `Rejected by SO — Reason: ${rejectionLabel}${dto.remarks ? `. Remarks: ${dto.remarks}` : ''}`
+    );
 
     return {
       message: 'Outlet rejected successfully',
       rejectionReason: dto.rejectionReason,
-      newStatus: UserStatus.BLOCKED, // was IN_APPROVAL
+      newStatus: UserStatus.IN_APPROVAL,
       rejectedAt: new Date().toISOString(),
     };
   }

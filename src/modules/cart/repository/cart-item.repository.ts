@@ -21,17 +21,21 @@ export class CartItemRepository extends BaseRepository<CartItem> {
   ): Promise<CartItem | null> {
     const repo = queryRunner ? queryRunner.manager.getRepository(CartItem) : this.repository;
 
-    return repo.findOne({
-      where: {
-        cart: {
-          id: Number(input.cartId),
-        },
-        productId: input.productId,
-        color: input.color,
-        size: input.size,
-        cartonSize: input.cartonSize,
-      } as any,
-    });
+    const qb = repo
+      .createQueryBuilder('item')
+      .where('item.cart = :cartId', { cartId: Number(input.cartId) })
+      .andWhere('item.productId = :productId', { productId: input.productId })
+      .andWhere('item.color = :color', { color: input.color })
+      .andWhere('item.size = :size', { size: input.size })
+      .andWhere('item.cartonSize = :cartonSize', { cartonSize: input.cartonSize });
+
+    // Pessimistic write lock requires an active transaction (queryRunner) to avoid
+    // two concurrent addItem calls both reading the same starting quantity.
+    if (queryRunner) {
+      qb.setLock('pessimistic_write');
+    }
+
+    return qb.getOne();
   }
 
   async findByIdAndUser(itemId: string, userId: string | number): Promise<CartItem | null> {

@@ -10,9 +10,7 @@ export class UserRepository extends BaseRepository<User> {
   }
 
   async findByMobile(mobile: string, queryRunner?: QueryRunner): Promise<User | null> {
-    const repo = queryRunner ? queryRunner.manager.getRepository(User) : this.repository;
-
-    return await repo.findOne({
+    return await this.getRepository(queryRunner).findOne({
       where: {
         mobile,
       } as any,
@@ -23,9 +21,7 @@ export class UserRepository extends BaseRepository<User> {
   }
 
   async findActiveByMobile(mobile: string, queryRunner?: QueryRunner): Promise<User | null> {
-    const repo = queryRunner ? queryRunner.manager.getRepository(User) : this.repository;
-
-    return await repo.findOne({
+    return await this.getRepository(queryRunner).findOne({
       where: {
         mobile,
         active: 1,
@@ -37,9 +33,7 @@ export class UserRepository extends BaseRepository<User> {
   }
 
   async findByEmail(email: string, queryRunner?: QueryRunner): Promise<User | null> {
-    const repo = queryRunner ? queryRunner.manager.getRepository(User) : this.repository;
-
-    return await repo.findOne({
+    return await this.getRepository(queryRunner).findOne({
       where: {
         email,
       } as any,
@@ -50,9 +44,7 @@ export class UserRepository extends BaseRepository<User> {
   }
 
   async findByUuid(uuid: string, queryRunner?: QueryRunner): Promise<User | null> {
-    const repo = queryRunner ? queryRunner.manager.getRepository(User) : this.repository;
-
-    return await repo.findOne({
+    return await this.getRepository(queryRunner).findOne({
       where: {
         uuid,
       } as any,
@@ -62,15 +54,22 @@ export class UserRepository extends BaseRepository<User> {
     });
   }
 
+  async findByIdForUpdate(userId: number, queryRunner: QueryRunner): Promise<User | null> {
+    return queryRunner.manager
+      .getRepository(User)
+      .createQueryBuilder('user')
+      .setLock('pessimistic_write')
+      .where('user.id = :userId', { userId })
+      .getOne();
+  }
+
   async updateOtp(
     userId: number,
     otp: string,
     otpExpiry?: Date | null,
     queryRunner?: QueryRunner
   ): Promise<boolean> {
-    const repo = queryRunner ? queryRunner.manager.getRepository(User) : this.repository;
-
-    const result = await repo.update(
+    const result = await this.getRepository(queryRunner).update(
       { id: userId } as any,
       {
         otp,
@@ -83,9 +82,7 @@ export class UserRepository extends BaseRepository<User> {
   }
 
   async clearOtp(userId: string, queryRunner?: QueryRunner): Promise<boolean> {
-    const repo = queryRunner ? queryRunner.manager.getRepository(User) : this.repository;
-
-    const result = await repo.update(
+    const result = await this.getRepository(queryRunner).update(
       { id: userId } as any,
       {
         otp: null,
@@ -103,9 +100,7 @@ export class UserRepository extends BaseRepository<User> {
     refreshTokenExpiry: Date | null,
     queryRunner?: QueryRunner
   ): Promise<boolean> {
-    const repo = queryRunner ? queryRunner.manager.getRepository(User) : this.repository;
-
-    const result = await repo.update(
+    const result = await this.getRepository(queryRunner).update(
       { id: userId } as any,
       {
         refreshToken,
@@ -117,9 +112,7 @@ export class UserRepository extends BaseRepository<User> {
   }
 
   async findByRefreshToken(refreshToken: string, queryRunner?: QueryRunner): Promise<User | null> {
-    const repo = queryRunner ? queryRunner.manager.getRepository(User) : this.repository;
-
-    return await repo.findOne({
+    return await this.getRepository(queryRunner).findOne({
       where: {
         refreshToken,
       } as any,
@@ -136,11 +129,9 @@ export class UserRepository extends BaseRepository<User> {
     },
     queryRunner?: QueryRunner
   ): Promise<User | null> {
-    const repo = queryRunner ? queryRunner.manager.getRepository(User) : this.repository;
-
     const whereCondition = data.mobile ? { mobile: data.mobile } : { email: data.email };
 
-    return await repo.findOne({
+    return await this.getRepository(queryRunner).findOne({
       where: whereCondition as any,
       relations: {
         role: true,
@@ -154,9 +145,7 @@ export class UserRepository extends BaseRepository<User> {
     resetPasswordTokenExpiry: Date | null,
     queryRunner?: QueryRunner
   ): Promise<boolean> {
-    const repo = queryRunner ? queryRunner.manager.getRepository(User) : this.repository;
-
-    const result = await repo.update(
+    const result = await this.getRepository(queryRunner).update(
       { id: userId } as any,
       {
         resetPasswordToken,
@@ -177,9 +166,7 @@ export class UserRepository extends BaseRepository<User> {
     },
     queryRunner?: QueryRunner
   ): Promise<boolean> {
-    const repo = queryRunner ? queryRunner.manager.getRepository(User) : this.repository;
-
-    const result = await repo.update(
+    const result = await this.getRepository(queryRunner).update(
       { id: userId } as any,
       {
         accessToken: data.accessToken ?? null,

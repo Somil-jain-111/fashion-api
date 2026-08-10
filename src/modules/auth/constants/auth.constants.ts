@@ -1,6 +1,16 @@
 export const OTP_EXPIRY_MINUTES = 5;
 export const OTP_LENGTH = 6;
 
+/**
+ * Max number of times a single generated OTP may be checked against in verifyOtp
+ * before further attempts are rejected. Mirrors the default maxAttempts (3) used by
+ * UserValidator.validateOtpAttempts for sending OTPs; a slightly higher value is used
+ * here since a genuine user may legitimately mistype the OTP once or twice.
+ * The counter is reset to 0 whenever a new OTP is generated (see UserRepository.updateOtp)
+ * and on successful verification.
+ */
+export const MAX_OTP_VERIFY_ATTEMPTS = 5;
+
 export enum UserStatus {
   ACTIVE = 'active',
   INACTIVE = 'inactive',

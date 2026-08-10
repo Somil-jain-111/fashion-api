@@ -32,7 +32,7 @@ import { VerifyAadhaarOtpDto } from './dto/verify-aadhar-otp.dto';
 import { LocalStorageContextUtil } from 'src/default/common/utils/local-storage.util';
 import { ContextType } from 'src/default/common/constants/context.option';
 import { UserRepository } from '../auth/repository';
-import { UserPartnerType } from 'src/default/common/enums/user-type.enum';
+import { RedemptionKYCRequirements } from 'src/default/common/constants/redemptions.option';
 
 @Injectable()
 export class KycService {
@@ -131,6 +131,16 @@ export class KycService {
      * 1. Validate user
      */
     const user = await this.userAuthValidator.getAllowedUserById(userId);
+
+    // const shouldVerifyAadhaar = RedemptionKYCRequirements[user.partnerType]?.includes(
+    //   KycType.AADHAAR
+    // );
+
+    // if (!shouldVerifyAadhaar) {
+    //   throw new BusinessException(ERROR_CODES.COMMON.BAD_REQUEST_RESON, {
+    //     reason: 'AADHAAR not required for this user',
+    //   });
+    // }
 
     if (!user.username) {
       throw new BusinessException(ERROR_CODES.KYC.USER_PROFILE_NAME_REQUIRED);
@@ -330,18 +340,30 @@ export class KycService {
     /**
      * 6. Save verified Aadhaar only in kyc_verifications
      */
+    const aadhaarName = aadhaarData.full_name || aadhaarData.name || user.username;
+
     const encryptedProviderResponse = this.encryptKycData(providerResult.responseData);
     const encryptedProfileImage = this.encryptKycData(uploadedAadhaarImage || '');
-    const encryptedVerifiedName = this.encryptKycData(
-      aadhaarData.full_name || aadhaarData.name || user.username
-    );
+    const encryptedVerifiedName = this.encryptKycData(aadhaarName);
+
+    const maskedDocumentNumber =
+      aadhaarData.masked_aadhaar ||
+      aadhaarData.maskedAadhaar ||
+      this.aadhaarProvider.maskAadhaarNumber(aadhaarName);
+
+    const metadata = {
+      profileImage: encryptedProfileImage,
+      maskedDocumentNumber: maskedDocumentNumber,
+      dob: aadhaarData?.dob,
+      gender: aadhaarData?.gender,
+    };
 
     await this.kycVerificationRepository.upsertVerifiedKyc({
       userId: userId,
       type: KycType.AADHAAR,
       referenceId,
       documentNumber: otpLog.documentNumber,
-      maskedDocumentNumber: aadhaarData.masked_aadhaar || aadhaarData.maskedAadhaar || null,
+      maskedDocumentNumber: maskedDocumentNumber,
       verifiedName: encryptedVerifiedName,
       provider: 'REWARDS_API',
       providerRequest: {
@@ -350,12 +372,7 @@ export class KycService {
         otp: '******',
       },
       providerResponse: encryptedProviderResponse,
-      metadata: {
-        profileImage: encryptedProfileImage,
-        dob: aadhaarData.dob ? this.encryptKycData(aadhaarData.dob) : null,
-        gender: aadhaarData.gender ? this.encryptKycData(aadhaarData.gender) : null,
-        address: aadhaarData.address ? this.encryptKycData(aadhaarData.address) : null,
-      },
+      metadata: metadata,
     });
 
     /**
@@ -375,6 +392,7 @@ export class KycService {
       verified: true,
       referenceId,
       message: 'Aadhaar verified successfully',
+      metadata,
     };
   }
 
@@ -398,6 +416,14 @@ export class KycService {
     });
 
     const user = await this.userAuthValidator.getAllowedUserById(userId);
+
+    // const shouldVerifyPan = RedemptionKYCRequirements[user.partnerType]?.includes(KycType.PAN);
+
+    // if (!shouldVerifyPan) {
+    //   throw new BusinessException(ERROR_CODES.COMMON.BAD_REQUEST_RESON, {
+    //     reason: 'PAN not required for this user',
+    //   });
+    // }
 
     if (!user.username) {
       throw new BusinessException(ERROR_CODES.KYC.USER_PROFILE_NAME_REQUIRED);
@@ -491,6 +517,15 @@ export class KycService {
       this.encryptKycData(panProviderResult.responseData),
     ]);
 
+    const maskedDocumentNumber = this.panProvider.maskPanNumber(pan);
+
+    const metadata = {
+      matchScore,
+      maskedDocumentNumber: maskedDocumentNumber,
+      panImage: encryptedPanImage,
+      aadhaarLinked: panApiData?.aadhaar_linked,
+    };
+
     await this.kycVerificationRepository.upsertVerifiedKyc({
       userId: userId,
       type: KycType.PAN,
@@ -498,14 +533,10 @@ export class KycService {
       documentNumber: encryptedPan,
       verifiedName: encryptedUserName,
       provider: 'REWARDS_API',
-      maskedDocumentNumber: this.panProvider.maskPanNumber(pan),
+      maskedDocumentNumber: maskedDocumentNumber,
       providerRequest: panProviderResult.requestPayload,
       providerResponse: encryptedApiData,
-      metadata: {
-        matchScore,
-        panImage: encryptedPanImage,
-        aadhaarLinked: panApiData?.aadhaar_linked,
-      },
+      metadata: metadata,
     });
 
     ConsoleLogger.log('VERIFY_PAN_SUCCESS', {
@@ -518,7 +549,8 @@ export class KycService {
 
     return {
       verified: true,
-      matchScore,
+      referenceId: transactionId,
+      metadata,
     };
   }
 
@@ -540,9 +572,15 @@ export class KycService {
       },
     });
 
-    const user = await this.userRepository.findOne({ id: Number(userId) });
+    const user = await this.userAuthValidator.getAllowedUserById(userId);
 
-    await this.userAuthValidator.validateUserStatus(user.status);
+    // const shouldVerifyGst = RedemptionKYCRequirements[user.partnerType]?.includes(KycType.GST);
+
+    // if (!shouldVerifyGst) {
+    //   throw new BusinessException(ERROR_CODES.COMMON.BAD_REQUEST_RESON, {
+    //     reason: 'GST not required for this user',
+    //   });
+    // }
 
     // if (user.partnerType !== UserPartnerType.INDIVIDUAL) {
     //   throw new BusinessException(ERROR_CODES.KYC.INVALID_PARTNER_TYPE_FOR_GST);
@@ -601,13 +639,15 @@ export class KycService {
     const gstApiData = gstProviderResult.responseData?.data || {};
 
     const encryptedApiData = await this.encryptKycData(gstProviderResult.responseData);
+    const maskedDocumentNumber = this.gstProvider.maskGstNumber(gst);
 
     const metadata = {
-      tradeName: gstApiData.business_name,
-      legalName: gstApiData.legal_name,
-      address: gstApiData.address,
-      status: gstApiData.gstin_status,
-      dateOfRegistration: gstApiData.date_of_registration,
+      maskedDocumentNumber: maskedDocumentNumber,
+      tradeName: gstApiData?.business_name,
+      legalName: gstApiData?.legal_name,
+      address: gstApiData?.address,
+      status: gstApiData?.gstin_status,
+      dateOfRegistration: gstApiData?.date_of_registration,
     };
 
     await this.kycVerificationRepository.upsertVerifiedKyc({
@@ -615,7 +655,7 @@ export class KycService {
       type: KycType.GST,
       referenceId: transactionId,
       documentNumber: encryptedGst,
-      maskedDocumentNumber: this.gstProvider.maskGstNumber(gst),
+      maskedDocumentNumber: metadata.maskedDocumentNumber,
       verifiedName: this.encryptKycData(
         gstApiData.trade_name || gstApiData.legal_name || user.username
       ),
@@ -640,7 +680,8 @@ export class KycService {
 
     return {
       verified: true,
-      ...metadata,
+      referenceId: transactionId,
+      metadata,
     };
   }
 
@@ -677,14 +718,18 @@ export class KycService {
       this.encryptKycData(normalizedHolderName),
     ]);
 
-    /** 4️⃣ Check if Bank Account already exists for user */
-    const isExist = await this.beneficiaryRepository.isAccountInfoExist(
+    /**
+     * 4️⃣ Check if this bank account is already registered — by this user or any
+     * other user. Scoping this check to userId only (as before) let the same
+     * account/IFSC be registered by multiple different users, unlike the
+     * PAN/Aadhaar duplicate checks above.
+     */
+    const existingBeneficiary = await this.beneficiaryRepository.isAccountInfoExist(
       accountNumberENC,
-      ifscENC,
-      userId
+      ifscENC
     );
 
-    if (isExist) {
+    if (existingBeneficiary) {
       ConsoleLogger.warn(`ACCOUNT_ALREADY_USED | userId: ${userId}`, tag);
       throw new BusinessException(ERROR_CODES.KYC.ACCOUNT_ALREADY_USED);
     }
@@ -794,10 +839,13 @@ export class KycService {
     /** 2️⃣ Encrypt UPI for duplicate check & storage */
     const upiENC = this.encryptKycData(normalizedUpi);
 
-    /** 3️⃣ Check if UPI already exists for user */
-    const isExist = await this.beneficiaryRepository.isUpiExist(upiENC, userId);
+    /**
+     * 3️⃣ Check if this UPI ID is already registered — by this user or any other
+     * user (see verifyAndAddBankBeneficiary for the same fix on bank accounts).
+     */
+    const existingBeneficiary = await this.beneficiaryRepository.isUpiExist(upiENC);
 
-    if (isExist) {
+    if (existingBeneficiary) {
       ConsoleLogger.warn(`UPI_ALREADY_USED | userId: ${userId}`, tag);
       throw new BusinessException(ERROR_CODES.KYC.UPI_ALREADY_USED);
     }

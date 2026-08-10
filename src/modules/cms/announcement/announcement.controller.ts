@@ -23,18 +23,22 @@ import { Roles } from 'src/default/common/decorators/roles.decorator';
 import { UserRole } from 'src/default/common/enums/user-type.enum';
 import { AnnouncementQueryDto } from './dto/query-announcement.dto';
 import { DataSanitizer } from 'src/default/common/utils/sanitize.utils';
+import { RolesRepository } from 'src/modules/auth/repository';
 
 @NoCache()
 @SkipThrottle()
 @UseInterceptors(IdempotencyInterceptor)
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles([UserRole.RETAILER])
 @Controller('announcement')
 export class AnnouncementController {
-  constructor(private readonly announcementService: AnnouncementService) {}
+  constructor(
+    private readonly announcementService: AnnouncementService,
+    private readonly roleRepository: RolesRepository
+  ) {}
 
   @NoCache()
   @Post()
+  @Roles([UserRole.SUPERADMIN])
   async create(@Body() dto: CreateAnnouncementDto) {
     const response = await this.announcementService.create(dto);
     return DataSanitizer.sanitizeData(response);
@@ -52,7 +56,8 @@ export class AnnouncementController {
   @NoCache()
   @Get('active')
   async getActiveAnnouncements(@Req() req: any) {
-    const roleIds = req.user?.roles?.map((role: any) => role.id?.toString()) ?? [];
+    const roleEntity = req.user?.role ? await this.roleRepository.findByName(req.user.role) : null;
+    const roleIds = roleEntity ? [roleEntity.id.toString()] : [];
 
     const response = await this.announcementService.getActiveAnnouncementsByRoleIds(roleIds);
     return DataSanitizer.sanitizeData(response);
@@ -66,12 +71,14 @@ export class AnnouncementController {
   }
   @NoCache()
   @Post(':id')
+  @Roles([UserRole.SUPERADMIN])
   async update(@Param('id') id: string, @Body() dto: UpdateAnnouncementDto) {
     const response = await this.announcementService.update(id, dto);
     return DataSanitizer.sanitizeData(response);
   }
   @NoCache()
   @Post('delete/:id')
+  @Roles([UserRole.SUPERADMIN])
   async remove(@Param('id') id: string) {
     const response = await this.announcementService.remove(id);
     return DataSanitizer.sanitizeData(response);
