@@ -27,11 +27,14 @@ export class Approval extends BaseEntity {
   @ManyToOne(() => User, (user) => user.approvals, {
     onDelete: 'CASCADE',
   })
-  @JoinColumn({ name: 'approved_by' })
-  approved_by!: User;
+  @JoinColumn({ name: 'action_by' })
+  actionBy?: User;
 
-  @Column({ type: 'datetime', nullable: true })
-  approved_at!: Date | null;
+  @Column({ type: 'varchar', length: 500, nullable: true, name: 'reject_reason_type' })
+  rejectReasonType?: string;
+
+  @Column({ type: 'datetime', nullable: true, name: 'action_at' })
+  actionAt?: Date | null;
 
   @ManyToOne(() => User, { nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'assigned_to' })

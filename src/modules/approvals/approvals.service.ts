@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { QueryRunner } from 'typeorm';
 import { ApprovalRepository } from 'src/modules/approvals/repository';
 import { UserRepository, RolesRepository } from 'src/modules/auth/repository';
 import { BusinessException } from 'src/default/error/business.exception';
@@ -13,7 +14,6 @@ import { UserRole } from 'src/default/common/enums/user-type.enum';
 import { User } from '../auth/entities/users.entity';
 import { CommonUtils } from 'src/default/common/utils/common.utils';
 import { TransactionService } from 'src/default/databases/transaction';
-import { QueryRunner } from 'typeorm';
 
 @Injectable()
 export class ApprovalsService {
@@ -28,6 +28,7 @@ export class ApprovalsService {
     approverId: number,
     approvalId: number,
     action: ApprovalAction,
+    rejectReasonType: string,
     remarks?: string
   ) {
     const approver = await this.userRepository.findOne({ id: approverId }, ['role']);
@@ -55,6 +56,7 @@ export class ApprovalsService {
         ['role'],
         queryRunner
       );
+
       if (!targetUser) {
         throw new BusinessException(ERROR_CODES.APPROVAL.TARGET_USER_NOT_FOUND);
       }
@@ -82,14 +84,19 @@ export class ApprovalsService {
         throw new BusinessException(ERROR_CODES.APPROVAL.INVALID_LEVEL);
       }
 
-      if (action === 'block') {
+      if (action === ApprovalAction.BLOCK) {
+        // Only L2 & SuperAdmin can block permanent block user
+        if (approverRole !== UserRole.L2 && !isSuperAdmin) {
+          throw new BusinessException(ERROR_CODES.APPROVAL.L2_ONLY);
+        }
+
         // Transition to BLOCKED
         await this.approvalRepository.updateById(
           approval.id,
           {
             status: ApprovalStatus.BLOCKED,
-            approved_by: { id: approverId } as any,
-            approved_at: new Date(),
+            actionBy: { id: approverId } as any,
+            actionAt: new Date(),
             remarks: remarks || 'Blocked in approval pipeline',
           },
           queryRunner
@@ -108,14 +115,19 @@ export class ApprovalsService {
         };
       }
 
-      if (action === 'reject') {
+      if (action === ApprovalAction.REJECT) {
         // Transition to REJECTED
+        if (!rejectReasonType) {
+          throw new BusinessException(ERROR_CODES.APPROVAL.REJECT_REASON_TYPE);
+        }
+
         await this.approvalRepository.updateById(
           approval.id,
           {
             status: ApprovalStatus.REJECTED,
-            approved_by: { id: approverId } as any,
-            approved_at: new Date(),
+            actionBy: { id: approverId } as any,
+            rejectReasonType: rejectReasonType,
+            actionAt: new Date(),
             remarks: remarks || 'Rejected',
           },
           queryRunner
@@ -126,7 +138,7 @@ export class ApprovalsService {
           await this.userRepository.updateById(
             targetUser.id,
             {
-              status: UserStatus.INACTIVE,
+              status: UserStatus.IN_APPROVAL,
             },
             queryRunner
           );
@@ -193,14 +205,14 @@ export class ApprovalsService {
         };
       }
 
-      if (action === 'approve') {
+      if (action === ApprovalAction.APPROVE) {
         // Transition to APPROVED
         await this.approvalRepository.updateById(
           approval.id,
           {
             status: ApprovalStatus.APPROVED,
-            approved_by: { id: approverId } as any,
-            approved_at: new Date(),
+            actionBy: { id: approverId } as any,
+            actionAt: new Date(),
             remarks: remarks || 'Approved',
           },
           queryRunner
@@ -315,7 +327,7 @@ export class ApprovalsService {
       .leftJoinAndSelect('approval.user', 'user')
       .leftJoinAndSelect('user.storeInformation', 'storeInformation')
       .leftJoinAndSelect('approval.assignedTo', 'assignedTo')
-      .leftJoinAndSelect('approval.approved_by', 'approvedBy')
+      .leftJoinAndSelect('approval.actionBy', 'actionBy')
       .where('approval.approval_type = :type', { type: ApprovalType.PROFILE });
 
     if (approverRole !== UserRole.SUPERADMIN) {
@@ -339,7 +351,7 @@ export class ApprovalsService {
       level: approval.level,
       status: approval.status,
       remarks: approval.remarks ?? null,
-      approvedAt: approval.approved_at ? new Date(approval.approved_at).toISOString() : null,
+      actionAt: approval.actionAt ? new Date(approval.actionAt).toISOString() : null,
       assignedTo: approval.assignedTo
         ? {
             id: approval.assignedTo.id,
@@ -347,11 +359,11 @@ export class ApprovalsService {
             mobile: approval.assignedTo.mobile ?? null,
           }
         : null,
-      approvedBy: approval.approved_by
+      actionBy: approval.actionBy
         ? {
-            id: approval.approved_by.id,
-            name: approval.approved_by.username ?? null,
-            mobile: approval.approved_by.mobile ?? null,
+            id: approval.actionBy.id,
+            name: approval.actionBy.username ?? null,
+            mobile: approval.actionBy.mobile ?? null,
           }
         : null,
       retailer: {

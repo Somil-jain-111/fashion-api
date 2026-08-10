@@ -120,11 +120,8 @@ import { SmsModule } from './modules/sms/sms.module';
           // names/values) to the client — log them internally and return a single
           // generic error instead.
           exceptionFactory: (errors: ValidationError[]) => {
-            ConsoleLogger.error(
-              'DTO validation failed',
-              JSON.stringify(errors),
-              'ValidationPipe'
-            );
+            ConsoleLogger.error('DTO validation failed', JSON.stringify(errors), 'ValidationPipe');
+            console.log(errors);
             return new BusinessException(ERROR_CODES.VALIDATION.INVALID_PAYLOAD);
           },
         }),
