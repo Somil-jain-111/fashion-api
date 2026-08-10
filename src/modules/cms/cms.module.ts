@@ -7,12 +7,12 @@ import { FaqModule } from './faq/faq.module';
 import { AppVersionModule } from './app-version/app-version.module';
 import { AnnouncementModule } from './announcement/announcement.module';
 import { UserAuthValidator } from '../auth/validators/user-auth.validator';
-import { UserRepository } from '../auth/repository';
+import { UserRepository, RolesRepository } from '../auth/repository';
 
 @Module({
   imports: [BannerModule, CmsPageModule, FaqModule, AppVersionModule, AnnouncementModule],
   controllers: [CmsController],
-  providers: [CmsService, UserAuthValidator,UserRepository],
+  providers: [CmsService, UserAuthValidator, UserRepository, RolesRepository],
   exports: [CmsService],
 })
 export class CmsModule {}

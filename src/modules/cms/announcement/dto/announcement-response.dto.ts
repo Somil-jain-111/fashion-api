@@ -25,8 +25,8 @@ export class AnnouncementResponseDto {
     this.priority = announcement.priority;
     this.isDismissible = announcement.isDismissible;
     this.isActive = announcement.isActive;
-    this.startDate = announcement?.startDate.toISOString() ?? null;
-    this.endDate = announcement?.endDate.toISOString() ?? null;
+    this.startDate = announcement?.startDate?.toISOString() ?? null;
+    this.endDate = announcement?.endDate?.toISOString() ?? null;
     this.roles =
       announcement.roles?.map((role: any) => ({
         id: role.id?.toString(),

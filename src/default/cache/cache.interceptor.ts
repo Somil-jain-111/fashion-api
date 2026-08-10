@@ -13,7 +13,10 @@ export class CustomCacheInterceptor extends CacheInterceptor {
   }
 
   trackBy(context: ExecutionContext): string | undefined {
-    const noCache = this.reflector.get<boolean>('no-cache', context.getHandler());
+    const noCache = this.reflector.getAllAndOverride<boolean>('no-cache', [
+      context.getHandler(),
+      context.getClass(),
+    ]);
     if (noCache) {
       return undefined;
     }

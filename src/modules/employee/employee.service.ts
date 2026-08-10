@@ -9,13 +9,15 @@ import { PointStatusEnum } from 'src/modules/redemptions/enum/point-history-stat
 import { EmployeeDataDto, TopupPointsDto } from './dto/employee.dto';
 import { CommonUtils } from 'src/default/common/utils/common.utils';
 import { RolesRepository } from '../auth/repository';
+import { TransactionService } from 'src/default/databases/transaction';
 
 @Injectable()
 export class EmployeeService {
   constructor(
     private readonly userRepository: UserRepository,
     private readonly roleRepository: RolesRepository,
-    private readonly pointHistoryRepository: PointHistoryRepository
+    private readonly pointHistoryRepository: PointHistoryRepository,
+    private readonly transactionService: TransactionService
   ) {}
 
   /**
@@ -54,29 +56,48 @@ export class EmployeeService {
         });
       }
 
-      // Top-up existing employee
-      const newPoints = Number(existing.points) + data.points;
-
-      await this.userRepository.updateById(existing.id, {
-        points: BigInt(newPoints),
-        // update name if provided and different
-        ...(data.name && { username: data.name }),
-        ...(data.email && { email: data.email }),
-      });
-
-      // Write point history earn row
+      // Top-up existing employee — lock the row inside a transaction so concurrent
+      // top-ups don't clobber each other's point increments (lost-update fix).
       const transactionId = await CommonUtils.generateUniqueRefCode();
-      await this.pointHistoryRepository.save({
-        user: { id: existing.id } as any,
-        points: data.points,
-        description: data.description ?? 'Points granted by Campus',
-        type: 'earn' as any,
-        status: PointStatusEnum.added,
-        date: new Date(),
-        user_remaining_points: newPoints,
-        taxable_points: 0,
-        tds_points: 0,
-        transaction_id: transactionId,
+
+      const newPoints = await this.transactionService.runInTransaction(async (queryRunner) => {
+        const lockedUser = await this.userRepository.findByIdForUpdate(existing.id, queryRunner);
+
+        if (!lockedUser) {
+          throw new BusinessException(ERROR_CODES.USER.USER_NOT_FOUND);
+        }
+
+        const updatedPoints = Number(lockedUser.points) + data.points;
+
+        await this.userRepository.updateById(
+          lockedUser.id,
+          {
+            points: BigInt(updatedPoints),
+            // update name if provided and different
+            ...(data.name && { username: data.name }),
+            ...(data.email && { email: data.email }),
+          },
+          queryRunner
+        );
+
+        // Write point history earn row
+        await this.pointHistoryRepository.save(
+          {
+            user: { id: lockedUser.id } as any,
+            points: data.points,
+            description: data.description ?? 'Points granted by Campus',
+            type: 'earn' as any,
+            status: PointStatusEnum.added,
+            date: new Date(),
+            user_remaining_points: updatedPoints,
+            taxable_points: 0,
+            tds_points: 0,
+            transaction_id: transactionId,
+          },
+          queryRunner
+        );
+
+        return updatedPoints;
       });
 
       return {
@@ -203,24 +224,44 @@ export class EmployeeService {
       });
     }
 
-    const newPoints = Number(user.points) + dto.points;
-
-    await this.userRepository.updateById(user.id, {
-      points: BigInt(newPoints),
-    });
-
+    // Lock the row inside a transaction so concurrent top-ups don't clobber each
+    // other's point increments (lost-update fix).
     const transactionId = await CommonUtils.generateUniqueRefCode();
-    await this.pointHistoryRepository.save({
-      user: { id: user.id } as any,
-      points: dto.points,
-      description: dto.description ?? 'Manual top-up',
-      type: 'earn' as any,
-      status: PointStatusEnum.added,
-      date: new Date(),
-      user_remaining_points: newPoints,
-      taxable_points: 0,
-      tds_points: 0,
-      transaction_id: transactionId,
+
+    const newPoints = await this.transactionService.runInTransaction(async (queryRunner) => {
+      const lockedUser = await this.userRepository.findByIdForUpdate(user.id, queryRunner);
+
+      if (!lockedUser) {
+        throw new BusinessException(ERROR_CODES.USER.USER_NOT_FOUND);
+      }
+
+      const updatedPoints = Number(lockedUser.points) + dto.points;
+
+      await this.userRepository.updateById(
+        lockedUser.id,
+        {
+          points: BigInt(updatedPoints),
+        },
+        queryRunner
+      );
+
+      await this.pointHistoryRepository.save(
+        {
+          user: { id: lockedUser.id } as any,
+          points: dto.points,
+          description: dto.description ?? 'Manual top-up',
+          type: 'earn' as any,
+          status: PointStatusEnum.added,
+          date: new Date(),
+          user_remaining_points: updatedPoints,
+          taxable_points: 0,
+          tds_points: 0,
+          transaction_id: transactionId,
+        },
+        queryRunner
+      );
+
+      return updatedPoints;
     });
 
     return {

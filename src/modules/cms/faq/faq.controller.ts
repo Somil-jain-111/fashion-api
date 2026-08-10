@@ -12,6 +12,9 @@ import {
 } from '@nestjs/common';
 import { JwtAuthGuard } from 'src/default/common/guards/jwt-auth.guard';
 // import { UserStatusGuard } from 'src/default/common/guards/user-status.guard';
+import { RolesGuard } from 'src/default/common/guards/roles.guard';
+import { Roles } from 'src/default/common/decorators/roles.decorator';
+import { UserRole } from 'src/default/common/enums/user-type.enum';
 import { FaqService } from './faq.service';
 import { CreateFaqDto } from './dto/create-faq.dto';
 import { DataSanitizer } from 'src/default/common/utils/sanitize.utils';
@@ -24,6 +27,8 @@ export class FaqController {
   constructor(private readonly faqService: FaqService) {}
 
   @Post()
+  @UseGuards(RolesGuard)
+  @Roles([UserRole.SUPERADMIN])
   async create(@Body() dto: CreateFaqDto) {
     const response = await this.faqService.create(dto);
 
@@ -56,6 +61,8 @@ export class FaqController {
   }
 
   @Patch(':id')
+  @UseGuards(RolesGuard)
+  @Roles([UserRole.SUPERADMIN])
   async update(@Param('id') id: string, @Body() dto: UpdateFaqDto) {
     const response = await this.faqService.update(id, dto);
 
@@ -63,6 +70,8 @@ export class FaqController {
   }
 
   @Delete(':id')
+  @UseGuards(RolesGuard)
+  @Roles([UserRole.SUPERADMIN])
   async remove(@Param('id') id: string) {
     const response = await this.faqService.remove(id);
 

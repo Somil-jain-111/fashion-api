@@ -142,6 +142,11 @@ export class AddressesService {
     const pincodeDetails = await this.getStateAndCity(dto.pincode);
 
     const isDefault = addresses.length === 0;
+    const addressType = dto.addressType ?? (isDefault ? AddressType.Primary : AddressType.Secondary);
+
+    if (addressType === AddressType.Primary) {
+      await this.addressRepository.demotePrimaryAddresses(userId);
+    }
 
     const address = await this.addressRepository.create({
       user: { id: userId } as any,
@@ -154,7 +159,7 @@ export class AddressesService {
       city_name: pincodeDetails?.city?.name,
       state_name: pincodeDetails?.state?.name,
       zone_name: pincodeDetails?.region?.name || null,
-      addressType: dto.addressType || isDefault ? AddressType.Primary : AddressType.Secondary,
+      addressType,
       active: true,
     });
 
@@ -217,11 +222,15 @@ export class AddressesService {
     if (dto.pincode !== undefined && pincodeDetails) {
       address.pincode = dto.pincode;
       address.city_name = pincodeDetails?.city?.name || address.city_name;
-      address.state_name = pincodeDetails?.city?.state?.name || address.state_name;
-      address.zone_name = pincodeDetails?.city?.state?.region?.name || address.zone_name;
+      address.state_name = pincodeDetails?.state?.name || address.state_name;
+      address.zone_name = pincodeDetails?.region?.name || address.zone_name;
     }
 
     if (dto.addressType) {
+      if (dto.addressType === AddressType.Primary) {
+        await this.addressRepository.demotePrimaryAddresses(userId, address.id);
+      }
+
       address.addressType = dto.addressType;
     }
 

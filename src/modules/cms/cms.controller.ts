@@ -5,15 +5,29 @@ import { UserStatusGuard } from 'src/default/common/guards/user-status.guard';
 import { JwtAuthGuard } from 'src/default/common/guards/jwt-auth.guard';
 import { CmsHomeQueryDto } from './dto/cms-home-query.dto';
 import { DataSanitizer } from 'src/default/common/utils/sanitize.utils';
+import { RolesRepository } from 'src/modules/auth/repository';
 
 @Controller('cms')
 @UseGuards(JwtAuthGuard, UserStatusGuard)
 export class CmsController {
-  constructor(private readonly cmsService: CmsService) {}
+  constructor(
+    private readonly cmsService: CmsService,
+    private readonly roleRepository: RolesRepository
+  ) {}
+
+  private async resolveRoleIds(role?: string): Promise<string[]> {
+    if (!role) {
+      return [];
+    }
+
+    const roleEntity = await this.roleRepository.findByName(role as any);
+
+    return roleEntity ? [roleEntity.id.toString()] : [];
+  }
 
   @Get('home')
   async getHome(@Req() req: any, @Query() query: CmsHomeQueryDto) {
-    const roleIds = req.user?.roles?.map((role: any) => role.id?.toString()) ?? [];
+    const roleIds = await this.resolveRoleIds(req.user?.role);
 
     const userRole = req.user?.role;
 
@@ -24,7 +38,7 @@ export class CmsController {
 
   @Get('config')
   async getConfig(@Req() req: any, @Query() query: CmsHomeQueryDto) {
-    const roleIds = req.user?.roles?.map((role: any) => role.id?.toString()) ?? [];
+    const roleIds = await this.resolveRoleIds(req.user?.role);
 
     const userRole = req.user?.role;
 

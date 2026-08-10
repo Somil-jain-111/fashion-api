@@ -51,9 +51,6 @@ export class BannerRepository extends BaseRepository<BannerEntity> {
       .leftJoinAndSelect('banner.roles', 'role')
       .where('banner.isActive = :isActive', {
         isActive: true,
-      })
-      .andWhere('role.name = :userRole', {
-        userRole,
       });
 
     if (query.position) {

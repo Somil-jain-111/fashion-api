@@ -59,9 +59,6 @@ export class CmsPageRepository extends BaseRepository<CmsPageEntity> {
       .leftJoinAndSelect('cmsPage.roles', 'role')
       .where('cmsPage.isActive = :isActive', {
         isActive: true,
-      })
-      .andWhere('role.name = :userRole', {
-        userRole,
       });
 
     if (query.type) {

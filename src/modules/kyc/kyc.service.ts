@@ -572,9 +572,7 @@ export class KycService {
       },
     });
 
-    const user = await this.userRepository.findOne({ id: Number(userId) });
-
-    await this.userAuthValidator.validateUserStatus(user.status);
+    const user = await this.userAuthValidator.getAllowedUserById(userId);
 
     // const shouldVerifyGst = RedemptionKYCRequirements[user.partnerType]?.includes(KycType.GST);
 
@@ -720,14 +718,18 @@ export class KycService {
       this.encryptKycData(normalizedHolderName),
     ]);
 
-    /** 4️⃣ Check if Bank Account already exists for user */
-    const isExist = await this.beneficiaryRepository.isAccountInfoExist(
+    /**
+     * 4️⃣ Check if this bank account is already registered — by this user or any
+     * other user. Scoping this check to userId only (as before) let the same
+     * account/IFSC be registered by multiple different users, unlike the
+     * PAN/Aadhaar duplicate checks above.
+     */
+    const existingBeneficiary = await this.beneficiaryRepository.isAccountInfoExist(
       accountNumberENC,
-      ifscENC,
-      userId
+      ifscENC
     );
 
-    if (isExist) {
+    if (existingBeneficiary) {
       ConsoleLogger.warn(`ACCOUNT_ALREADY_USED | userId: ${userId}`, tag);
       throw new BusinessException(ERROR_CODES.KYC.ACCOUNT_ALREADY_USED);
     }
@@ -837,10 +839,13 @@ export class KycService {
     /** 2️⃣ Encrypt UPI for duplicate check & storage */
     const upiENC = this.encryptKycData(normalizedUpi);
 
-    /** 3️⃣ Check if UPI already exists for user */
-    const isExist = await this.beneficiaryRepository.isUpiExist(upiENC, userId);
+    /**
+     * 3️⃣ Check if this UPI ID is already registered — by this user or any other
+     * user (see verifyAndAddBankBeneficiary for the same fix on bank accounts).
+     */
+    const existingBeneficiary = await this.beneficiaryRepository.isUpiExist(upiENC);
 
-    if (isExist) {
+    if (existingBeneficiary) {
       ConsoleLogger.warn(`UPI_ALREADY_USED | userId: ${userId}`, tag);
       throw new BusinessException(ERROR_CODES.KYC.UPI_ALREADY_USED);
     }
