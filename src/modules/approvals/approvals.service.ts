@@ -15,6 +15,7 @@ import { User } from '../auth/entities/users.entity';
 import { CommonUtils } from 'src/default/common/utils/common.utils';
 import { TransactionService } from 'src/default/databases/transaction';
 import { ApprovalRejectionOptions } from 'src/default/common/constants/approval-rejection.option';
+import { KycService } from '../kyc/kyc.service';
 
 @Injectable()
 export class ApprovalsService {
@@ -22,7 +23,8 @@ export class ApprovalsService {
     private readonly approvalRepository: ApprovalRepository,
     private readonly userRepository: UserRepository,
     private readonly roleRepository: RolesRepository,
-    private readonly transactionUtils: TransactionService
+    private readonly transactionUtils: TransactionService,
+    private readonly kycService: KycService
   ) {}
 
   async handleApprovalAction(
@@ -70,7 +72,7 @@ export class ApprovalsService {
       const isSuperAdmin = approverRole === UserRole.SUPERADMIN;
 
       if (approval.level === 1) {
-        if (approverRole !== UserRole.L1 && !isSuperAdmin) {
+        if (approverRole !== UserRole.L1 && approverRole !== UserRole.L2 && !isSuperAdmin) {
           throw new BusinessException(ERROR_CODES.APPROVAL.L1_ONLY);
         }
       } else if (approval.level === 2) {
@@ -312,7 +314,8 @@ export class ApprovalsService {
     approverRole: UserRole,
     statusFilter?: ApprovalStatus,
     page: number = 1,
-    limit: number = 10
+    limit: number = 10,
+    approvalId?: number
   ) {
     const level =
       approverRole === UserRole.L1
@@ -332,11 +335,22 @@ export class ApprovalsService {
       .createQueryBuilder('approval')
       .leftJoinAndSelect('approval.user', 'user')
       .leftJoinAndSelect('user.storeInformation', 'storeInformation')
+      .leftJoinAndSelect('user.kyc', 'kyc')
+      .leftJoinAndSelect('user.userBeneficiaries', 'userBeneficiaries')
       .leftJoinAndSelect('approval.assignedTo', 'assignedTo')
       .leftJoinAndSelect('approval.actionBy', 'actionBy')
       .where('approval.approval_type = :type', { type: ApprovalType.PROFILE });
 
-    if (approverRole !== UserRole.SUPERADMIN) {
+    if (approvalId) {
+      listQuery.andWhere('approval.id = :approvalId', { approvalId });
+    }
+
+    if (approverRole === UserRole.L2) {
+      listQuery.andWhere(
+        '((approval.assigned_to = :approverId AND approval.level = 2) OR (approval.level = 1 AND approval.status IN (:...l1Statuses)))',
+        { approverId, l1Statuses: [ApprovalStatus.PENDING, ApprovalStatus.REJECTED] }
+      );
+    } else if (approverRole !== UserRole.SUPERADMIN) {
       listQuery
         .andWhere('approval.assigned_to = :approverId', { approverId })
         .andWhere('approval.level = :level', { level });
@@ -352,43 +366,135 @@ export class ApprovalsService {
 
     const [approvals, total] = await listQuery.getManyAndCount();
 
-    const list = approvals.map((approval) => ({
-      approvalId: approval.id,
-      level: approval.level,
-      status: approval.status,
-      remarks: approval.remarks ?? null,
-      actionAt: approval.actionAt ? new Date(approval.actionAt).toISOString() : null,
-      assignedTo: approval.assignedTo
+    const isDetailView = Boolean(approvalId);
+
+    const list = approvals.map((approval) => {
+      const retailer = isDetailView
         ? {
-            id: approval.assignedTo.id,
-            name: approval.assignedTo.username ?? null,
-            mobile: approval.assignedTo.mobile ?? null,
+            id: approval?.user?.id,
+            uuid: approval?.user?.uuid ?? null,
+            applicationId: approval?.user?.applicationId ?? null,
+            salutation: approval?.user?.salutation ?? null,
+            name: approval?.user?.username ?? null,
+            mobile: approval?.user?.mobile ?? null,
+            whatsappNumber: approval?.user?.whatsappNumber ?? null,
+            whatsappVerified: approval?.user?.whatsappVerified ?? false,
+            email: approval?.user?.email ?? null,
+            emailVerified: approval?.user?.emailVerified ?? false,
+            firmName: approval?.user?.firmName ?? null,
+            privateName: approval?.user?.privateName ?? null,
+            partnerType: approval?.user?.partnerType ?? null,
+            code: approval?.user?.code ?? null,
+            status: approval?.user?.status,
+            imageUrl: approval?.user?.image_url ?? null,
+            dateOfBirth: approval?.user?.date_of_birth ?? null,
+            referralCode: approval?.user?.refferal_code ?? null,
+            points: approval?.user?.points ? Number(approval?.user?.points) : 0,
+            createdAt: approval?.user?.createdAt
+              ? new Date(approval?.user?.createdAt).toISOString()
+              : null,
           }
-        : null,
-      actionBy: approval.actionBy
+        : {
+            id: approval?.user?.id,
+            name: approval?.user?.username ?? null,
+            mobile: approval?.user?.mobile ?? null,
+            status: approval?.user?.status,
+            partnerType: approval?.user?.partnerType ?? null,
+          };
+
+      const storeInfo = approval?.user?.storeInformation
+        ? isDetailView
+          ? {
+              id: approval?.user?.storeInformation.id,
+              address: approval?.user?.storeInformation.address1,
+              address1: approval?.user?.storeInformation.address1,
+              address2: approval?.user?.storeInformation.address2 ?? null,
+              city: approval?.user?.storeInformation.city,
+              state: approval?.user?.storeInformation.state,
+              pincode: approval?.user?.storeInformation.pincode,
+              lat: approval?.user?.storeInformation.lat,
+              lng: approval?.user?.storeInformation.lng,
+              storeFrontFacadeImageUrl:
+                approval?.user?.storeInformation.storeFrontFacadeImageUrl ?? null,
+              storeDisplayImageUrl: approval?.user?.storeInformation.storeDisplayImageUrl ?? null,
+              addressProofType: approval?.user?.storeInformation.addressProofType ?? null,
+              addressProofImageUrl: approval?.user?.storeInformation.addressProofImageUrl ?? null,
+              createdAt: approval?.user?.storeInformation.createdAt
+                ? new Date(approval?.user?.storeInformation.createdAt).toISOString()
+                : null,
+            }
+          : {
+              address: approval?.user?.storeInformation.address1,
+              city: approval?.user?.storeInformation.city,
+              pincode: approval?.user?.storeInformation.pincode,
+              lat: approval?.user?.storeInformation.lat,
+              lng: approval?.user?.storeInformation.lng,
+            }
+        : null;
+
+      const kycInformation = isDetailView
         ? {
-            id: approval.actionBy.id,
-            name: approval.actionBy.username ?? null,
-            mobile: approval.actionBy.mobile ?? null,
+            verifications: (approval?.user?.kyc || []).map((k: any) => ({
+              id: k?.id,
+              type: k?.type,
+              status: k?.status,
+              referenceId: k?.referenceId ?? null,
+              documentNumber: k?.documentNumber
+                ? this.kycService.decryptKycData(k?.documentNumber)
+                : null,
+              maskedDocumentNumber: k?.maskedDocumentNumber ?? null,
+              verifiedName: k?.verifiedName
+                ? this.kycService.decryptKycData(k?.verifiedName)
+                : null,
+              provider: k?.provider ?? null,
+              failureReason: k?.failureReason ?? null,
+              metadata: k?.metadata ? this.kycService.decryptKycData(k?.metadata) : null,
+              createdAt: k?.createdAt ? new Date(k?.createdAt).toISOString() : null,
+            })),
+            beneficiaries: (approval?.user?.userBeneficiaries || []).map((b: any) => ({
+              id: b?.id,
+              type: b.type,
+              accountNumber: b?.accountNumber
+                ? this.kycService.decryptKycData(b?.accountNumber)
+                : null,
+              ifsc: b?.ifsc ? this.kycService.decryptKycData(b?.ifsc) : null,
+              bankName: b?.bankName ? this.kycService.decryptKycData(b?.bankName) : null,
+              bankHolderName: b?.bankHolderName
+                ? this.kycService.decryptKycData(b?.bankHolderName)
+                : null,
+              upi: b?.upi ? this.kycService.decryptKycData(b?.upi) : null,
+              status: b?.status,
+              referenceId: b?.referenceId ?? null,
+              createdAt: b?.createdAt ? new Date(b?.createdAt).toISOString() : null,
+            })),
           }
-        : null,
-      retailer: {
-        id: approval.user.id,
-        name: approval.user.username ?? null,
-        mobile: approval.user.mobile ?? null,
-        status: approval.user.status,
-        partnerType: approval.user.partnerType ?? null,
-      },
-      storeInfo: approval.user.storeInformation
-        ? {
-            address: approval.user.storeInformation.address1,
-            city: approval.user.storeInformation.city,
-            pincode: approval.user.storeInformation.pincode,
-            lat: approval.user.storeInformation.lat,
-            lng: approval.user.storeInformation.lng,
-          }
-        : null,
-    }));
+        : undefined;
+
+      return {
+        approvalId: approval?.id,
+        level: approval?.level,
+        status: approval?.status,
+        remarks: approval?.remarks ?? null,
+        actionAt: approval?.actionAt ? new Date(approval?.actionAt).toISOString() : null,
+        assignedTo: approval?.assignedTo
+          ? {
+              id: approval?.assignedTo?.id,
+              name: approval?.assignedTo?.username ?? null,
+              mobile: approval?.assignedTo?.mobile ?? null,
+            }
+          : null,
+        actionBy: approval?.actionBy
+          ? {
+              id: approval?.actionBy?.id,
+              name: approval?.actionBy?.username ?? null,
+              mobile: approval?.actionBy?.mobile ?? null,
+            }
+          : null,
+        retailer,
+        storeInfo,
+        ...(isDetailView && { kycInformation }),
+      };
+    });
 
     return {
       list,

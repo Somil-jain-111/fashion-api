@@ -45,7 +45,8 @@ export class ApprovalsController {
       req.user.role as UserRole,
       query.status,
       query.page ? Number(query.page) : 1,
-      query.limit ? Number(query.limit) : 10
+      query.limit ? Number(query.limit) : 10,
+      query.approvalId ? Number(query.approvalId) : undefined
     );
 
     return DataSanitizer.sanitizeData(response);
