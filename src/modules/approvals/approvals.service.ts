@@ -14,6 +14,7 @@ import { UserRole } from 'src/default/common/enums/user-type.enum';
 import { User } from '../auth/entities/users.entity';
 import { CommonUtils } from 'src/default/common/utils/common.utils';
 import { TransactionService } from 'src/default/databases/transaction';
+import { ApprovalRejectionOptions } from 'src/default/common/constants/approval-rejection.option';
 
 @Injectable()
 export class ApprovalsService {
@@ -90,12 +91,17 @@ export class ApprovalsService {
           throw new BusinessException(ERROR_CODES.APPROVAL.L2_ONLY);
         }
 
+        if (!rejectReasonType) {
+          throw new BusinessException(ERROR_CODES.APPROVAL.REJECT_REASON_TYPE);
+        }
+
         // Transition to BLOCKED
         await this.approvalRepository.updateById(
           approval.id,
           {
             status: ApprovalStatus.BLOCKED,
             actionBy: { id: approverId } as any,
+            rejectReasonType: ApprovalRejectionOptions[rejectReasonType],
             actionAt: new Date(),
             remarks: remarks || 'Blocked in approval pipeline',
           },
@@ -126,7 +132,7 @@ export class ApprovalsService {
           {
             status: ApprovalStatus.REJECTED,
             actionBy: { id: approverId } as any,
-            rejectReasonType: rejectReasonType,
+            rejectReasonType: ApprovalRejectionOptions[rejectReasonType],
             actionAt: new Date(),
             remarks: remarks || 'Rejected',
           },
@@ -417,5 +423,9 @@ export class ApprovalsService {
       rejected: all.filter((a) => a.status === ApprovalStatus.REJECTED).length,
       blocked: all.filter((a) => a.status === ApprovalStatus.BLOCKED).length,
     };
+  }
+
+  async getRejectionOptions() {
+    return ApprovalRejectionOptions;
   }
 }
