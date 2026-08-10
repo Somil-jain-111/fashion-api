@@ -8,7 +8,6 @@ import { UserRole } from 'src/default/common/enums/user-type.enum';
 import { ResponseMessage } from 'src/default/common/decorators/response-message.decorator';
 import { DataSanitizer } from 'src/default/common/utils/sanitize.utils';
 import { NoCache } from 'src/default/cache/cache.decorator';
-import { ApprovalStatus } from 'src/default/common/enums/approvals.enum';
 import { QueueQueryDto } from './dto/queue-query.dto';
 
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -30,6 +29,7 @@ export class ApprovalsController {
       approverId,
       Number(id),
       dto.action,
+      dto.rejectReasonType,
       dto.remarks
     );
     return DataSanitizer.sanitizeData(response);

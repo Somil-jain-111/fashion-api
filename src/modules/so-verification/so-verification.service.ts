@@ -346,6 +346,7 @@ export class SoVerificationService {
       soUserId,
       approvalId,
       ApprovalAction.APPROVE,
+      null,
       dto.remarks ?? 'Outlet verified by Sales Officer'
     );
 
@@ -398,6 +399,7 @@ export class SoVerificationService {
       soUserId,
       approvalId,
       ApprovalAction.REJECT,
+      rejectionLabel,
       `Rejected by SO — Reason: ${rejectionLabel}${dto.remarks ? `. Remarks: ${dto.remarks}` : ''}`
     );
 
