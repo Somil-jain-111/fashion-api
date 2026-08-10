@@ -8,13 +8,14 @@ import { UserRole } from 'src/default/common/enums/user-type.enum';
 import { ResponseMessage } from 'src/default/common/decorators/response-message.decorator';
 import { DataSanitizer } from 'src/default/common/utils/sanitize.utils';
 import { NoCache } from 'src/default/cache/cache.decorator';
-import { ApprovalStatus } from 'src/default/common/enums/approvals.enum';
+import { QueueQueryDto } from './dto/queue-query.dto';
 
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('approvals')
 export class ApprovalsController {
   constructor(private readonly approvalsService: ApprovalsService) {}
 
+  @NoCache()
   @Roles([UserRole.L1, UserRole.L2, UserRole.SALESPERSON, UserRole.SUPERADMIN])
   @Post(':id/action')
   @ResponseMessage('Approval action processed successfully')
@@ -28,6 +29,7 @@ export class ApprovalsController {
       approverId,
       Number(id),
       dto.action,
+      dto.rejectReasonType,
       dto.remarks
     );
     return DataSanitizer.sanitizeData(response);
@@ -37,19 +39,15 @@ export class ApprovalsController {
   @NoCache()
   @Get('queue')
   @ResponseMessage('Approval queue fetched successfully')
-  async getApprovalQueue(
-    @Req() req: any,
-    @Query('status') status?: ApprovalStatus,
-    @Query('page') page?: string,
-    @Query('limit') limit?: string
-  ) {
+  async getApprovalQueue(@Req() req: any, @Query() query: QueueQueryDto) {
     const response = await this.approvalsService.getApprovalQueue(
       Number(req.user.id),
       req.user.role as UserRole,
-      status,
-      page ? Number(page) : 1,
-      limit ? Number(limit) : 10
+      query.status,
+      query.page ? Number(query.page) : 1,
+      query.limit ? Number(query.limit) : 10
     );
+
     return DataSanitizer.sanitizeData(response);
   }
 
@@ -62,6 +60,16 @@ export class ApprovalsController {
       Number(req.user.id),
       req.user.role as UserRole
     );
+    return DataSanitizer.sanitizeData(response);
+  }
+
+  @NoCache()
+  @Roles([UserRole.L1, UserRole.L2, UserRole.SALESPERSON, UserRole.SUPERADMIN])
+  @Get('reject-options')
+  @ResponseMessage('Rejection Options fetched')
+  async getRejectionOptions() {
+    const response = await this.approvalsService.getRejectionOptions();
+
     return DataSanitizer.sanitizeData(response);
   }
 }

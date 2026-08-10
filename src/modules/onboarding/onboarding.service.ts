@@ -349,7 +349,7 @@ export class OnboardingService {
         rejectedBy:
           activeApproval.level === 1 ? 'L1' : activeApproval.level === 2 ? 'L2' : 'Sales Officer',
         reason: activeApproval.remarks ?? 'Your profile was rejected.',
-        rejectedAt: activeApproval.approved_at,
+        rejectedAt: activeApproval.actionAt,
       };
     }
 

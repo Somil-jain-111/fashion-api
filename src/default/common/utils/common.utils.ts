@@ -354,15 +354,15 @@ export class CommonUtils {
     page: number,
     limit: number
   ): {
-    total: number;
-    page: number;
-    limit: number;
+    totalItems: number;
+    currentPage: number;
+    pageSize: number;
     totalPages: number;
   } {
     return {
-      total,
-      page,
-      limit,
+      totalItems: total,
+      currentPage: page,
+      pageSize: limit,
       totalPages: Math.ceil(total / limit),
     };
   }
