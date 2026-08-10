@@ -30,5 +30,5 @@ export enum ApprovalRejectionOptions {
   DUPLICATE_OUTLET = 'Duplicate registered outlet',
 
   // MISC
-  OTHER = 'Incorrect: Please check remarks for more information.',
+  OTHER = 'Other: Please check remarks for more information.',
 }

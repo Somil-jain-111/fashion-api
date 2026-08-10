@@ -62,4 +62,14 @@ export class ApprovalsController {
     );
     return DataSanitizer.sanitizeData(response);
   }
+
+  @NoCache()
+  @Roles([UserRole.L1, UserRole.L2, UserRole.SALESPERSON, UserRole.SUPERADMIN])
+  @Get('reject-options')
+  @ResponseMessage('Rejection Options fetched')
+  async getRejectionOptions() {
+    const response = await this.approvalsService.getRejectionOptions();
+
+    return DataSanitizer.sanitizeData(response);
+  }
 }
