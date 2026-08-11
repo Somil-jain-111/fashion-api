@@ -397,8 +397,6 @@ export class KycService {
     };
   }
 
-
-
   async saveAadhaar(userId: number, body: SaveAadhaarDto): Promise<any> {
     const tag = 'KycService.saveAadhaar';
     const { aadharNumber, aadharFrontImage, aadharBackImage } = body;
@@ -436,8 +434,7 @@ export class KycService {
 
     const referenceId = await ReferenceIdUtil.generateKycReferenceId(KycType.AADHAAR);
 
-    const lastFourDigit = aadharNumber.slice(-4);
-    const maskedAadhaar = `XXXXXXXX${lastFourDigit}`;
+    const maskedAadhaar = this.aadhaarProvider.maskAadhaarNumber(aadharNumber);
 
     await this.kycVerificationRepository.upsertVerifiedKyc({
       userId,
