@@ -47,6 +47,7 @@ export class UserService {
     }
 
     const existingBlock = await this.userBlockRepository.findActiveBlockByUserId(dto.userId);
+
     if (existingBlock) {
       throw new BusinessException(ERROR_CODES.USER.USER_ALREADY_BLOCKED, {
         blockedTill: existingBlock.blockedTill
@@ -60,9 +61,15 @@ export class UserService {
     }
 
     const blockedFrom = new Date();
-    const blockedTill = new Date(blockedFrom);
-    blockedTill.setDate(blockedTill.getDate() + dto.daysToBlock);
-    blockedTill.setHours(23, 59, 59, 999);
+
+    // Calculate midnight (23:59:59.999) of the target date in IST timezone (UTC+5:30)
+    const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000;
+    const istDate = new Date(blockedFrom.getTime() + IST_OFFSET_MS);
+
+    istDate.setUTCDate(istDate.getUTCDate() + dto.daysToBlock);
+    istDate.setUTCHours(23, 59, 59, 999);
+
+    const blockedTill = new Date(istDate.getTime());
 
     await this.userBlockRepository.deactivateBlocksForUser(dto.userId);
 
@@ -120,8 +127,13 @@ export class UserService {
     }
 
     const existingBlock = await this.userBlockRepository.findActiveBlockByUserId(dto.userId);
+
     if (existingBlock) {
-      throw new BusinessException(ERROR_CODES.USER.USER_ALREADY_BLOCKED);
+      throw new BusinessException(ERROR_CODES.USER.USER_ALREADY_BLOCKED, {
+        blockedTill: existingBlock.blockedTill
+          ? existingBlock.blockedTill.toISOString()
+          : 'Indefinitely',
+      });
     }
 
     await this.userBlockRepository.deactivateBlocksForUser(dto.userId);
@@ -148,13 +160,13 @@ export class UserService {
   }
 
   /**
-   * Removes the last permanent block of the user if any
+   * Removes the last permanent/temp block of the user if any
    *
    * @param dto
    * @param performingUser
    * @returns
    */
-  async removePermanentBlock(dto: UnblockUserDto, performingUser: any) {
+  async removeBlock(dto: UnblockUserDto, performingUser: any) {
     const targetUser = await this.userRepository.findById(dto.userId);
 
     if (!targetUser) {
@@ -163,7 +175,7 @@ export class UserService {
 
     const activeBlock = await this.userBlockRepository.findActiveBlockByUserId(dto.userId);
 
-    if (!activeBlock || activeBlock.blockType !== BlockType.PERMANENT_BLOCK) {
+    if (!activeBlock) {
       throw new BusinessException(ERROR_CODES.USER.NO_PERMANENT_BLOCK);
     }
 
@@ -177,7 +189,7 @@ export class UserService {
     return {
       id: activeBlock.id,
       userId: dto.userId,
-      blockType: BlockType.PERMANENT_BLOCK,
+      blockType: activeBlock.blockType,
       unblockedAt: unblockedAt.toISOString(),
       remarks: dto.remarks || activeBlock.remarks || null,
     };

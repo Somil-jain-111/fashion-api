@@ -34,10 +34,10 @@ export class UserController {
 
   @NoCache()
   @SkipThrottle()
-  @Post('unblock-permanent')
+  @Post('unblock')
   @Roles([UserRole.L2, UserRole.SUPERADMIN])
   @ResponseMessage('User permanent block removed successfully')
   async removePermanentBlock(@Body() dto: UnblockUserDto, @Req() req: any) {
-    return await this.userService.removePermanentBlock(dto, req.user);
+    return await this.userService.removeBlock(dto, req.user);
   }
 }
