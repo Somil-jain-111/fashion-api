@@ -3,49 +3,10 @@ import { Type } from 'class-transformer';
 //
 import { UserRole } from 'src/default/common/enums/user-type.enum';
 
-export class ApprovalLimitsDto {
-  @IsOptional()
-  @ValidateNested()
-  dbt?: number;
-
-  @IsOptional()
-  @ValidateNested()
-  physical?: number;
-
-  @IsOptional()
-  @ValidateNested()
-  digital?: number;
-}
-
 export class AdditionalSettingsDto {
   @IsOptional()
-  @ValidateNested()
-  @Type(() => ApprovalLimitsDto)
-  approvalLimits?: ApprovalLimitsDto;
-
-  @IsOptional()
   @IsBoolean()
-  cappingLimitEnabled?: boolean;
-
-  @IsOptional()
-  @IsNumber()
-  @Min(0)
-  @Max(100)
-  cappingLimitPercentage?: number;
-}
-
-export class RedemptionOptionsDto {
-  @IsOptional()
-  @IsBoolean()
-  physical?: boolean;
-
-  @IsOptional()
-  @IsBoolean()
-  digital?: boolean;
-
-  @IsOptional()
-  @IsBoolean()
-  dbt?: boolean;
+  skipKyc?: boolean;
 }
 
 export class LimitDetailDto {
@@ -100,9 +61,16 @@ export class EditDynamicConfigDto {
   redemptionEnabled?: boolean;
 
   @IsOptional()
-  @ValidateNested()
-  @Type(() => RedemptionOptionsDto)
-  redemptionOptions?: RedemptionOptionsDto;
+  @IsBoolean()
+  physicalRedemptionEnabled?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  digitalRedemptionEnabled?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  dbtEnabled?: boolean;
 
   @IsOptional()
   @ValidateNested()
@@ -113,4 +81,36 @@ export class EditDynamicConfigDto {
   @ValidateNested()
   @Type(() => AdditionalSettingsDto)
   additionalSettings?: AdditionalSettingsDto;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(1)
+  @Max(100)
+  loginMaxOtpAttempts?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(1)
+  loginOtpTimeoutSeconds?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(1)
+  loginOtpExpirySeconds?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(1)
+  @Max(100)
+  redemptionMaxOtpAttempts?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(1)
+  redemptionOtpTimeoutSeconds?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(1)
+  redemptionOtpExpirySeconds?: number;
 }

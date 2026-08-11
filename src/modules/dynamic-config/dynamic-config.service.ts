@@ -54,6 +54,21 @@ export class DynamicConfigService {
     return { previousChanges, newChanges, hasChanges };
   }
 
+  private cleanObjectNoNulls(obj: any): any {
+    if (obj === null || obj === undefined) return undefined;
+    if (typeof obj !== 'object') return obj;
+    if (Array.isArray(obj)) return obj.map((item) => this.cleanObjectNoNulls(item));
+
+    const result: Record<string, any> = {};
+    for (const key of Object.keys(obj)) {
+      const val = obj[key];
+      if (val !== null && val !== undefined) {
+        result[key] = typeof val === 'object' ? this.cleanObjectNoNulls(val) : val;
+      }
+    }
+    return result;
+  }
+
   /**
    * Formats a UserRoleConfig entity
    */
@@ -65,8 +80,17 @@ export class DynamicConfigService {
     return {
       userRole: config.userRole,
       redemptionEnabled: config.redemptionEnabled,
-      redemptionOptions: config.redemptionOptions || {},
+      physicalRedemptionEnabled: config.physicalRedemptionEnabled,
+      digitalRedemptionEnabled: config.digitalRedemptionEnabled,
+      dbtEnabled: config.dbtEnabled,
+      // redemptionOptions: config.redemptionOptions || {},
       ...(showAll && {
+        loginMaxOtpAttempts: config.loginMaxOtpAttempts ?? 3,
+        loginOtpTimeoutSeconds: config.loginOtpTimeoutSeconds ?? 3600,
+        loginOtpExpirySeconds: config.loginOtpExpirySeconds ?? 300,
+        redemptionMaxOtpAttempts: config.redemptionMaxOtpAttempts ?? 3,
+        redemptionOtpTimeoutSeconds: config.redemptionOtpTimeoutSeconds ?? 3600,
+        redemptionOtpExpirySeconds: config.redemptionOtpExpirySeconds ?? 300,
         redemptionLimits: config.redemptionLimits || {},
         additionalSettings: config.additionalSettings || {},
       }),
@@ -136,73 +160,38 @@ export class DynamicConfigService {
     const configData: Partial<UserRoleConfig> = {
       userRole: dto.userRole,
       redemptionEnabled: isRedemptionEnabled,
-      physicalRedemptionEnabled: dto.redemptionOptions?.physical ?? false,
-      digitalRedemptionEnabled: dto.redemptionOptions?.digital ?? false,
-      dbtEnabled: dto.redemptionOptions?.dbt ?? false,
-      redemptionOptions: dto.redemptionOptions
-        ? {
-            physical: dto.redemptionOptions.physical ?? false,
-            digital: dto.redemptionOptions.digital ?? false,
-            dbt: dto.redemptionOptions.dbt ?? false,
-          }
-        : {
-            physical: false,
-            digital: false,
-            dbt: false,
-          },
-      redemptionLimits: dto.redemptionLimits
-        ? {
-            dbt: {
-              maxDailyRedemptions: dto.redemptionLimits.dbt?.maxDailyRedemptions ?? 0,
-              maxMonthlyRedemptions: dto.redemptionLimits.dbt?.maxMonthlyRedemptions ?? 0,
-              dailyLimit: dto.redemptionLimits.dbt?.dailyLimit ?? 0,
-              monthlyLimit: dto.redemptionLimits.dbt?.monthlyLimit ?? 0,
-            },
-            digital: {
-              maxDailyRedemptions: dto.redemptionLimits.digital?.maxDailyRedemptions ?? 0,
-              maxMonthlyRedemptions: dto.redemptionLimits.digital?.maxMonthlyRedemptions ?? 0,
-              dailyLimit: dto.redemptionLimits.digital?.dailyLimit ?? 0,
-              monthlyLimit: dto.redemptionLimits.digital?.monthlyLimit ?? 0,
-            },
-            physical: {
-              maxDailyRedemptions: dto.redemptionLimits.physical?.maxDailyRedemptions ?? 0,
-              maxMonthlyRedemptions: dto.redemptionLimits.physical?.maxMonthlyRedemptions ?? 0,
-              dailyLimit: dto.redemptionLimits.physical?.dailyLimit ?? 0,
-              monthlyLimit: dto.redemptionLimits.physical?.monthlyLimit ?? 0,
-            },
-          }
-        : {
-            dbt: {
-              maxDailyRedemptions: 0,
-              maxMonthlyRedemptions: 0,
-              dailyLimit: 0,
-              monthlyLimit: 0,
-            },
-            digital: {
-              maxDailyRedemptions: 0,
-              maxMonthlyRedemptions: 0,
-              dailyLimit: 0,
-              monthlyLimit: 0,
-            },
-            physical: {
-              maxDailyRedemptions: 0,
-              maxMonthlyRedemptions: 0,
-              dailyLimit: 0,
-              monthlyLimit: 0,
-            },
-          },
-      additionalSettings: dto.additionalSettings
-        ? {
-            ...dto.additionalSettings,
-            approvalLimits: {
-              dbt: dto.additionalSettings.approvalLimits?.dbt ?? null,
-              physical: dto.additionalSettings.approvalLimits?.physical ?? null,
-              digital: dto.additionalSettings.approvalLimits?.digital ?? null,
-            },
-            cappingLimitEnabled: dto.additionalSettings.cappingLimitEnabled ?? false,
-            cappingLimitPercentage: dto.additionalSettings.cappingLimitPercentage ?? 0,
-          }
-        : null,
+      physicalRedemptionEnabled: dto.physicalRedemptionEnabled ?? false,
+      digitalRedemptionEnabled: dto.digitalRedemptionEnabled ?? false,
+      dbtEnabled: dto.dbtEnabled ?? false,
+      redemptionLimits: {
+        dbt: {
+          maxDailyRedemptions: dto.redemptionLimits?.dbt?.maxDailyRedemptions ?? 0,
+          maxMonthlyRedemptions: dto.redemptionLimits?.dbt?.maxMonthlyRedemptions ?? 0,
+          dailyLimit: dto.redemptionLimits?.dbt?.dailyLimit ?? 0,
+          monthlyLimit: dto.redemptionLimits?.dbt?.monthlyLimit ?? 0,
+        },
+        digital: {
+          maxDailyRedemptions: dto.redemptionLimits?.digital?.maxDailyRedemptions ?? 0,
+          maxMonthlyRedemptions: dto.redemptionLimits?.digital?.maxMonthlyRedemptions ?? 0,
+          dailyLimit: dto.redemptionLimits?.digital?.dailyLimit ?? 0,
+          monthlyLimit: dto.redemptionLimits?.digital?.monthlyLimit ?? 0,
+        },
+        physical: {
+          maxDailyRedemptions: dto.redemptionLimits?.physical?.maxDailyRedemptions ?? 0,
+          maxMonthlyRedemptions: dto.redemptionLimits?.physical?.maxMonthlyRedemptions ?? 0,
+          dailyLimit: dto.redemptionLimits?.physical?.dailyLimit ?? 0,
+          monthlyLimit: dto.redemptionLimits?.physical?.monthlyLimit ?? 0,
+        },
+      },
+      additionalSettings: {
+        skipKyc: dto.additionalSettings.skipKyc ?? false,
+      },
+      loginMaxOtpAttempts: dto.loginMaxOtpAttempts ?? 3,
+      loginOtpTimeoutSeconds: dto.loginOtpTimeoutSeconds ?? 3600,
+      loginOtpExpirySeconds: dto.loginOtpExpirySeconds ?? 300,
+      redemptionMaxOtpAttempts: dto.redemptionMaxOtpAttempts ?? 3,
+      redemptionOtpTimeoutSeconds: dto.redemptionOtpTimeoutSeconds ?? 3600,
+      redemptionOtpExpirySeconds: dto.redemptionOtpExpirySeconds ?? 300,
     };
 
     const created = await this.dynamicConfigRepository.createUserRoleConfig(
@@ -221,121 +210,135 @@ export class DynamicConfigService {
 
     const previousValues = JSON.parse(JSON.stringify(existing));
 
-    if (dto.redemptionEnabled !== undefined) {
+    if (dto.redemptionEnabled !== undefined && dto.redemptionEnabled !== null) {
       existing.redemptionEnabled = dto.redemptionEnabled;
     }
 
-    if (dto.redemptionOptions !== undefined) {
-      existing.redemptionOptions = {
-        ...(existing.redemptionOptions || {}),
-        ...dto.redemptionOptions,
-      };
-
-      if (dto.redemptionOptions.physical !== undefined) {
-        existing.physicalRedemptionEnabled = dto.redemptionOptions.physical;
-      }
-      if (dto.redemptionOptions.digital !== undefined) {
-        existing.digitalRedemptionEnabled = dto.redemptionOptions.digital;
-      }
-      if (dto.redemptionOptions.dbt !== undefined) {
-        existing.dbtEnabled = dto.redemptionOptions.dbt;
-      }
+    if (dto.physicalRedemptionEnabled !== undefined && dto.physicalRedemptionEnabled !== null) {
+      existing.physicalRedemptionEnabled = dto.physicalRedemptionEnabled;
     }
 
-    if (dto.redemptionLimits !== undefined) {
+    if (dto.digitalRedemptionEnabled !== undefined && dto.digitalRedemptionEnabled !== null) {
+      existing.digitalRedemptionEnabled = dto.digitalRedemptionEnabled;
+    }
+
+    if (dto.dbtEnabled !== undefined && dto.dbtEnabled !== null) {
+      existing.dbtEnabled = dto.dbtEnabled;
+    }
+
+    if (dto.loginMaxOtpAttempts !== undefined && dto.loginMaxOtpAttempts !== null) {
+      existing.loginMaxOtpAttempts = dto.loginMaxOtpAttempts;
+    }
+
+    if (dto.loginOtpTimeoutSeconds !== undefined && dto.loginOtpTimeoutSeconds !== null) {
+      existing.loginOtpTimeoutSeconds = dto.loginOtpTimeoutSeconds;
+    }
+
+    if (dto.loginOtpExpirySeconds !== undefined && dto.loginOtpExpirySeconds !== null) {
+      existing.loginOtpExpirySeconds = dto.loginOtpExpirySeconds;
+    }
+
+    if (dto.redemptionMaxOtpAttempts !== undefined && dto.redemptionMaxOtpAttempts !== null) {
+      existing.redemptionMaxOtpAttempts = dto.redemptionMaxOtpAttempts;
+    }
+
+    if (dto.redemptionOtpTimeoutSeconds !== undefined && dto.redemptionOtpTimeoutSeconds !== null) {
+      existing.redemptionOtpTimeoutSeconds = dto.redemptionOtpTimeoutSeconds;
+    }
+
+    if (dto.redemptionOtpExpirySeconds !== undefined && dto.redemptionOtpExpirySeconds !== null) {
+      existing.redemptionOtpExpirySeconds = dto.redemptionOtpExpirySeconds;
+    }
+
+    if (dto.redemptionLimits !== undefined && dto.redemptionLimits !== null) {
       const existingLimits = existing.redemptionLimits || {};
       const incomingLimits = dto.redemptionLimits;
 
       existing.redemptionLimits = {
         dbt: {
           maxDailyRedemptions:
-            incomingLimits.dbt?.maxDailyRedemptions !== undefined
+            incomingLimits.dbt?.maxDailyRedemptions !== undefined &&
+            incomingLimits.dbt?.maxDailyRedemptions !== null
               ? incomingLimits.dbt.maxDailyRedemptions
               : (existingLimits.dbt?.maxDailyRedemptions ?? 0),
           maxMonthlyRedemptions:
-            incomingLimits.dbt?.maxMonthlyRedemptions !== undefined
+            incomingLimits.dbt?.maxMonthlyRedemptions !== undefined &&
+            incomingLimits.dbt?.maxMonthlyRedemptions !== null
               ? incomingLimits.dbt.maxMonthlyRedemptions
               : (existingLimits.dbt?.maxMonthlyRedemptions ?? 0),
           dailyLimit:
-            incomingLimits.dbt?.dailyLimit !== undefined
+            incomingLimits.dbt?.dailyLimit !== undefined && incomingLimits.dbt?.dailyLimit !== null
               ? incomingLimits.dbt.dailyLimit
               : (existingLimits.dbt?.dailyLimit ?? 0),
           monthlyLimit:
-            incomingLimits.dbt?.monthlyLimit !== undefined
+            incomingLimits.dbt?.monthlyLimit !== undefined &&
+            incomingLimits.dbt?.monthlyLimit !== null
               ? incomingLimits.dbt.monthlyLimit
               : (existingLimits.dbt?.monthlyLimit ?? 0),
         },
         digital: {
           maxDailyRedemptions:
-            incomingLimits.digital?.maxDailyRedemptions !== undefined
+            incomingLimits.digital?.maxDailyRedemptions !== undefined &&
+            incomingLimits.digital?.maxDailyRedemptions !== null
               ? incomingLimits.digital.maxDailyRedemptions
               : (existingLimits.digital?.maxDailyRedemptions ?? 0),
           maxMonthlyRedemptions:
-            incomingLimits.digital?.maxMonthlyRedemptions !== undefined
+            incomingLimits.digital?.maxMonthlyRedemptions !== undefined &&
+            incomingLimits.digital?.maxMonthlyRedemptions !== null
               ? incomingLimits.digital.maxMonthlyRedemptions
               : (existingLimits.digital?.maxMonthlyRedemptions ?? 0),
           dailyLimit:
-            incomingLimits.digital?.dailyLimit !== undefined
+            incomingLimits.digital?.dailyLimit !== undefined &&
+            incomingLimits.digital?.dailyLimit !== null
               ? incomingLimits.digital.dailyLimit
               : (existingLimits.digital?.dailyLimit ?? 0),
           monthlyLimit:
-            incomingLimits.digital?.monthlyLimit !== undefined
+            incomingLimits.digital?.monthlyLimit !== undefined &&
+            incomingLimits.digital?.monthlyLimit !== null
               ? incomingLimits.digital.monthlyLimit
               : (existingLimits.digital?.monthlyLimit ?? 0),
         },
         physical: {
           maxDailyRedemptions:
-            incomingLimits.physical?.maxDailyRedemptions !== undefined
+            incomingLimits.physical?.maxDailyRedemptions !== undefined &&
+            incomingLimits.physical?.maxDailyRedemptions !== null
               ? incomingLimits.physical.maxDailyRedemptions
               : (existingLimits.physical?.maxDailyRedemptions ?? 0),
           maxMonthlyRedemptions:
-            incomingLimits.physical?.maxMonthlyRedemptions !== undefined
+            incomingLimits.physical?.maxMonthlyRedemptions !== undefined &&
+            incomingLimits.physical?.maxMonthlyRedemptions !== null
               ? incomingLimits.physical.maxMonthlyRedemptions
               : (existingLimits.physical?.maxMonthlyRedemptions ?? 0),
           dailyLimit:
-            incomingLimits.physical?.dailyLimit !== undefined
+            incomingLimits.physical?.dailyLimit !== undefined &&
+            incomingLimits.physical?.dailyLimit !== null
               ? incomingLimits.physical.dailyLimit
               : (existingLimits.physical?.dailyLimit ?? 0),
           monthlyLimit:
-            incomingLimits.physical?.monthlyLimit !== undefined
+            incomingLimits.physical?.monthlyLimit !== undefined &&
+            incomingLimits.physical?.monthlyLimit !== null
               ? incomingLimits.physical.monthlyLimit
               : (existingLimits.physical?.monthlyLimit ?? 0),
         },
       };
     }
 
-    if (dto.additionalSettings !== undefined) {
+    if (dto.additionalSettings !== undefined && dto.additionalSettings !== null) {
       const currentSettings = existing.additionalSettings || {};
       const newSettings = dto.additionalSettings;
-
-      const currentApprovalLimits = currentSettings.approvalLimits || {};
-      const newApprovalLimits = newSettings.approvalLimits || {};
 
       existing.additionalSettings = {
         ...currentSettings,
         ...newSettings,
-        approvalLimits: {
-          dbt:
-            newApprovalLimits.dbt !== undefined ? newApprovalLimits.dbt : currentApprovalLimits.dbt,
-          physical:
-            newApprovalLimits.physical !== undefined
-              ? newApprovalLimits.physical
-              : currentApprovalLimits.physical,
-          digital:
-            newApprovalLimits.digital !== undefined
-              ? newApprovalLimits.digital
-              : currentApprovalLimits.digital,
-        },
-
-        cappingLimitEnabled:
-          newSettings.cappingLimitEnabled !== undefined
-            ? newSettings.cappingLimitEnabled
-            : (currentSettings.cappingLimitEnabled ?? false),
-        cappingLimitPercentage:
-          newSettings.cappingLimitPercentage !== undefined
-            ? newSettings.cappingLimitPercentage
-            : (currentSettings.cappingLimitPercentage ?? 0),
       };
+    }
+
+    if (existing.redemptionLimits) {
+      existing.redemptionLimits = this.cleanObjectNoNulls(existing.redemptionLimits);
+    }
+
+    if (existing.additionalSettings) {
+      existing.additionalSettings = this.cleanObjectNoNulls(existing.additionalSettings);
     }
 
     const newValues = JSON.parse(JSON.stringify(existing));
