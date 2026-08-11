@@ -4,6 +4,7 @@ import { SkipThrottle } from '@nestjs/throttler';
 import {
   GenerateAadharOtpDto,
   VerifyAadhaarOtpDto,
+  SaveAadhaarDto,
   VerifyGstDto,
   VerifyPanDto,
   AddBeneficiaryDto,
@@ -45,6 +46,17 @@ export class KYCController {
     const userId = req.user.id;
 
     const response = await this.kycService.verifyAadhaarOtp(userId, body);
+    return DataSanitizer.sanitizeData(response);
+  }
+
+  @NoCache()
+  @SkipThrottle()
+  @Post('aadhaar/save')
+  @ResponseMessage(SUCCESS_MESSAGES.KYC.AADHAAR_SAVED)
+  async saveAadhaar(@Req() req: any, @Body() body: SaveAadhaarDto) {
+    const userId = req.user.id;
+
+    const response = await this.kycService.saveAadhaar(userId, body);
     return DataSanitizer.sanitizeData(response);
   }
 

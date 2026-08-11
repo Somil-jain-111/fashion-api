@@ -66,6 +66,7 @@ export class KycVerificationRepository extends BaseRepository<KycVerificationEnt
     data: {
       userId: number;
       type: KycType;
+      status?: KycStatus;
       referenceId?: string;
       documentNumber?: string;
       maskedDocumentNumber?: string;
@@ -78,6 +79,7 @@ export class KycVerificationRepository extends BaseRepository<KycVerificationEnt
     queryRunner?: QueryRunner
   ): Promise<KycVerificationEntity> {
     const repo = this.getRepository(queryRunner);
+    const status = data.status ?? KycStatus.VERIFIED;
 
     const existing = await repo.findOne({
       where: {
@@ -88,7 +90,7 @@ export class KycVerificationRepository extends BaseRepository<KycVerificationEnt
 
     if (existing) {
       Object.assign(existing, {
-        status: KycStatus.VERIFIED,
+        status,
         referenceId: data.referenceId ?? existing.referenceId,
         documentNumber: data.documentNumber ?? existing.documentNumber,
         maskedDocumentNumber: data.maskedDocumentNumber ?? existing.maskedDocumentNumber,
@@ -107,7 +109,7 @@ export class KycVerificationRepository extends BaseRepository<KycVerificationEnt
       {
         user: { id: data.userId },
         type: data.type,
-        status: KycStatus.VERIFIED,
+        status,
         referenceId: data.referenceId,
         documentNumber: data.documentNumber,
         maskedDocumentNumber: data.maskedDocumentNumber,

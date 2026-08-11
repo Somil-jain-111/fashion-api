@@ -25,6 +25,7 @@ export const SUCCESS_MESSAGES = {
   KYC: {
     AADHAAR_OTP_GENERATED: 'Aadhaar OTP generated successfully',
     AADHAAR_VERIFIED: 'Aadhaar verified successfully',
+    AADHAAR_SAVED: 'Aadhaar details saved successfully',
     PAN_VERIFIED: 'PAN verified successfully',
     GST_VERIFIED: 'GST verified successfully',
     BENEFICIARY_ADDED: 'Beneficiary added successfully',
