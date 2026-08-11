@@ -29,6 +29,7 @@ import { NameMatchProvider } from './provider/name-matching.provider';
 import { GenerateAadharOtpDto } from './dto/generate-aadhar.dto';
 import { AadhaarProvider } from './provider/aadhaar.provider';
 import { VerifyAadhaarOtpDto } from './dto/verify-aadhar-otp.dto';
+import { SaveAadhaarDto } from './dto/save-aadhaar.dto';
 import { LocalStorageContextUtil } from 'src/default/common/utils/local-storage.util';
 import { ContextType } from 'src/default/common/constants/context.option';
 import { UserRepository } from '../auth/repository';
@@ -393,6 +394,88 @@ export class KycService {
       referenceId,
       message: 'Aadhaar verified successfully',
       metadata,
+    };
+  }
+
+  async saveAadhaar(userId: number, body: SaveAadhaarDto): Promise<any> {
+    const tag = 'KycService.saveAadhaar';
+    const { aadharNumber, aadharFrontImage, aadharBackImage } = body;
+
+    ConsoleLogger.log('AADHAAR_SAVE_START', {
+      tag,
+      data: { userId },
+    });
+
+    const user = await this.userAuthValidator.getAllowedUserById(userId);
+
+    if (!user.username) {
+      throw new BusinessException(ERROR_CODES.KYC.USER_PROFILE_NAME_REQUIRED);
+    }
+
+    const encryptedAadhaarNumber = this.encryptKycData(aadharNumber);
+
+    const existingAadhaar = await this.kycVerificationRepository.findByDocumentNumberAndType(
+      encryptedAadhaarNumber,
+      KycType.AADHAAR
+    );
+
+    if (existingAadhaar && existingAadhaar.user.id !== userId) {
+      throw new BusinessException(ERROR_CODES.KYC.AADHAAR_ALREADY_IN_USE);
+    }
+
+    const userVerifiedAadhaar = await this.kycVerificationRepository.findVerifiedByUserIdAndType(
+      userId,
+      KycType.AADHAAR
+    );
+
+    if (userVerifiedAadhaar) {
+      throw new BusinessException(ERROR_CODES.KYC.AADHAAR_ALREADY_VERIFIED);
+    }
+
+    const referenceId = await ReferenceIdUtil.generateKycReferenceId(KycType.AADHAAR);
+
+    const maskedAadhaar = this.aadhaarProvider.maskAadhaarNumber(aadharNumber);
+
+    await this.kycVerificationRepository.upsertVerifiedKyc({
+      userId,
+      type: KycType.AADHAAR,
+      status: KycStatus.VERIFIED,
+      referenceId,
+      documentNumber: encryptedAadhaarNumber,
+      maskedDocumentNumber: maskedAadhaar,
+      provider: 'MANUAL',
+      providerRequest: {
+        aadharFrontImage,
+        aadharBackImage,
+      },
+      metadata: {
+        aadharNumber,
+      },
+    });
+
+    await this.kycVerificationLogRepository.createLog({
+      user_id: userId,
+      type: KycType.AADHAAR,
+      status: KycLogStatus.SUBMITTED,
+      referenceId,
+      documentNumber: encryptedAadhaarNumber,
+      provider: 'MANUAL',
+      requestPayload: {
+        aadharFrontImage,
+        aadharBackImage,
+      },
+      journeyId: LocalStorageContextUtil.get(ContextType.JOURNEY_ID),
+    });
+
+    ConsoleLogger.log('AADHAAR_SAVE_SUCCESS', {
+      tag,
+      data: { userId, referenceId },
+    });
+
+    return {
+      referenceId,
+      maskedAadhaar,
+      message: 'Aadhaar details saved successfully.',
     };
   }
 

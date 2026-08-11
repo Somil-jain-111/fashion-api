@@ -28,6 +28,7 @@ export enum KycLogStatus {
   FAILED = 'FAILED',
   EXPIRED = 'EXPIRED',
   PROVIDER_ERROR = 'PROVIDER_ERROR',
+  SUBMITTED = 'SUBMITTED',
 }
 
 export enum BeneficiaryType {
