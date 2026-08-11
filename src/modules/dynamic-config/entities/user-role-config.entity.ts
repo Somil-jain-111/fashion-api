@@ -11,11 +11,12 @@ export class UserRoleConfig extends BaseEntity {
   @Column({ type: 'boolean', default: true, name: 'redemption_enabled' })
   redemptionEnabled!: boolean;
 
-  @Column({
-    type: 'json',
-    name: 'redemption_options',
-  })
-  redemptionOptions?: Record<string, any>;
+  // @Column({
+  //   type: 'json',
+  //   name: 'redemption_options',
+  //   nullable: true,
+  // })
+  // redemptionOptions?: Record<string, any>;
 
   @Column({
     type: 'boolean',
