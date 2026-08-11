@@ -53,6 +53,7 @@ import { EmployeeModule } from './modules/employee/employee.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { RedemptionCartModule } from './modules/redemption-cart/redemption-cart.module';
 import { SmsModule } from './modules/sms/sms.module';
+import { UserModule } from './modules/user/user.module';
 
 @Module({
   imports: [
@@ -104,6 +105,7 @@ import { SmsModule } from './modules/sms/sms.module';
     AdminModule,
     RedemptionCartModule,
     SmsModule,
+    UserModule,
   ],
   providers: [
     {

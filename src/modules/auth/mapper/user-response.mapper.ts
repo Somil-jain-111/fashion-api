@@ -1,12 +1,14 @@
 import { KycVerificationEntity, User } from 'src/modules/auth/entities';
 import { AuthUserResponseDto } from '../interface/auth-user.response.dto';
+import { UserBlock } from 'src/modules/user/entities/user-block.entity';
 
 export class UserResponseMapper {
   static toAuthUser(
     user: User,
     panKyc?: KycVerificationEntity,
     aadhaarKyc?: KycVerificationEntity,
-    gstKyc?: KycVerificationEntity
+    gstKyc?: KycVerificationEntity,
+    activeBlock?: UserBlock | null
   ): AuthUserResponseDto {
     return {
       id: user.id.toString(),
@@ -35,6 +37,19 @@ export class UserResponseMapper {
       ...(gstKyc && {
         maskedGst: gstKyc?.maskedDocumentNumber,
       }),
+      temp_block: activeBlock
+        ? {
+            is_blocked: true,
+            block_type: activeBlock.blockType,
+            blocked_till: activeBlock.blockedTill ? activeBlock.blockedTill.toISOString() : null,
+            remarks: activeBlock.remarks || null,
+          }
+        : {
+            is_blocked: false,
+            block_type: null,
+            blocked_till: null,
+            remarks: null,
+          },
     };
   }
 }

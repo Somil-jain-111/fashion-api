@@ -22,6 +22,7 @@ import { AddressesModule } from '../addresses/addresses.module';
 import { ApprovalRepository } from '../approvals/repository';
 import { DynamicConfigModule } from '../dynamic-config/dynamic-config.module';
 import { SmsModule } from '../sms/sms.module';
+import { UserModule } from '../user/user.module';
 
 @Module({
   imports: [
@@ -37,6 +38,7 @@ import { SmsModule } from '../sms/sms.module';
     AddressesModule,
     DynamicConfigModule,
     SmsModule,
+    UserModule,
   ],
   providers: [
     AuthService,
