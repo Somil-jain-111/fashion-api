@@ -36,6 +36,7 @@ import { AppConfigService } from 'src/default/config/config.service';
 import { KycType } from 'src/default/common/enums/kyc.enum';
 import { OtpAttemptType } from 'src/default/common/enums/common.enum';
 import { SmsService } from '../sms/sms.service';
+import { UserBlockRepository } from '../user/repository/user-block.repository';
 
 @Injectable()
 export class AuthService {
@@ -45,6 +46,7 @@ export class AuthService {
     private loginHistoryRepository: LoginHistoriesRepository,
     private kycVerificationRepository: KycVerificationRepository,
     private otpAttemptLogsRepository: OTPAttemptLogsRepository,
+    private userBlockRepository: UserBlockRepository,
 
     private readonly jwtService: JwtService,
     private readonly userAuthValidator: UserAuthValidator,
@@ -316,13 +318,14 @@ export class AuthService {
       },
       ['role']
     );
-    const [panKyc, aadhaarKyc, gstKyc] = await Promise.all([
+    const [panKyc, aadhaarKyc, gstKyc, activeBlock] = await Promise.all([
       this.kycVerificationRepository.findVerifiedByUserIdAndType(user.id, KycType.PAN),
       this.kycVerificationRepository.findVerifiedByUserIdAndType(user.id, KycType.AADHAAR),
       this.kycVerificationRepository.findVerifiedByUserIdAndType(user.id, KycType.GST),
+      this.userBlockRepository.findActiveBlockByUserId(user.id),
     ]);
 
-    return UserResponseMapper.toAuthUser(user, panKyc, aadhaarKyc, gstKyc);
+    return UserResponseMapper.toAuthUser(user, panKyc, aadhaarKyc, gstKyc, activeBlock);
   }
 
   private validateLoginPayload(dto: LoginDto): void {

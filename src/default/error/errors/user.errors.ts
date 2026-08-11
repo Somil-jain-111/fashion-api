@@ -70,4 +70,34 @@ export const USER_ERRORS = {
     message: 'Mobile number not found',
     statusCode: 400,
   },
+
+  USER_TEMP_BLOCKED: {
+    code: 'USR_012',
+    message: 'User profile is temporarily blocked until {blockedTill}',
+    statusCode: 403,
+  },
+
+  USER_ALREADY_BLOCKED: {
+    code: 'USR_013',
+    message: 'User is already blocked till {blockedTill}',
+    statusCode: 400,
+  },
+
+  INVALID_BLOCK_STATUS: {
+    code: 'USR_014',
+    message: 'User status must be in_approval, partial_approved or active to block',
+    statusCode: 400,
+  },
+
+  INVALID_BLOCK_ROLE: {
+    code: 'USR_015',
+    message: 'Only L2 and SuperAdmin can permanently block a user',
+    statusCode: 403,
+  },
+
+  NO_PERMANENT_BLOCK: {
+    code: 'USR_016',
+    message: 'User is not permanently blocked',
+    statusCode: 400,
+  },
 } as const;
