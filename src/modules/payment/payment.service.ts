@@ -24,6 +24,9 @@ import { RazorpayIntegration } from './integrations/razorpay.integration';
 import { calculatePaymentSplit } from './helper/payment-split.helper';
 import { PointPurchaseStatus } from './entities';
 import { OtpHelper } from 'src/default/common/helper/otp.helper';
+import { BeneficiaryStatus } from 'src/default/common/enums/user-beneficiary.enum';
+import { SmsService } from '../sms/sms.service';
+import { OtpAttemptType } from 'src/default/common/enums/common.enum';
 
 @Injectable()
 export class PaymentService {
@@ -40,7 +43,8 @@ export class PaymentService {
     private readonly kycService: KycService,
     private readonly rewardsService: RewardsService,
     private readonly pointPurchaseRepository: PointPurchaseRepository,
-    private readonly razorpay: RazorpayIntegration
+    private readonly razorpay: RazorpayIntegration,
+    private readonly smsService: SmsService
   ) {}
 
   async createPointPurchase(userId: number, points: number, requestedCallbackUrl?: string) {
@@ -311,7 +315,7 @@ export class PaymentService {
       // Fetch user's active bank account
       const bankAccount = await this.beneficiaryRepository.findBankAccountByBeneId(userId, beneId);
 
-      if (!bankAccount || bankAccount.status !== 1) {
+      if (!bankAccount || bankAccount.status !== BeneficiaryStatus.VERIFIED) {
         throw new BusinessException(ERROR_CODES.PAYMENT.BANK_DETAILS_NOT_VERIFIED);
       }
 
@@ -419,9 +423,11 @@ export class PaymentService {
           const otpExpiry = DateHelper.getOtpExpiryDate();
 
           if (isLive) {
-            const sms = await CommonUtils.sendSMS({
+            const sms = await this.smsService.sendParticipationOTPSms({
+              type: OtpAttemptType.REDEMPTION,
               mobile: user.mobile,
               otp: plainOtp,
+              userId: user.id,
             });
 
             ConsoleLogger.log('OTP sent successfully for DBT.', {
@@ -530,9 +536,11 @@ export class PaymentService {
     }
 
     if (isLive) {
-      const sms = await CommonUtils.sendSMS({
+      const sms = await this.smsService.sendParticipationOTPSms({
+        type: OtpAttemptType.REDEMPTION,
         mobile: user.mobile,
         otp: plainOtp,
+        userId: user.id,
       });
 
       ConsoleLogger.log('OTP sent successfully for DBT reset.', {

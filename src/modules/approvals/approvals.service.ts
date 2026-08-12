@@ -388,6 +388,7 @@ export class ApprovalsService {
             status: approval?.user?.status,
             imageUrl: approval?.user?.image_url ?? null,
             dateOfBirth: approval?.user?.date_of_birth ?? null,
+            anniversaryDate: approval?.user?.anniversary_date ?? null,
             referralCode: approval?.user?.refferal_code ?? null,
             points: approval?.user?.points ? Number(approval?.user?.points) : 0,
             createdAt: approval?.user?.createdAt
