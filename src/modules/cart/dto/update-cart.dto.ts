@@ -1,12 +1,9 @@
-import { Type } from 'class-transformer';
-import { IsBoolean, IsInt, IsOptional, Min } from 'class-validator';
+import { IsBoolean, IsOptional } from 'class-validator';
 
 export class UpdateCartDto {
+
   @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  cartonQuantity?: number;
+  cartonQuantity?: number | '+' | '-';
 
   @IsOptional()
   @IsBoolean()

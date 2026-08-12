@@ -24,4 +24,9 @@ export const CART_ERRORS = {
     message: 'Cart update failed',
     statusCode: 400,
   },
+  INVALID_CARTON_QUANTITY: {
+    code: 'CRT_006',
+    message: 'cartonQuantity must be a positive integer, "+", or "-"',
+    statusCode: 400,
+  },
 } as const;
