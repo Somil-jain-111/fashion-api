@@ -1,4 +1,12 @@
-import { IsEmail, IsEnum, IsNotEmpty, IsOptional, IsString, Matches } from 'class-validator';
+import {
+  IsDateString,
+  IsEmail,
+  IsEnum,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  Matches,
+} from 'class-validator';
 import { UserPartnerType } from 'src/default/common/enums/user-type.enum';
 
 export class SaveBasicInfoDto {
@@ -18,4 +26,12 @@ export class SaveBasicInfoDto {
   @IsEnum(UserPartnerType, { message: 'Invalid partner type' })
   @IsNotEmpty({ message: 'Partner type is required' })
   partnerType: UserPartnerType;
+
+  @IsDateString({}, { message: 'Invalid date of birth' })
+  @IsOptional()
+  dateOfBirth?: string;
+
+  @IsDateString({}, { message: 'Invalid anniversary date' })
+  @IsOptional()
+  anniversaryDate?: string;
 }

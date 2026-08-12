@@ -23,6 +23,8 @@ export class AuthUserResponseDto {
     name: string;
   } | null;
   created_at?: string;
+  date_of_birth?: string | null;
+  anniversary_date?: string | null;
   maskedPan?: string;
   maskedAadhaar?: string;
   maskedGst?: string;
