@@ -48,18 +48,32 @@ export class OnboardingService {
 
   private resolveCurrentStep(user: any, activeApproval: any): string {
     // Check user status first — it's the source of truth
-    if (user.status === UserStatus.ACTIVE) return 'ACTIVE';
-    if (user.status === UserStatus.BLOCKED) return 'BLOCKED';
+    if (user.status === UserStatus.ACTIVE) {
+      return 'ACTIVE';
+    }
+    if (user.status === UserStatus.BLOCKED) {
+      return 'BLOCKED';
+    }
 
     if (!activeApproval) {
-      if (!user.username || !user.partnerType) return 'BASIC_INFO';
-      if (!user.storeInformation) return 'STORE_INFO';
+      if (!user.username || !user.partnerType) {
+        return 'BASIC_INFO';
+      }
+      if (!user.storeInformation) {
+        return 'STORE_INFO';
+      }
       return 'SUBMIT';
     }
 
-    if (activeApproval.level === 1) return 'PENDING_L1_REVIEW';
-    if (activeApproval.level === 2) return 'PENDING_L2_REVIEW';
-    if (activeApproval.level === 3) return 'PENDING_SO_VISIT';
+    if (activeApproval.level === 1) {
+      return 'PENDING_L1_REVIEW';
+    }
+    if (activeApproval.level === 2) {
+      return 'PENDING_L2_REVIEW';
+    }
+    if (activeApproval.level === 3) {
+      return 'PENDING_SO_VISIT';
+    }
 
     return 'UNKNOWN';
   }
@@ -303,35 +317,19 @@ export class OnboardingService {
     );
     const panKycComplete = !!panKyc;
 
-    let aadhaarKycComplete = false;
+    const aadhaarKycComplete = !!(await this.kycVerificationRepository.findVerifiedByUserIdAndType(
+      userId,
+      KycType.AADHAAR
+    ));
 
-    if (user.partnerType === UserPartnerType.INDIVIDUAL) {
-      const aadhaarKyc = await this.kycVerificationRepository.findVerifiedByUserIdAndType(
-        userId,
-        KycType.AADHAAR
-      );
-      aadhaarKycComplete = !!aadhaarKyc;
-    }
-    // else {
-    //   aadhaarKycComplete = true;
-    // }
-
-    // GST only for entity Partner Type
-    let gstKycComplete = false;
     // Store info required regardless user is individual or entity
     const storeInfoComplete = !!user.storeInformation;
 
-    if (user.partnerType === UserPartnerType.ENTITY) {
-      const gstKyc = await this.kycVerificationRepository.findVerifiedByUserIdAndType(
-        userId,
-        KycType.GST
-      );
-
-      gstKycComplete = !!gstKyc;
-    }
-    // else {
-    //   gstKycComplete = true;
-    // }
+    // GST required for entity Partner Type, optional for Individual
+    const gstKycComplete = !!(await this.kycVerificationRepository.findVerifiedByUserIdAndType(
+      userId,
+      KycType.GST
+    ));
 
     // ---- Approval & routing info (merged from SO flow) ----
     const approvals = await this.approvalRepository.findByUserId(userId, ApprovalType.PROFILE);
