@@ -2,7 +2,10 @@ import { Column, Entity, Index, JoinColumn, ManyToOne } from 'typeorm';
 //
 import { User } from '../../auth/entities';
 import { BaseEntity } from '../../../default/common/entities';
-import { BeneficiaryType, BeneficiaryStatus } from 'src/default/common/enums/user-beneficiary.enum';
+import {
+  BeneficiaryType,
+  BeneficiaryStatus,
+} from '../../../default/common/enums/user-beneficiary.enum';
 
 @Entity('user_beneficiaries')
 @Index(['user'])
@@ -63,4 +66,13 @@ export class UserBeneficiary extends BaseEntity {
 
   @Column({ name: 'metadata', type: 'json', nullable: true })
   metadata?: Record<string, any> | null;
+
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  otp?: string | null;
+
+  @Column({ type: 'datetime', nullable: true, name: 'expiry_at' })
+  otp_expiry?: Date | null;
+
+  @Column({ type: 'bigint', default: 0, name: 'otp_attempt_count' })
+  otp_attempt_count!: number;
 }

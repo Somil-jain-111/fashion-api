@@ -30,7 +30,16 @@ import { LocalStorageContextUtil } from 'src/default/common/utils/local-storage.
 import { ContextType } from 'src/default/common/constants/context.option';
 import { UserRepository } from '../auth/repository';
 import { TransactionService } from 'src/default/databases/transaction';
-import { BeneficiaryType, BeneficiaryStatus } from 'src/default/common/enums/user-beneficiary.enum';
+import { UserBeneficiary } from './entities/beneficiary.entity';
+import { UserValidator } from 'src/default/common/validators/user.validator';
+import { SmsService } from 'src/modules/sms/sms.service';
+import { OtpAttemptType } from 'src/default/common/enums/common.enum';
+import { OtpHelper } from 'src/default/common/helper/otp.helper';
+import { CommonUtils } from 'src/default/common/utils/common.utils';
+import { MAX_OTP_VERIFY_ATTEMPTS } from '../auth/constants/auth.constants';
+import { VerifyBeneficiaryOtpDto } from './dto/verify-beneficiary-otp.dto';
+import { ResendBeneficiaryOtpDto } from './dto/resend-beneficiary-otp.dto';
+import { BeneficiaryStatus, BeneficiaryType } from 'src/default/common/enums/user-beneficiary.enum';
 
 @Injectable()
 export class KycService {
@@ -48,7 +57,9 @@ export class KycService {
     private upiProvider: UpiProvider,
     private readonly appConfigService: AppConfigService,
     private readonly dataSource: DataSource,
-    private readonly transactionService: TransactionService
+    private readonly transactionService: TransactionService,
+    private readonly userValidator: UserValidator,
+    private readonly smsService: SmsService
   ) {}
 
   encryptKycData(value: any): any {
@@ -1200,7 +1211,7 @@ export class KycService {
         panNumber: panNumberENC,
         aadhaarNumber: aadhaarNumberENC,
         address: addressENC,
-        status: BeneficiaryStatus.VERIFIED,
+        status: BeneficiaryStatus.PENDING,
         referenceId: transactionId,
         metadata: {
           matchScore,
@@ -1214,12 +1225,8 @@ export class KycService {
     ConsoleLogger.log(`VERIFY_ACCOUNT_SUCCESS | userId: ${userId} | id: ${beneficiary.id}`, tag);
 
     return {
-      verified: true,
-      message: 'Bank account verified and saved successfully',
-      details: {
-        id: beneficiary.id,
-        ...metadata,
-      },
+      beneficiary,
+      metadata,
     };
   }
 
@@ -1314,7 +1321,7 @@ export class KycService {
     ]);
 
     const metadata = {
-      maskedUpi: this.upiProvider.maskUpiId(normalizedUpi),
+      upi: this.upiProvider.maskUpiId(normalizedUpi),
     };
 
     const beneficiary = await this.beneficiaryRepository.createBeneficiary(
@@ -1328,7 +1335,7 @@ export class KycService {
         panNumber: panNumberENC,
         aadhaarNumber: aadhaarNumberENC,
         address: addressENC,
-        status: BeneficiaryStatus.VERIFIED,
+        status: BeneficiaryStatus.PENDING,
         referenceId: transactionId,
         metadata: {
           rawResponse: providerResponseENC,
@@ -1341,20 +1348,43 @@ export class KycService {
     ConsoleLogger.log(`VERIFY_UPI_SUCCESS | userId: ${userId} | id: ${beneficiary.id}`, tag);
 
     return {
-      verified: true,
-      message: 'UPI verified and saved successfully',
-      details: {
-        id: beneficiary.id,
-        ...metadata,
-      },
+      beneficiary,
+      metadata,
     };
   }
 
   /**
    * Beneficiary Addition & Verification (Unified Entrypoint)
+   * Verify PAN, AADHAAR, BANK, UPI + SEND OTP
+   *
+   * @param userId
+   * @param dto
+   * @returns
    */
   async addBeneficiary(userId: number, dto: AddBeneficiaryDto): Promise<any> {
-    const response = await this.transactionService.runInTransaction(async (queryRunner) => {
+    const user = await this.userAuthValidator.validateActiveUserById(userId);
+    const mobile = dto.mobile?.trim() || user.mobile;
+
+    const otpValidation = await this.userValidator.validateOtpAttempts({
+      mobile,
+      otpType: OtpAttemptType.BENEFICIARY,
+      userRole: user.role?.name,
+      userId: user.id,
+      increment: true,
+    });
+
+    let otpPlain = await OtpHelper.generateOtp();
+    const isProd = this.appConfigService.isProduction() || this.appConfigService.isQa();
+
+    if (!isProd) {
+      otpPlain = this.appConfigService.getNonProdOtp().toString();
+    }
+
+    const expirySeconds = otpValidation.expirySeconds;
+    const otpExpiry = OtpHelper.generateExpiryDate(expirySeconds);
+    const encryptedOtp = CommonUtils.encrypt(otpPlain);
+
+    const result = await this.transactionService.runInTransaction(async (queryRunner) => {
       /** 1️⃣ If PAN provided, verify PAN & save under BENE_PAN in kyc_verifications */
       const panCard = dto.panNumber?.toUpperCase()?.trim();
 
@@ -1384,20 +1414,209 @@ export class KycService {
       }
 
       /** 3️⃣ Verify bank account or UPI and add beneficiary inside transaction */
-      let result: any;
+      let beneResult: any;
 
       if (dto.type === BeneficiaryType.BANK) {
-        result = await this.verifyAndAddBankBeneficiary(userId, dto, queryRunner);
+        beneResult = await this.verifyAndAddBankBeneficiary(userId, dto, queryRunner);
       } else if (dto.type === BeneficiaryType.UPI) {
-        result = await this.verifyAndAddUpiBeneficiary(userId, dto, queryRunner);
+        beneResult = await this.verifyAndAddUpiBeneficiary(userId, dto, queryRunner);
       } else {
         throw new BusinessException(ERROR_CODES.KYC.INVALID_BENEFICIARY_TYPE);
       }
 
-      return result;
+      const beneficiary = beneResult.beneficiary;
+
+      await this.beneficiaryRepository.updateById(
+        beneficiary.id,
+        {
+          otp: encryptedOtp,
+          otp_expiry: otpExpiry,
+          otp_attempt_count: 0,
+        },
+        queryRunner
+      );
+
+      return {
+        beneficiaryId: beneficiary.id,
+        metadata: beneResult.metadata,
+      };
     });
 
-    return response;
+    if (!isProd) {
+      const smsResult = await this.smsService.sendParticipationOTPSms({
+        type: OtpAttemptType.BENEFICIARY,
+        mobile,
+        otp: otpPlain,
+        userId: user.id,
+      });
+
+      if (!smsResult || smsResult.status !== 'success') {
+        throw new BusinessException(ERROR_CODES.AUTH.OTP_SEND_FAILED);
+      }
+    }
+
+    return {
+      verified: false,
+      message: 'Beneficiary added successfully. OTP sent for verification.',
+      details: {
+        id: result.beneficiaryId,
+        ...result.metadata,
+        otp_expiry_in_minutes: Math.ceil(expirySeconds / 60),
+      },
+    };
+  }
+
+  /**
+   * Verify OTP along with beneficiary_id
+   *
+   * @param userId
+   * @param dto
+   * @returns
+   */
+  async verifyBeneficiaryOtp(userId: number, dto: VerifyBeneficiaryOtpDto): Promise<any> {
+    const beneficiary = await this.beneficiaryRepository.findOne({
+      id: dto.beneficiaryId,
+      user: { id: userId },
+      active: true,
+    });
+
+    if (!beneficiary) {
+      throw new BusinessException(ERROR_CODES.KYC.BENEFICIARY_NOT_FOUND);
+    }
+
+    if (beneficiary.status === BeneficiaryStatus.VERIFIED) {
+      return {
+        verified: true,
+        message: 'Beneficiary is already verified',
+        details: {
+          id: beneficiary.id,
+          status: beneficiary.status,
+          ...(beneficiary.metadata.accountNumber
+            ? { accountNumber: beneficiary.metadata.accountNumber }
+            : {}),
+          ...(beneficiary.metadata.ifsc ? { ifscCode: beneficiary.metadata.ifsc } : {}),
+          ...(beneficiary.metadata.upi ? { upi: beneficiary.metadata.upi } : {}),
+          ...(beneficiary.metadata.bankHolderName
+            ? { bankHolderName: beneficiary.metadata.bankHolderName }
+            : {}),
+        },
+      };
+    }
+
+    if (Number(beneficiary.otp_attempt_count) >= MAX_OTP_VERIFY_ATTEMPTS) {
+      throw new BusinessException(ERROR_CODES.AUTH.TOO_MANY_REQUESTS);
+    }
+
+    if (!beneficiary.otp || beneficiary.otp !== CommonUtils.encrypt(dto.otp)) {
+      await this.beneficiaryRepository.updateById(beneficiary.id, {
+        otp_attempt_count: Number(beneficiary.otp_attempt_count) + 1,
+      });
+
+      throw new BusinessException(ERROR_CODES.AUTH.INVALID_OTP);
+    }
+
+    if (OtpHelper.isOtpExpired(beneficiary.otp_expiry)) {
+      throw new BusinessException(ERROR_CODES.AUTH.OTP_EXPIRED);
+    }
+
+    beneficiary.otp = null;
+    beneficiary.otp_expiry = null;
+    beneficiary.otp_attempt_count = 0;
+    beneficiary.status = BeneficiaryStatus.VERIFIED;
+
+    await this.beneficiaryRepository.save(beneficiary);
+
+    return {
+      verified: true,
+      message: 'Beneficiary verified successfully',
+      details: {
+        id: beneficiary.id,
+        status: beneficiary.status,
+
+        ...(beneficiary.metadata.accountNumber
+          ? { accountNumber: beneficiary.metadata.accountNumber }
+          : {}),
+        ...(beneficiary.metadata.ifsc ? { ifscCode: beneficiary.metadata.ifsc } : {}),
+        ...(beneficiary.metadata.upi ? { upi: beneficiary.metadata.upi } : {}),
+        ...(beneficiary.metadata.bankHolderName
+          ? { bankHolderName: beneficiary.metadata.bankHolderName }
+          : {}),
+      },
+    };
+  }
+
+  /**
+   * Resend OTP for the Beneficiary ID in PENDING STATUS
+   *
+   * @param userId
+   * @param dto
+   * @returns
+   */
+  async resendBeneficiaryOtp(userId: number, dto: ResendBeneficiaryOtpDto): Promise<any> {
+    const beneficiary = await this.beneficiaryRepository.findOne({
+      id: dto.beneficiaryId,
+      user: { id: userId },
+      active: true,
+    });
+
+    if (!beneficiary) {
+      throw new BusinessException(ERROR_CODES.KYC.BENEFICIARY_NOT_FOUND);
+    }
+
+    if (beneficiary.status === BeneficiaryStatus.VERIFIED) {
+      throw new BusinessException(ERROR_CODES.KYC.BENEFICIARY_ALREADY_VERIFIED);
+    }
+
+    const user = await this.userAuthValidator.validateActiveUserById(userId);
+    const mobile = beneficiary.mobileNumber
+      ? this.decryptKycData(beneficiary.mobileNumber)
+      : user.mobile;
+
+    const otpValidation = await this.userValidator.validateOtpAttempts({
+      mobile,
+      otpType: OtpAttemptType.BENEFICIARY,
+      userRole: user.role?.name,
+      userId: user.id,
+      increment: true,
+    });
+
+    let otpPlain = await OtpHelper.generateOtp();
+    const isProd = this.appConfigService.isProduction() || this.appConfigService.isQa();
+
+    if (!isProd) {
+      otpPlain = this.appConfigService.getNonProdOtp().toString();
+    }
+
+    const expirySeconds = otpValidation.expirySeconds;
+    const otpExpiry = OtpHelper.generateExpiryDate(expirySeconds);
+    const encryptedOtp = CommonUtils.encrypt(otpPlain);
+
+    beneficiary.otp = encryptedOtp;
+    beneficiary.otp_expiry = otpExpiry;
+    beneficiary.otp_attempt_count = 0;
+
+    await this.beneficiaryRepository.save(beneficiary);
+
+    if (!isProd) {
+      const smsResult = await this.smsService.sendParticipationOTPSms({
+        type: OtpAttemptType.BENEFICIARY,
+        mobile,
+        otp: otpPlain,
+        userId: user.id,
+      });
+
+      if (!smsResult || smsResult.status !== 'success') {
+        throw new BusinessException(ERROR_CODES.AUTH.OTP_SEND_FAILED);
+      }
+    }
+
+    return {
+      message: 'OTP sent for beneficiary verification',
+      details: {
+        id: beneficiary.id,
+        otp_expiry_in_minutes: Math.ceil(expirySeconds / 60),
+      },
+    };
   }
 
   async getUserBeneficiaries(userId: number): Promise<any[]> {
