@@ -19,12 +19,7 @@ import { UserAuthValidator } from '../auth/validators/user-auth.validator';
 import { AppConfigService } from 'src/default/config/config.service';
 import { KycEncryptionHelper } from 'src/default/common/helper/kyc-encryption.helper';
 import { ReferenceIdUtil } from 'src/default/common/utils/reference-id.util';
-import {
-  BeneficiaryType,
-  KycLogStatus,
-  KycStatus,
-  KycType,
-} from 'src/default/common/enums/kyc.enum';
+import { KycLogStatus, KycStatus, KycType } from 'src/default/common/enums/kyc.enum';
 import { PanProvider } from './provider/pan.provider';
 import { NameMatchProvider } from './provider/name-matching.provider';
 import { GenerateAadharOtpDto } from './dto/generate-aadhar.dto';
@@ -34,7 +29,11 @@ import { SaveAadhaarDto } from './dto/save-aadhaar.dto';
 import { LocalStorageContextUtil } from 'src/default/common/utils/local-storage.util';
 import { ContextType } from 'src/default/common/constants/context.option';
 import { UserRepository } from '../auth/repository';
-import { RedemptionKYCRequirements } from 'src/default/common/constants/redemptions.option';
+import { TransactionService } from 'src/default/databases/transaction';
+import {
+  BeneficiaryType,
+  UserBeneficiaryStatus,
+} from 'src/default/common/enums/user-beneficiary.enum';
 
 @Injectable()
 export class KycService {
@@ -51,7 +50,8 @@ export class KycService {
     private bankProvider: BankProvider,
     private upiProvider: UpiProvider,
     private readonly appConfigService: AppConfigService,
-    private readonly dataSource: DataSource
+    private readonly dataSource: DataSource,
+    private readonly transactionService: TransactionService
   ) {}
 
   encryptKycData(value: any): any {
@@ -645,6 +645,7 @@ export class KycService {
   async verifyBeneficiaryPanInternal(
     userId: number,
     body: VerifyPanDto,
+    beneficiary_name?: string,
     queryRunner?: QueryRunner
   ): Promise<any> {
     const tag = 'KycService.verifyBeneficiaryPanInternal';
@@ -663,7 +664,7 @@ export class KycService {
 
     const user = await this.userAuthValidator.getAllowedUserById(userId);
 
-    if (!user.username) {
+    if (!beneficiary_name) {
       throw new BusinessException(ERROR_CODES.KYC.USER_PROFILE_NAME_REQUIRED);
     }
 
@@ -727,7 +728,7 @@ export class KycService {
 
     const nameMatchResult = await this.nameMatchProvider.matchName({
       userName: panApiData?.full_name,
-      apiUserName: user?.username,
+      apiUserName: beneficiary_name,
       transactionId: await ReferenceIdUtil.generateKycReferenceId(KycType.NAME_MATCH),
     });
 
@@ -797,16 +798,13 @@ export class KycService {
     };
   }
 
-  async verifyBeneficiaryPan(userId: number, body: VerifyPanDto): Promise<any> {
-    return await this.verifyBeneficiaryPanInternal(userId, body);
-  }
-
   /**
    * Beneficiary Aadhaar Save
    */
   async saveBeneficiaryAadhaarInternal(
     userId: number,
     body: SaveAadhaarDto,
+    beneficiary_name?: string,
     queryRunner?: QueryRunner
   ): Promise<any> {
     const tag = 'KycService.saveBeneficiaryAadhaarInternal';
@@ -819,8 +817,8 @@ export class KycService {
 
     const user = await this.userAuthValidator.getAllowedUserById(userId);
 
-    if (!user.username) {
-      throw new BusinessException(ERROR_CODES.KYC.USER_PROFILE_NAME_REQUIRED);
+    if (!beneficiary_name) {
+      throw new BusinessException(ERROR_CODES.KYC.MISSING_BENEFICIARY_NAME);
     }
 
     const encryptedAadhaarNumber = this.encryptKycData(aadharNumber);
@@ -1041,7 +1039,7 @@ export class KycService {
       reEnterAccountNumber,
       ifsc,
       bankHolderName,
-      name,
+      beneficiary_name,
       mobile,
       panNumber,
       aadhaarNumber,
@@ -1052,7 +1050,7 @@ export class KycService {
     const normalizedAccountNumber = accountNumber?.toUpperCase().trim() || '';
     const normalizedReEnterAccountNumber = reEnterAccountNumber?.toUpperCase().trim() || '';
     const normalizedIfsc = ifsc?.toUpperCase().trim() || '';
-    const normalizedHolderName = (bankHolderName || name)?.trim() || '';
+    const normalizedHolderName = (bankHolderName || beneficiary_name)?.trim() || '';
 
     /** 1️⃣ Basic Validation */
     if (normalizedAccountNumber !== normalizedReEnterAccountNumber) {
@@ -1130,7 +1128,7 @@ export class KycService {
 
     const nameMatchResult = await this.nameMatchProvider.matchName({
       userName: accountHolderNameFromApi,
-      apiUserName: user.username,
+      apiUserName: normalizedHolderName,
       transactionId: await ReferenceIdUtil.generateKycReferenceId(KycType.NAME_MATCH),
     });
 
@@ -1157,7 +1155,7 @@ export class KycService {
 
     /** 7️⃣ Save Beneficiary */
     const relationshipStr = relationship?.trim() || null;
-    const nameStr = (name || bankHolderName)?.trim() || null;
+    const nameStr = (beneficiary_name || bankHolderName)?.trim() || null;
     const mobileNumberStr = String(mobile)?.trim() || null;
     const panNumberStr = panNumber?.trim() || null;
     const aadhaarNumberStr = aadhaarNumber?.trim() || null;
@@ -1183,6 +1181,14 @@ export class KycService {
       addressStr ? this.encryptKycData(addressStr) : null,
     ]);
 
+    const metadata = {
+      ...this.bankProvider.maskAccountDetails({
+        accountNumber: normalizedAccountNumber,
+        ifsc: normalizedIfsc,
+        bankHolderName: normalizedHolderName,
+      }),
+    };
+
     const beneficiary = await this.beneficiaryRepository.createBeneficiary(
       {
         userId,
@@ -1192,16 +1198,17 @@ export class KycService {
         bankName: bankNameENC,
         bankHolderName: bankHolderNameENC,
         relationship: relationshipENC,
-        name: nameENC,
+        beneficiary_name: nameENC,
         mobileNumber: mobileNumberENC,
         panNumber: panNumberENC,
         aadhaarNumber: aadhaarNumberENC,
         address: addressENC,
-        status: 1,
+        status: UserBeneficiaryStatus.VERIFIED,
         referenceId: transactionId,
         metadata: {
           matchScore,
           rawResponse: providerResponseENC,
+          ...metadata,
         },
       },
       queryRunner
@@ -1212,7 +1219,10 @@ export class KycService {
     return {
       verified: true,
       message: 'Bank account verified and saved successfully',
-      beneficiaryId: beneficiary.id,
+      details: {
+        id: beneficiary.id,
+        ...metadata,
+      },
     };
   }
 
@@ -1222,8 +1232,16 @@ export class KycService {
     queryRunner?: QueryRunner
   ): Promise<any> {
     const tag = 'KycService.verifyAndAddUpiBeneficiary';
-    const { upi, bankHolderName, name, mobile, panNumber, aadhaarNumber, address, relationship } =
-      dto;
+    const {
+      upi,
+      bankHolderName,
+      beneficiary_name,
+      mobile,
+      panNumber,
+      aadhaarNumber,
+      address,
+      relationship,
+    } = dto;
     const normalizedUpi = upi?.trim() || '';
 
     /** 1️⃣ Validate User */
@@ -1274,7 +1292,7 @@ export class KycService {
 
     /** 5️⃣ Save Beneficiary */
     const relationshipStr = relationship?.trim() || null;
-    const nameStr = (name || bankHolderName)?.trim() || null;
+    const nameStr = (beneficiary_name || bankHolderName)?.trim() || null;
     const mobileNumberStr = String(mobile)?.trim() || null;
     const panNumberStr = panNumber?.trim() || null;
     const aadhaarNumberStr = aadhaarNumber?.trim() || null;
@@ -1298,21 +1316,26 @@ export class KycService {
       addressStr ? this.encryptKycData(addressStr) : null,
     ]);
 
+    const metadata = {
+      maskedUpi: this.upiProvider.maskUpiId(normalizedUpi),
+    };
+
     const beneficiary = await this.beneficiaryRepository.createBeneficiary(
       {
         userId,
         type: BeneficiaryType.UPI,
         upi: upiENC,
         relationship: relationshipENC,
-        name: nameENC,
+        beneficiary_name: nameENC,
         mobileNumber: mobileNumberENC,
         panNumber: panNumberENC,
         aadhaarNumber: aadhaarNumberENC,
         address: addressENC,
-        status: 1,
+        status: UserBeneficiaryStatus.VERIFIED,
         referenceId: transactionId,
         metadata: {
           rawResponse: providerResponseENC,
+          ...metadata,
         },
       },
       queryRunner
@@ -1323,7 +1346,10 @@ export class KycService {
     return {
       verified: true,
       message: 'UPI verified and saved successfully',
-      beneficiaryId: beneficiary.id,
+      details: {
+        id: beneficiary.id,
+        ...metadata,
+      },
     };
   }
 
@@ -1331,16 +1357,17 @@ export class KycService {
    * Beneficiary Addition & Verification (Unified Entrypoint)
    */
   async addBeneficiary(userId: number, dto: AddBeneficiaryDto): Promise<any> {
-    const queryRunner = this.dataSource.createQueryRunner();
-    await queryRunner.connect();
-    await queryRunner.startTransaction();
-
-    try {
+    const response = await this.transactionService.runInTransaction(async (queryRunner) => {
       /** 1️⃣ If PAN provided, verify PAN & save under BENE_PAN in kyc_verifications */
       const panCard = dto.panNumber?.toUpperCase()?.trim();
 
       if (panCard) {
-        await this.verifyBeneficiaryPanInternal(userId, { panCard, panImage: '' }, queryRunner);
+        await this.verifyBeneficiaryPanInternal(
+          userId,
+          { panCard, panImage: '' },
+          dto.beneficiary_name,
+          queryRunner
+        );
       }
 
       /** 2️⃣ If Aadhaar provided, save Aadhaar under BENE_AADHAAR in kyc_verifications */
@@ -1354,12 +1381,14 @@ export class KycService {
             aadharFrontImage: '',
             aadharBackImage: '',
           },
+          dto.beneficiary_name,
           queryRunner
         );
       }
 
       /** 3️⃣ Verify bank account or UPI and add beneficiary inside transaction */
       let result: any;
+
       if (dto.type === BeneficiaryType.BANK) {
         result = await this.verifyAndAddBankBeneficiary(userId, dto, queryRunner);
       } else if (dto.type === BeneficiaryType.UPI) {
@@ -1368,14 +1397,10 @@ export class KycService {
         throw new BusinessException(ERROR_CODES.KYC.INVALID_BENEFICIARY_TYPE);
       }
 
-      await queryRunner.commitTransaction();
       return result;
-    } catch (err) {
-      await queryRunner.rollbackTransaction();
-      throw err;
-    } finally {
-      await queryRunner.release();
-    }
+    });
+
+    return response;
   }
 
   async getUserBeneficiaries(userId: number): Promise<any[]> {
@@ -1384,7 +1409,7 @@ export class KycService {
     return list.map((item) => {
       const extraFields = {
         relationship: item.relationship ? this.decryptKycData(item.relationship) : null,
-        name: item.name ? this.decryptKycData(item.name) : null,
+        beneficiary_name: item.beneficiary_name ? this.decryptKycData(item.beneficiary_name) : null,
         mobileNumber: item.mobileNumber ? this.decryptKycData(item.mobileNumber) : null,
         panNumber: item.panNumber ? this.decryptKycData(item.panNumber) : null,
         aadhaarNumber: item.aadhaarNumber ? this.decryptKycData(item.aadhaarNumber) : null,

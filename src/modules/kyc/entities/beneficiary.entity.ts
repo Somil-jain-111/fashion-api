@@ -2,11 +2,14 @@ import { Column, Entity, Index, JoinColumn, ManyToOne } from 'typeorm';
 //
 import { User } from '../../auth/entities';
 import { BaseEntity } from '../../../default/common/entities';
-import { BeneficiaryType } from '../../../default/common/enums/kyc.enum';
+import {
+  BeneficiaryType,
+  UserBeneficiaryStatus,
+} from 'src/default/common/enums/user-beneficiary.enum';
 
 @Entity('user_beneficiaries')
 @Index(['user'])
-@Index(['type', 'active'])
+@Index(['type', 'status'])
 export class UserBeneficiary extends BaseEntity {
   @ManyToOne(() => User, (user) => user.id, { nullable: false, onDelete: 'CASCADE' })
   @JoinColumn({ name: 'user_id' })
@@ -17,6 +20,13 @@ export class UserBeneficiary extends BaseEntity {
     enum: BeneficiaryType,
   })
   type!: BeneficiaryType;
+
+  @Column({
+    type: 'enum',
+    enum: UserBeneficiaryStatus,
+    default: UserBeneficiaryStatus.PENDING,
+  })
+  status!: UserBeneficiaryStatus;
 
   @Column({ name: 'account_number', type: 'varchar', length: 255, nullable: true })
   accountNumber?: string | null;
@@ -36,8 +46,8 @@ export class UserBeneficiary extends BaseEntity {
   @Column({ name: 'relationship', type: 'varchar', length: 255, nullable: true })
   relationship?: string | null;
 
-  @Column({ name: 'name', type: 'varchar', length: 255, nullable: true })
-  name?: string | null;
+  @Column({ name: 'beneficiary_name', type: 'varchar', length: 255, nullable: true })
+  beneficiary_name?: string | null;
 
   @Column({ name: 'mobile_number', type: 'varchar', length: 255, nullable: true })
   mobileNumber?: string | null;
@@ -50,9 +60,6 @@ export class UserBeneficiary extends BaseEntity {
 
   @Column({ name: 'address', type: 'text', nullable: true })
   address?: string | null;
-
-  @Column({ type: 'tinyint', default: 1 })
-  status: number;
 
   @Column({ name: 'reference_id', type: 'varchar', length: 255, nullable: true })
   referenceId?: string | null;

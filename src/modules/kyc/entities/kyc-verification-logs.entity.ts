@@ -4,9 +4,6 @@ import { User } from '../../auth/entities';
 import { Column, Entity, Index, JoinColumn, ManyToOne } from 'typeorm';
 
 @Entity('kyc_verification_logs')
-@Index(['user', 'type'])
-@Index(['referenceId'])
-@Index(['status'])
 export class KycVerificationLogEntity extends BaseEntity {
   @ManyToOne(() => User, (user) => user.kyc_logs, { nullable: true })
   @JoinColumn({ name: 'user_id' })
