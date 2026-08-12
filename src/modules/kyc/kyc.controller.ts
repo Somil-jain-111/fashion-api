@@ -84,6 +84,17 @@ export class KYCController {
 
   @NoCache()
   @SkipThrottle()
+  @Post('beneficiary/pan/verify')
+  @ResponseMessage(SUCCESS_MESSAGES.KYC.PAN_VERIFIED)
+  async verifyBeneficiaryPan(@Req() req: any, @Body() body: VerifyPanDto) {
+    const userId = req.user.id;
+
+    const response = await this.kycService.verifyBeneficiaryPan(userId, body);
+    return DataSanitizer.sanitizeData(response);
+  }
+
+  @NoCache()
+  @SkipThrottle()
   @Post('beneficiary')
   @ResponseMessage(SUCCESS_MESSAGES.KYC.BENEFICIARY_ADDED)
   async addBeneficiary(@Req() req: any, @Body() body: AddBeneficiaryDto) {

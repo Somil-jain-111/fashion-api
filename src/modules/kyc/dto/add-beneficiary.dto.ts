@@ -1,7 +1,15 @@
-import { Transform } from 'class-transformer';
-import { IsEnum, IsNotEmpty, IsString, Matches, ValidateIf } from 'class-validator';
+import { Transform, Type } from 'class-transformer';
+import {
+  IsEnum,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  Length,
+  Matches,
+  ValidateIf,
+} from 'class-validator';
 //
-import { BeneficiaryType } from 'src/default/common/enums/kyc.enum';
+import { BeneficiaryRelationshipType, BeneficiaryType } from 'src/default/common/enums/kyc.enum';
 
 export class AddBeneficiaryDto {
   @IsEnum(BeneficiaryType, { message: 'Type must be either BANK or UPI' })
@@ -28,7 +36,7 @@ export class AddBeneficiaryDto {
   @Transform(({ value }) => value?.toUpperCase()?.trim())
   ifsc?: string;
 
-  @ValidateIf((o) => o.type === BeneficiaryType.BANK)
+  @ValidateIf((o) => o.type === BeneficiaryType.BANK && !o.name && !o.beneficiaryName)
   @IsString()
   @IsNotEmpty({ message: 'Bank holder name is required for bank verification' })
   bankHolderName?: string;
@@ -41,4 +49,34 @@ export class AddBeneficiaryDto {
   @IsNotEmpty({ message: 'UPI ID is required for UPI verification' })
   @Transform(({ value }) => value?.trim())
   upi?: string;
+
+  /**
+   * Beneficiary basic details (encrypted & stored in UserBeneficiary Entity only)
+   */
+  @IsEnum(BeneficiaryRelationshipType)
+  @IsNotEmpty()
+  relationship?: BeneficiaryRelationshipType;
+
+  @IsNotEmpty()
+  @IsString()
+  name?: string;
+
+  @IsNotEmpty({ message: 'Mobile number is required' })
+  @IsString()
+  @Matches(/^[6-9]\d{9}$/, {
+    message: 'Mobile number must be valid Indian mobile number',
+  })
+  mobile?: number;
+
+  @IsNotEmpty()
+  @IsString()
+  panNumber?: string;
+
+  @IsNotEmpty()
+  @IsString()
+  aadhaarNumber?: string;
+
+  @IsNotEmpty()
+  @IsString()
+  address?: string;
 }

@@ -33,6 +33,24 @@ export class UserBeneficiary extends BaseEntity {
   @Column({ name: 'upi', type: 'varchar', length: 255, nullable: true })
   upi?: string | null;
 
+  @Column({ name: 'relationship', type: 'varchar', length: 255, nullable: true })
+  relationship?: string | null;
+
+  @Column({ name: 'name', type: 'varchar', length: 255, nullable: true })
+  name?: string | null;
+
+  @Column({ name: 'mobile_number', type: 'varchar', length: 255, nullable: true })
+  mobileNumber?: string | null;
+
+  @Column({ name: 'pan_number', type: 'varchar', length: 255, nullable: true })
+  panNumber?: string | null;
+
+  @Column({ name: 'aadhaar_number', type: 'varchar', length: 255, nullable: true })
+  aadhaarNumber?: string | null;
+
+  @Column({ name: 'address', type: 'text', nullable: true })
+  address?: string | null;
+
   @Column({ type: 'tinyint', default: 1 })
   status: number;
 

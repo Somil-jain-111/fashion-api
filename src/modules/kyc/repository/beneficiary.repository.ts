@@ -19,6 +19,12 @@ export class BeneficiaryRepository extends BaseRepository<UserBeneficiary> {
       bankName?: string | null;
       bankHolderName?: string | null;
       upi?: string | null;
+      relationship?: string | null;
+      name?: string | null;
+      mobileNumber?: string | null;
+      panNumber?: string | null;
+      aadhaarNumber?: string | null;
+      address?: string | null;
       status?: number;
       referenceId?: string | null;
       metadata?: Record<string, any> | null;
@@ -35,6 +41,12 @@ export class BeneficiaryRepository extends BaseRepository<UserBeneficiary> {
       bankName: data.bankName,
       bankHolderName: data.bankHolderName,
       upi: data.upi,
+      relationship: data.relationship,
+      name: data.name,
+      mobileNumber: data.mobileNumber,
+      panNumber: data.panNumber,
+      aadhaarNumber: data.aadhaarNumber,
+      address: data.address,
       status: data.status ?? 1,
       referenceId: data.referenceId,
       metadata: data.metadata,
