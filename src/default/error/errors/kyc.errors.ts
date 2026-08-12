@@ -180,4 +180,22 @@ export const KYC_ERRORS = {
     message: 'KYC of {type} is already verified for this user.',
     statusCode: 400,
   },
+
+  MISSING_BENEFICIARY_NAME: {
+    code: 'KYC_032',
+    message: 'Beneficiary Name is required',
+    statusCode: 400,
+  },
+
+  BENEFICIARY_NOT_FOUND: {
+    code: 'KYC_033',
+    message: 'Beneficiary not found',
+    statusCode: 404,
+  },
+
+  BENEFICIARY_ALREADY_VERIFIED: {
+    code: 'KYC_034',
+    message: 'Beneficiary is already verified',
+    statusCode: 400,
+  },
 } as const;

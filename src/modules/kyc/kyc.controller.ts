@@ -8,6 +8,8 @@ import {
   VerifyGstDto,
   VerifyPanDto,
   AddBeneficiaryDto,
+  VerifyBeneficiaryOtpDto,
+  ResendBeneficiaryOtpDto,
 } from './dto';
 import { KycService } from './kyc.service';
 import { NoCache } from 'src/default/cache/cache.decorator';
@@ -84,12 +86,34 @@ export class KYCController {
 
   @NoCache()
   @SkipThrottle()
-  @Post('beneficiary')
+  @Post('beneficiary/create')
   @ResponseMessage(SUCCESS_MESSAGES.KYC.BENEFICIARY_ADDED)
   async addBeneficiary(@Req() req: any, @Body() body: AddBeneficiaryDto) {
     const userId = req.user.id;
 
     const response = await this.kycService.addBeneficiary(userId, body);
+    return DataSanitizer.sanitizeData(response);
+  }
+
+  @NoCache()
+  @SkipThrottle()
+  @Post('beneficiary/verify-otp')
+  @ResponseMessage(SUCCESS_MESSAGES.KYC.BENEFICIARY_VERIFIED)
+  async verifyBeneficiaryOtp(@Req() req: any, @Body() body: VerifyBeneficiaryOtpDto) {
+    const userId = req.user.id;
+
+    const response = await this.kycService.verifyBeneficiaryOtp(userId, body);
+    return DataSanitizer.sanitizeData(response);
+  }
+
+  @NoCache()
+  @SkipThrottle()
+  @Post('beneficiary/resend-otp')
+  @ResponseMessage(SUCCESS_MESSAGES.KYC.BENEFICIARY_OTP_SENT)
+  async resendBeneficiaryOtp(@Req() req: any, @Body() body: ResendBeneficiaryOtpDto) {
+    const userId = req.user.id;
+
+    const response = await this.kycService.resendBeneficiaryOtp(userId, body);
     return DataSanitizer.sanitizeData(response);
   }
 
@@ -104,3 +128,4 @@ export class KYCController {
     return DataSanitizer.sanitizeData(response);
   }
 }
+
