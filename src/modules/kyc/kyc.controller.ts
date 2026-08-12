@@ -127,5 +127,13 @@ export class KYCController {
     const response = await this.kycService.getUserBeneficiaries(userId);
     return DataSanitizer.sanitizeData(response);
   }
-}
 
+  @NoCache()
+  @SkipThrottle()
+  @Get('beneficiary-relationships')
+  @ResponseMessage(SUCCESS_MESSAGES.KYC.BENEFICIARIES_RELATIONSHIPS_FETCHED)
+  async getBeneficiaryRelationships() {
+    const response = await this.kycService.getBeneficiaryRelationships();
+    return DataSanitizer.sanitizeData(response);
+  }
+}

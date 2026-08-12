@@ -39,7 +39,11 @@ import { CommonUtils } from 'src/default/common/utils/common.utils';
 import { MAX_OTP_VERIFY_ATTEMPTS } from '../auth/constants/auth.constants';
 import { VerifyBeneficiaryOtpDto } from './dto/verify-beneficiary-otp.dto';
 import { ResendBeneficiaryOtpDto } from './dto/resend-beneficiary-otp.dto';
-import { BeneficiaryStatus, BeneficiaryType } from 'src/default/common/enums/user-beneficiary.enum';
+import {
+  BeneficiaryRelationshipType,
+  BeneficiaryStatus,
+  BeneficiaryType,
+} from 'src/default/common/enums/user-beneficiary.enum';
 
 @Injectable()
 export class KycService {
@@ -1655,5 +1659,9 @@ export class KycService {
         };
       }
     });
+  }
+
+  async getBeneficiaryRelationships() {
+    return Object.values(BeneficiaryRelationshipType);
   }
 }

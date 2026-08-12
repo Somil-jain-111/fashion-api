@@ -32,6 +32,7 @@ export const SUCCESS_MESSAGES = {
     BENEFICIARY_VERIFIED: 'Beneficiary verified successfully',
     BENEFICIARY_OTP_SENT: 'OTP sent for beneficiary verification',
     BENEFICIARIES_FETCHED: 'Beneficiaries retrieved successfully',
+    BENEFICIARIES_RELATIONSHIPS_FETCHED: 'Beneficiaries relationships retrieved successfully',
   },
 
   ONBOARDING: {
