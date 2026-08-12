@@ -1,12 +1,8 @@
-import { IsEnum, IsBoolean, IsOptional, ValidateNested } from 'class-validator';
+import { IsEnum, IsBoolean, IsOptional, IsNumber, ValidateNested, Min, Max } from 'class-validator';
 import { Type } from 'class-transformer';
 //
 import { UserRole } from 'src/default/common/enums/user-type.enum';
-import {
-  AdditionalSettingsDto,
-  RedemptionOptionsDto,
-  RedemptionLimitsDto,
-} from './edit-dynamic-config.dto';
+import { AdditionalSettingsDto, RedemptionLimitsDto } from './edit-dynamic-config.dto';
 
 export class CreateDynamicConfigDto {
   @IsEnum(UserRole)
@@ -17,9 +13,16 @@ export class CreateDynamicConfigDto {
   redemptionEnabled?: boolean;
 
   @IsOptional()
-  @ValidateNested()
-  @Type(() => RedemptionOptionsDto)
-  redemptionOptions?: RedemptionOptionsDto;
+  @IsBoolean()
+  physicalRedemptionEnabled?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  digitalRedemptionEnabled?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  dbtEnabled?: boolean;
 
   @IsOptional()
   @ValidateNested()
@@ -30,4 +33,36 @@ export class CreateDynamicConfigDto {
   @ValidateNested()
   @Type(() => AdditionalSettingsDto)
   additionalSettings?: AdditionalSettingsDto;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(1)
+  @Max(100)
+  loginMaxOtpAttempts?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(1)
+  loginOtpTimeoutSeconds?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(1)
+  loginOtpExpirySeconds?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(1)
+  @Max(100)
+  redemptionMaxOtpAttempts?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(1)
+  redemptionOtpTimeoutSeconds?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(1)
+  redemptionOtpExpirySeconds?: number;
 }
