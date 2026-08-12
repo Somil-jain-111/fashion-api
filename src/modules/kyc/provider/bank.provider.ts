@@ -29,6 +29,37 @@ export class BankProvider {
     private readonly apiResponseRepository: ApiResponseRepository
   ) {}
 
+  maskAccountDetails(details: Record<string, any>): Record<string, any> {
+    if (!details || typeof details !== 'object') {
+      return {};
+    }
+
+    const masked = { ...details };
+
+    // 1. Mask Bank Account Number (e.g., XXXXXXXX1234)
+    if (masked.accountNumber) {
+      const accStr = String(masked.accountNumber).replace(/\s+/g, '');
+      if (accStr.length > 4) {
+        const lastFour = accStr.slice(-4);
+        masked.accountNumber = 'X'.repeat(accStr.length - 4) + lastFour;
+      } else {
+        masked.accountNumber = 'X'.repeat(accStr.length);
+      }
+    }
+
+    // 2. Mask IFSC Code (e.g., SBIN0001234 -> SBIN****234)
+    if (masked.ifsc) {
+      const ifscStr = String(masked.ifsc).replace(/\s+/g, '').toUpperCase();
+      if (ifscStr.length === 11) {
+        const bankPrefix = ifscStr.slice(0, 4); // Bank code (e.g., SBIN)
+        const branchSuffix = ifscStr.slice(8); // Last 3 digits
+        masked.ifsc = `${bankPrefix}****${branchSuffix}`;
+      }
+    }
+
+    return masked;
+  }
+
   async validateBankAccount(data: BankVerifyInput): Promise<BankVerifyResult> {
     const payload = {
       type: 'kyc_bank',

@@ -32,8 +32,8 @@ const CONTACT_OTP_EXPIRY_MINUTES = 5;
 @Injectable()
 export class OnboardingService {
   private BASIC_INFO_FIELDS = {
-    required: ['username', 'partnerType'],
-    optional: ['email', 'whatsappNumber'],
+    required: ['username', 'partnerType', 'date_of_birth'],
+    optional: ['email', 'whatsappNumber', 'anniversary_date'],
   };
 
   constructor(
@@ -48,18 +48,32 @@ export class OnboardingService {
 
   private resolveCurrentStep(user: any, activeApproval: any): string {
     // Check user status first — it's the source of truth
-    if (user.status === UserStatus.ACTIVE) return 'ACTIVE';
-    if (user.status === UserStatus.BLOCKED) return 'BLOCKED';
+    if (user.status === UserStatus.ACTIVE) {
+      return 'ACTIVE';
+    }
+    if (user.status === UserStatus.BLOCKED) {
+      return 'BLOCKED';
+    }
 
     if (!activeApproval) {
-      if (!user.username || !user.partnerType) return 'BASIC_INFO';
-      if (!user.storeInformation) return 'STORE_INFO';
+      if (!user.username || !user.partnerType || !user.date_of_birth) {
+        return 'BASIC_INFO';
+      }
+      if (!user.storeInformation) {
+        return 'STORE_INFO';
+      }
       return 'SUBMIT';
     }
 
-    if (activeApproval.level === 1) return 'PENDING_L1_REVIEW';
-    if (activeApproval.level === 2) return 'PENDING_L2_REVIEW';
-    if (activeApproval.level === 3) return 'PENDING_SO_VISIT';
+    if (activeApproval.level === 1) {
+      return 'PENDING_L1_REVIEW';
+    }
+    if (activeApproval.level === 2) {
+      return 'PENDING_L2_REVIEW';
+    }
+    if (activeApproval.level === 3) {
+      return 'PENDING_SO_VISIT';
+    }
 
     return 'UNKNOWN';
   }
@@ -91,6 +105,16 @@ export class OnboardingService {
       throw new BusinessException(ERROR_CODES.USER.USER_NOT_FOUND);
     }
 
+    const dobStr = dto.dateOfBirth;
+
+    if (!dobStr) {
+      throw new BusinessException(ERROR_CODES.COMMON.BAD_REQUEST_RESON, {
+        reason: 'Date of birth is required',
+      });
+    }
+
+    const anniversaryStr = dto.anniversaryDate || null;
+
     // Check email uniqueness
     if (dto.email) {
       const existingUserWithEmail = await this.userRepository.findByEmail(dto.email);
@@ -116,6 +140,8 @@ export class OnboardingService {
     const updatedData = await this.userRepository.updateById(userId, {
       username: dto.name,
       partnerType: dto.partnerType,
+      date_of_birth: new Date(dobStr),
+      ...(anniversaryStr ? { anniversary_date: new Date(anniversaryStr) } : {}),
       ...(dto.email && { email: dto.email }),
       ...(dto.whatsappNumber && { whatsappNumber: dto.whatsappNumber }),
       // Reset whatsapp verification if number changed
@@ -295,7 +321,7 @@ export class OnboardingService {
       throw new BusinessException(ERROR_CODES.USER.USER_NOT_FOUND);
     }
 
-    const basicInfoComplete = !!(user.username && user.partnerType);
+    const basicInfoComplete = !!(user.username && user.partnerType && user.date_of_birth);
 
     const panKyc = await this.kycVerificationRepository.findVerifiedByUserIdAndType(
       userId,
@@ -303,35 +329,19 @@ export class OnboardingService {
     );
     const panKycComplete = !!panKyc;
 
-    let aadhaarKycComplete = false;
+    const aadhaarKycComplete = !!(await this.kycVerificationRepository.findVerifiedByUserIdAndType(
+      userId,
+      KycType.AADHAAR
+    ));
 
-    if (user.partnerType === UserPartnerType.INDIVIDUAL) {
-      const aadhaarKyc = await this.kycVerificationRepository.findVerifiedByUserIdAndType(
-        userId,
-        KycType.AADHAAR
-      );
-      aadhaarKycComplete = !!aadhaarKyc;
-    }
-    // else {
-    //   aadhaarKycComplete = true;
-    // }
-
-    // GST only for entity Partner Type
-    let gstKycComplete = false;
     // Store info required regardless user is individual or entity
     const storeInfoComplete = !!user.storeInformation;
 
-    if (user.partnerType === UserPartnerType.ENTITY) {
-      const gstKyc = await this.kycVerificationRepository.findVerifiedByUserIdAndType(
-        userId,
-        KycType.GST
-      );
-
-      gstKycComplete = !!gstKyc;
-    }
-    // else {
-    //   gstKycComplete = true;
-    // }
+    // GST required for entity Partner Type, optional for Individual
+    const gstKycComplete = !!(await this.kycVerificationRepository.findVerifiedByUserIdAndType(
+      userId,
+      KycType.GST
+    ));
 
     // ---- Approval & routing info (merged from SO flow) ----
     const approvals = await this.approvalRepository.findByUserId(userId, ApprovalType.PROFILE);
@@ -372,6 +382,8 @@ export class OnboardingService {
       aadhaarKycComplete,
       storeInfoComplete,
       overallStatus: user.status,
+      dateOfBirth: user.date_of_birth ? new Date(user.date_of_birth) : null,
+      anniversaryDate: user.anniversary_date ? new Date(user.anniversary_date) : null,
       // ---- New routing & approval fields ----
       currentStep,
       approvalStatus: activeApproval?.status ?? null,

@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { DataSource, EntityManager, QueryRunner, Repository } from 'typeorm';
+import { DataSource, QueryRunner } from 'typeorm';
 import { BaseRepository } from 'src/default/common/repositories/base.repository';
-import { BeneficiaryType } from 'src/default/common/enums/kyc.enum';
 import { UserBeneficiary } from '../entities/beneficiary.entity';
+import { BeneficiaryType, BeneficiaryStatus } from 'src/default/common/enums/user-beneficiary.enum';
 
 @Injectable()
 export class BeneficiaryRepository extends BaseRepository<UserBeneficiary> {
@@ -20,40 +20,46 @@ export class BeneficiaryRepository extends BaseRepository<UserBeneficiary> {
       bankHolderName?: string | null;
       upi?: string | null;
       relationship?: string | null;
-      name?: string | null;
+      beneficiary_name?: string | null;
       mobileNumber?: string | null;
       panNumber?: string | null;
       aadhaarNumber?: string | null;
       address?: string | null;
-      status?: number;
+      status: BeneficiaryStatus;
       referenceId?: string | null;
       metadata?: Record<string, any> | null;
+      otp?: string | null;
+      otp_expiry?: Date | null;
+      otp_attempt_count?: number;
     },
     queryRunner?: QueryRunner
   ): Promise<UserBeneficiary> {
-    const repo = this.getRepository(queryRunner);
-
-    const beneficiary = repo.create({
-      user: { id: data.userId } as any,
-      type: data.type,
-      accountNumber: data.accountNumber,
-      ifsc: data.ifsc,
-      bankName: data.bankName,
-      bankHolderName: data.bankHolderName,
-      upi: data.upi,
-      relationship: data.relationship,
-      name: data.name,
-      mobileNumber: data.mobileNumber,
-      panNumber: data.panNumber,
-      aadhaarNumber: data.aadhaarNumber,
-      address: data.address,
-      status: data.status ?? 1,
-      referenceId: data.referenceId,
-      metadata: data.metadata,
-    });
-
-    return await repo.save(beneficiary);
+    return await this.save(
+      {
+        user: { id: data.userId } as any,
+        type: data.type,
+        accountNumber: data.accountNumber,
+        ifsc: data.ifsc,
+        bankName: data.bankName,
+        bankHolderName: data.bankHolderName,
+        upi: data.upi,
+        relationship: data.relationship,
+        beneficiary_name: data.beneficiary_name,
+        mobileNumber: data.mobileNumber,
+        panNumber: data.panNumber,
+        aadhaarNumber: data.aadhaarNumber,
+        address: data.address,
+        status: data.status,
+        referenceId: data.referenceId,
+        metadata: data.metadata,
+        otp: data.otp,
+        otp_expiry: data.otp_expiry,
+        otp_attempt_count: data.otp_attempt_count ?? 0,
+      },
+      queryRunner
+    );
   }
+
 
   async findUserBeneficiaries(
     userId: number,

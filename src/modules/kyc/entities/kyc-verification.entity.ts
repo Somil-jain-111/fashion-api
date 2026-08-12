@@ -6,7 +6,6 @@ import { KycStatus, KycType } from '../../../default/common/enums/kyc.enum';
 
 @Entity('kyc_verifications')
 @Index(['user'])
-@Index(['type', 'status'])
 export class KycVerificationEntity extends BaseEntity {
   @ManyToOne(() => User, (user) => user.id, { nullable: false })
   @JoinColumn({ name: 'user_id' })

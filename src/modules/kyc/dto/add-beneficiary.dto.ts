@@ -1,15 +1,10 @@
-import { Transform, Type } from 'class-transformer';
-import {
-  IsEnum,
-  IsNotEmpty,
-  IsOptional,
-  IsString,
-  Length,
-  Matches,
-  ValidateIf,
-} from 'class-validator';
+import { Transform } from 'class-transformer';
+import { IsEnum, IsNotEmpty, IsString, Matches, ValidateIf } from 'class-validator';
 //
-import { BeneficiaryRelationshipType, BeneficiaryType } from 'src/default/common/enums/kyc.enum';
+import {
+  BeneficiaryType,
+  BeneficiaryRelationshipType,
+} from 'src/default/common/enums/user-beneficiary.enum';
 
 export class AddBeneficiaryDto {
   @IsEnum(BeneficiaryType, { message: 'Type must be either BANK or UPI' })
@@ -59,14 +54,14 @@ export class AddBeneficiaryDto {
 
   @IsNotEmpty()
   @IsString()
-  name?: string;
+  beneficiary_name?: string;
 
   @IsNotEmpty({ message: 'Mobile number is required' })
   @IsString()
   @Matches(/^[6-9]\d{9}$/, {
     message: 'Mobile number must be valid Indian mobile number',
   })
-  mobile?: number;
+  mobile?: string;
 
   @IsNotEmpty()
   @IsString()
