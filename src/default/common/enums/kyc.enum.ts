@@ -5,6 +5,8 @@ export enum KycType {
   NAME_MATCH = 'NAME_MATCH',
   BANK = 'BANK',
   UPI = 'UPI',
+  BENE_PAN = 'BENE_PAN',
+  BENE_AADHAAR = 'BENE_AADHAAR',
 }
 
 export const KycTypeFiltered = {
@@ -29,9 +31,4 @@ export enum KycLogStatus {
   EXPIRED = 'EXPIRED',
   PROVIDER_ERROR = 'PROVIDER_ERROR',
   SUBMITTED = 'SUBMITTED',
-}
-
-export enum BeneficiaryType {
-  BANK = 'BANK',
-  UPI = 'UPI',
 }

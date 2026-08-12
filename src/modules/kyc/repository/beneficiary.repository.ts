@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { DataSource, EntityManager, QueryRunner, Repository } from 'typeorm';
+import { DataSource, QueryRunner } from 'typeorm';
 import { BaseRepository } from 'src/default/common/repositories/base.repository';
-import { BeneficiaryType } from 'src/default/common/enums/kyc.enum';
 import { UserBeneficiary } from '../entities/beneficiary.entity';
+import { BeneficiaryType, BeneficiaryStatus } from 'src/default/common/enums/user-beneficiary.enum';
 
 @Injectable()
 export class BeneficiaryRepository extends BaseRepository<UserBeneficiary> {
@@ -19,28 +19,39 @@ export class BeneficiaryRepository extends BaseRepository<UserBeneficiary> {
       bankName?: string | null;
       bankHolderName?: string | null;
       upi?: string | null;
-      status?: number;
+      relationship?: string | null;
+      beneficiary_name?: string | null;
+      mobileNumber?: string | null;
+      panNumber?: string | null;
+      aadhaarNumber?: string | null;
+      address?: string | null;
+      status: BeneficiaryStatus;
       referenceId?: string | null;
       metadata?: Record<string, any> | null;
     },
     queryRunner?: QueryRunner
   ): Promise<UserBeneficiary> {
-    const repo = this.getRepository(queryRunner);
-
-    const beneficiary = repo.create({
-      user: { id: data.userId } as any,
-      type: data.type,
-      accountNumber: data.accountNumber,
-      ifsc: data.ifsc,
-      bankName: data.bankName,
-      bankHolderName: data.bankHolderName,
-      upi: data.upi,
-      status: data.status ?? 1,
-      referenceId: data.referenceId,
-      metadata: data.metadata,
-    });
-
-    return await repo.save(beneficiary);
+    return await this.save(
+      {
+        user: { id: data.userId } as any,
+        type: data.type,
+        accountNumber: data.accountNumber,
+        ifsc: data.ifsc,
+        bankName: data.bankName,
+        bankHolderName: data.bankHolderName,
+        upi: data.upi,
+        relationship: data.relationship,
+        beneficiary_name: data.beneficiary_name,
+        mobileNumber: data.mobileNumber,
+        panNumber: data.panNumber,
+        aadhaarNumber: data.aadhaarNumber,
+        address: data.address,
+        status: data.status,
+        referenceId: data.referenceId,
+        metadata: data.metadata,
+      },
+      queryRunner
+    );
   }
 
   async findUserBeneficiaries(

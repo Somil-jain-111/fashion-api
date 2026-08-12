@@ -28,6 +28,33 @@ export class UpiProvider {
     private readonly apiResponseRepository: ApiResponseRepository
   ) {}
 
+  maskUpiId(upiId: string) {
+    if (!upiId || !upiId.includes('@')) {
+      throw new Error('Invalid UPI ID format. Must contain "@".');
+    }
+
+    const parts = upiId.trim().split('@');
+
+    if (parts.length !== 2 || !parts[0] || !parts[1]) {
+      throw new Error('Invalid UPI ID structure.');
+    }
+
+    const [username, handle] = parts;
+    const len = username.length;
+    let maskedUsername = '';
+
+    if (len <= 2) {
+      maskedUsername = username[0] + '*'.repeat(len - 1);
+    } else if (len <= 4) {
+      maskedUsername = username[0] + '*'.repeat(len - 2) + username[len - 1];
+    } else {
+      // Keep first 2 and last 2 characters visible
+      maskedUsername = `${username.slice(0, 2)}${'*'.repeat(len - 4)}${username.slice(-2)}`;
+    }
+
+    return `${maskedUsername}@${handle}`;
+  }
+
   async validateUpi(data: UpiVerifyInput): Promise<UpiVerifyResult> {
     const payload = {
       type: 'kyc_upi',

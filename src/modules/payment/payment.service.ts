@@ -24,6 +24,7 @@ import { RazorpayIntegration } from './integrations/razorpay.integration';
 import { calculatePaymentSplit } from './helper/payment-split.helper';
 import { PointPurchaseStatus } from './entities';
 import { OtpHelper } from 'src/default/common/helper/otp.helper';
+import { BeneficiaryStatus } from 'src/default/common/enums/user-beneficiary.enum';
 
 @Injectable()
 export class PaymentService {
@@ -311,7 +312,7 @@ export class PaymentService {
       // Fetch user's active bank account
       const bankAccount = await this.beneficiaryRepository.findBankAccountByBeneId(userId, beneId);
 
-      if (!bankAccount || bankAccount.status !== 1) {
+      if (!bankAccount || bankAccount.status !== BeneficiaryStatus.VERIFIED) {
         throw new BusinessException(ERROR_CODES.PAYMENT.BANK_DETAILS_NOT_VERIFIED);
       }
 
