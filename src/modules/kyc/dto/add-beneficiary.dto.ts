@@ -1,8 +1,10 @@
 import { Transform } from 'class-transformer';
 import { IsEnum, IsNotEmpty, IsString, Matches, ValidateIf } from 'class-validator';
 //
-import { BeneficiaryRelationshipType } from 'src/default/common/enums/kyc.enum';
-import { BeneficiaryType } from 'src/default/common/enums/user-beneficiary.enum';
+import {
+  BeneficiaryType,
+  BeneficiaryRelationshipType,
+} from 'src/default/common/enums/user-beneficiary.enum';
 
 export class AddBeneficiaryDto {
   @IsEnum(BeneficiaryType, { message: 'Type must be either BANK or UPI' })

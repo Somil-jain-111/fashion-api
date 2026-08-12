@@ -2,10 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { DataSource, QueryRunner } from 'typeorm';
 import { BaseRepository } from 'src/default/common/repositories/base.repository';
 import { UserBeneficiary } from '../entities/beneficiary.entity';
-import {
-  BeneficiaryType,
-  UserBeneficiaryStatus,
-} from 'src/default/common/enums/user-beneficiary.enum';
+import { BeneficiaryType, BeneficiaryStatus } from 'src/default/common/enums/user-beneficiary.enum';
 
 @Injectable()
 export class BeneficiaryRepository extends BaseRepository<UserBeneficiary> {
@@ -28,7 +25,7 @@ export class BeneficiaryRepository extends BaseRepository<UserBeneficiary> {
       panNumber?: string | null;
       aadhaarNumber?: string | null;
       address?: string | null;
-      status: UserBeneficiaryStatus;
+      status: BeneficiaryStatus;
       referenceId?: string | null;
       metadata?: Record<string, any> | null;
     },

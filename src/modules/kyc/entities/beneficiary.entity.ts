@@ -2,10 +2,7 @@ import { Column, Entity, Index, JoinColumn, ManyToOne } from 'typeorm';
 //
 import { User } from '../../auth/entities';
 import { BaseEntity } from '../../../default/common/entities';
-import {
-  BeneficiaryType,
-  UserBeneficiaryStatus,
-} from 'src/default/common/enums/user-beneficiary.enum';
+import { BeneficiaryType, BeneficiaryStatus } from 'src/default/common/enums/user-beneficiary.enum';
 
 @Entity('user_beneficiaries')
 @Index(['user'])
@@ -23,10 +20,10 @@ export class UserBeneficiary extends BaseEntity {
 
   @Column({
     type: 'enum',
-    enum: UserBeneficiaryStatus,
-    default: UserBeneficiaryStatus.PENDING,
+    enum: BeneficiaryStatus,
+    default: BeneficiaryStatus.PENDING,
   })
-  status!: UserBeneficiaryStatus;
+  status!: BeneficiaryStatus;
 
   @Column({ name: 'account_number', type: 'varchar', length: 255, nullable: true })
   accountNumber?: string | null;

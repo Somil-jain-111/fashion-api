@@ -30,10 +30,7 @@ import { LocalStorageContextUtil } from 'src/default/common/utils/local-storage.
 import { ContextType } from 'src/default/common/constants/context.option';
 import { UserRepository } from '../auth/repository';
 import { TransactionService } from 'src/default/databases/transaction';
-import {
-  BeneficiaryType,
-  UserBeneficiaryStatus,
-} from 'src/default/common/enums/user-beneficiary.enum';
+import { BeneficiaryType, BeneficiaryStatus } from 'src/default/common/enums/user-beneficiary.enum';
 
 @Injectable()
 export class KycService {
@@ -1203,7 +1200,7 @@ export class KycService {
         panNumber: panNumberENC,
         aadhaarNumber: aadhaarNumberENC,
         address: addressENC,
-        status: UserBeneficiaryStatus.VERIFIED,
+        status: BeneficiaryStatus.VERIFIED,
         referenceId: transactionId,
         metadata: {
           matchScore,
@@ -1331,7 +1328,7 @@ export class KycService {
         panNumber: panNumberENC,
         aadhaarNumber: aadhaarNumberENC,
         address: addressENC,
-        status: UserBeneficiaryStatus.VERIFIED,
+        status: BeneficiaryStatus.VERIFIED,
         referenceId: transactionId,
         metadata: {
           rawResponse: providerResponseENC,
