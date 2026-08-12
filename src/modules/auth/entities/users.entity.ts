@@ -160,6 +160,9 @@ export class User extends BaseEntity {
   @Column({ type: 'date', nullable: true, default: null })
   date_of_birth?: Date;
 
+  @Column({ type: 'date', nullable: true, default: null, name: 'anniversary_date' })
+  anniversary_date?: Date | null;
+
   /**
    * @Relation fields
    */
