@@ -32,8 +32,8 @@ const CONTACT_OTP_EXPIRY_MINUTES = 5;
 @Injectable()
 export class OnboardingService {
   private BASIC_INFO_FIELDS = {
-    required: ['username', 'partnerType'],
-    optional: ['email', 'whatsappNumber'],
+    required: ['username', 'partnerType', 'date_of_birth'],
+    optional: ['email', 'whatsappNumber', 'anniversary_date'],
   };
 
   constructor(
@@ -56,7 +56,7 @@ export class OnboardingService {
     }
 
     if (!activeApproval) {
-      if (!user.username || !user.partnerType) {
+      if (!user.username || !user.partnerType || !user.date_of_birth) {
         return 'BASIC_INFO';
       }
       if (!user.storeInformation) {
@@ -105,6 +105,16 @@ export class OnboardingService {
       throw new BusinessException(ERROR_CODES.USER.USER_NOT_FOUND);
     }
 
+    const dobStr = dto.dateOfBirth;
+
+    if (!dobStr) {
+      throw new BusinessException(ERROR_CODES.COMMON.BAD_REQUEST_RESON, {
+        reason: 'Date of birth is required',
+      });
+    }
+
+    const anniversaryStr = dto.anniversaryDate || null;
+
     // Check email uniqueness
     if (dto.email) {
       const existingUserWithEmail = await this.userRepository.findByEmail(dto.email);
@@ -130,6 +140,8 @@ export class OnboardingService {
     const updatedData = await this.userRepository.updateById(userId, {
       username: dto.name,
       partnerType: dto.partnerType,
+      date_of_birth: new Date(dobStr),
+      ...(anniversaryStr ? { anniversary_date: new Date(anniversaryStr) } : {}),
       ...(dto.email && { email: dto.email }),
       ...(dto.whatsappNumber && { whatsappNumber: dto.whatsappNumber }),
       // Reset whatsapp verification if number changed
@@ -309,7 +321,7 @@ export class OnboardingService {
       throw new BusinessException(ERROR_CODES.USER.USER_NOT_FOUND);
     }
 
-    const basicInfoComplete = !!(user.username && user.partnerType);
+    const basicInfoComplete = !!(user.username && user.partnerType && user.date_of_birth);
 
     const panKyc = await this.kycVerificationRepository.findVerifiedByUserIdAndType(
       userId,
@@ -370,6 +382,8 @@ export class OnboardingService {
       aadhaarKycComplete,
       storeInfoComplete,
       overallStatus: user.status,
+      dateOfBirth: user.date_of_birth ? new Date(user.date_of_birth) : null,
+      anniversaryDate: user.anniversary_date ? new Date(user.anniversary_date) : null,
       // ---- New routing & approval fields ----
       currentStep,
       approvalStatus: activeApproval?.status ?? null,

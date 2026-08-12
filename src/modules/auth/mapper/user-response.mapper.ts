@@ -11,7 +11,7 @@ export class UserResponseMapper {
     activeBlock?: UserBlock | null
   ): AuthUserResponseDto {
     return {
-      id: user.id.toString(),
+      id: user?.id?.toString(),
       uuid: user.uuid,
       applicationId: user.applicationId,
       username: user.username,
@@ -23,11 +23,15 @@ export class UserResponseMapper {
       points: String(user.points),
       role: user.role
         ? {
-            id: user.role.id.toString(),
+            id: user.role?.id?.toString(),
             name: user.role.name,
           }
         : null,
       created_at: user?.createdAt?.toISOString(),
+      date_of_birth: user?.date_of_birth ? new Date(user.date_of_birth).toISOString() : null,
+      anniversary_date: user?.anniversary_date
+        ? new Date(user.anniversary_date).toISOString()
+        : null,
       ...(panKyc && {
         maskedPan: panKyc?.maskedDocumentNumber,
       }),
