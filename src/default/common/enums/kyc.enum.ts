@@ -33,11 +33,6 @@ export enum KycLogStatus {
   SUBMITTED = 'SUBMITTED',
 }
 
-export enum BeneficiaryType {
-  BANK = 'BANK',
-  UPI = 'UPI',
-}
-
 export enum BeneficiaryRelationshipType {
   SELF = 'SELF',
   SPOUSE = 'SPOUSE',
