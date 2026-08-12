@@ -28,6 +28,9 @@ export class BeneficiaryRepository extends BaseRepository<UserBeneficiary> {
       status: BeneficiaryStatus;
       referenceId?: string | null;
       metadata?: Record<string, any> | null;
+      otp?: string | null;
+      otp_expiry?: Date | null;
+      otp_attempt_count?: number;
     },
     queryRunner?: QueryRunner
   ): Promise<UserBeneficiary> {
@@ -49,10 +52,14 @@ export class BeneficiaryRepository extends BaseRepository<UserBeneficiary> {
         status: data.status,
         referenceId: data.referenceId,
         metadata: data.metadata,
+        otp: data.otp,
+        otp_expiry: data.otp_expiry,
+        otp_attempt_count: data.otp_attempt_count ?? 0,
       },
       queryRunner
     );
   }
+
 
   async findUserBeneficiaries(
     userId: number,

@@ -24,10 +24,7 @@ import { PasswordHelper } from 'src/default/common/helper/password.helper';
 import { AuthTokenHelper } from 'src/default/common/helper/auth-token.helper';
 import { UserResponseMapper } from './mapper/user-response.mapper';
 import { ResetTokenHelper } from 'src/default/common/helper/reset-token.helper';
-import {
-  MAX_OTP_VERIFY_ATTEMPTS,
-  RESET_TOKEN_EXPIRY_MINUTES,
-} from './constants/auth.constants';
+import { MAX_OTP_VERIFY_ATTEMPTS, RESET_TOKEN_EXPIRY_MINUTES } from './constants/auth.constants';
 import { RevokedTokenRepository } from 'src/modules/auth/repository';
 import { TokenType } from 'src/default/common/enums/token-type.enum';
 import { TokenHashHelper } from 'src/default/common/helper/token-hash.helper';
