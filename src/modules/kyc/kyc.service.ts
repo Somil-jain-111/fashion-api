@@ -699,7 +699,7 @@ export class KycService {
       queryRunner
     );
 
-    if (existingPan && existingPan.user.id !== userId) {
+    if (existingPan) {
       throw new BusinessException(ERROR_CODES.KYC.PAN_ALREADY_IN_USE);
     }
 
@@ -843,7 +843,7 @@ export class KycService {
       queryRunner
     );
 
-    if (existingAadhaar && existingAadhaar.user.id !== userId) {
+    if (existingAadhaar) {
       throw new BusinessException(ERROR_CODES.KYC.AADHAAR_ALREADY_IN_USE);
     }
 
@@ -1693,5 +1693,59 @@ export class KycService {
       key: item[0],
       label: item[1],
     }));
+  }
+
+  /**
+   * Soft Delete Beneficiary and its related PAN and Aadhaar KYC Verifications
+   *
+   * @param userId
+   * @param beneficiaryId
+   */
+  async deleteBeneficiary(userId: number, beneficiaryId: number): Promise<any> {
+    const tag = 'KycService.deleteBeneficiary';
+
+    ConsoleLogger.log('DELETE_BENEFICIARY_START', {
+      tag,
+      data: { userId, beneficiaryId },
+    });
+
+    await this.userAuthValidator.validateActiveUserById(userId);
+
+    await this.transactionService.runInTransaction(async (queryRunner) => {
+      const beneficiary = await this.beneficiaryRepository.findActiveBeneficiaryWithVerifications(
+        beneficiaryId,
+        userId,
+        queryRunner
+      );
+
+      if (!beneficiary) {
+        throw new BusinessException(ERROR_CODES.KYC.BENEFICIARY_NOT_FOUND);
+      }
+
+      await this.beneficiaryRepository.softDeleteBeneficiary(beneficiaryId, userId, queryRunner);
+
+      if (beneficiary.panVerification?.id) {
+        await this.kycVerificationRepository.softDeleteKycVerification(
+          beneficiary.panVerification.id,
+          queryRunner
+        );
+      }
+
+      if (beneficiary.aadhaarVerification?.id) {
+        await this.kycVerificationRepository.softDeleteKycVerification(
+          beneficiary.aadhaarVerification.id,
+          queryRunner
+        );
+      }
+    });
+
+    ConsoleLogger.log('DELETE_BENEFICIARY_SUCCESS', {
+      tag,
+      data: { userId, beneficiaryId },
+    });
+
+    return {
+      message: 'Beneficiary deleted successfully.',
+    };
   }
 }
