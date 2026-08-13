@@ -699,7 +699,7 @@ export class KycService {
       queryRunner
     );
 
-    if (existingPan && existingPan.user.id !== userId) {
+    if (existingPan) {
       throw new BusinessException(ERROR_CODES.KYC.PAN_ALREADY_IN_USE);
     }
 
@@ -843,7 +843,7 @@ export class KycService {
       queryRunner
     );
 
-    if (existingAadhaar && existingAadhaar.user.id !== userId) {
+    if (existingAadhaar) {
       throw new BusinessException(ERROR_CODES.KYC.AADHAAR_ALREADY_IN_USE);
     }
 
