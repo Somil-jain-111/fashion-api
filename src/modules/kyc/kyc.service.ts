@@ -682,15 +682,15 @@ export class KycService {
 
     const encryptedPan = await this.encryptKycData(pan);
 
-    const existingUserPan = await this.kycVerificationRepository.findByUserIdAndType(
-      userIdString,
-      KycType.BENE_PAN,
-      queryRunner
-    );
+    // const existingUserPan = await this.kycVerificationRepository.findByUserIdAndType(
+    //   userIdString,
+    //   KycType.BENE_PAN,
+    //   queryRunner
+    // );
 
-    if (existingUserPan?.status === KycStatus.VERIFIED) {
-      throw new BusinessException(ERROR_CODES.KYC.PAN_ALREADY_SUBMITTED);
-    }
+    // if (existingUserPan?.status === KycStatus.VERIFIED) {
+    //   throw new BusinessException(ERROR_CODES.KYC.PAN_ALREADY_SUBMITTED);
+    // }
 
     const existingPan = await this.kycVerificationRepository.findByDocumentNumberAndType(
       encryptedPan,
