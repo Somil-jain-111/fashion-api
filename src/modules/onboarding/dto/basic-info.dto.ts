@@ -5,6 +5,7 @@ import {
   IsNotEmpty,
   IsOptional,
   IsString,
+  Length,
   Matches,
 } from 'class-validator';
 import { UserPartnerType } from 'src/default/common/enums/user-type.enum';
@@ -12,6 +13,7 @@ import { UserPartnerType } from 'src/default/common/enums/user-type.enum';
 export class SaveBasicInfoDto {
   @IsString()
   @IsNotEmpty({ message: 'Name is required' })
+  @Length(3)
   name: string;
 
   @IsEmail({}, { message: 'Invalid email address' })
