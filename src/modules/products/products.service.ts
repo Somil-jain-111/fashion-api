@@ -1,8 +1,8 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 
 import products from './mock/products.json';
-import * as categories from './mock/categories.json';
-import * as subCategories from './mock/sub-categories.json';
+import categories from './mock/categories.json';
+import subCategories from './mock/sub-categories.json';
 
 import { ProductsMapper } from './mapper/products.mapper';
 import { PaginationHelper } from './helper/pagination.helper';
