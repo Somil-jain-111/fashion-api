@@ -1,6 +1,5 @@
 export * from './login-histories.repository';
 export * from './revoked_token.repository';
-export * from './base.repository';
 export * from './roles.repository';
 export * from './revoked_token.repository';
 export * from '../../kyc/repository/kyc-verification.repository';
@@ -12,4 +11,5 @@ export * from '../../cms/cms-page/repository/cms-page.repository';
 export * from '../../cms/faq/repository/faq.repository';
 export * from '../../user/repository/user-store-info.repository';
 export * from './otp-attempt-logs.repository';
+export * from './user-mapping.repository';
 export * from '../../user/repository';

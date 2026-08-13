@@ -165,7 +165,7 @@ export class CartService {
     }
 
     const product = this.getProductOrThrow(item.productId);
-    const cartonQuantity = dto.cartonQuantity ?? item.cartonQuantity;
+    const cartonQuantity = this.resolveCartonQuantity(item.cartonQuantity, dto.cartonQuantity);
     const totals = CartCalculationHelper.calculateItem({
       cartonSize: item.cartonSize,
       cartonQuantity,
@@ -247,6 +247,26 @@ export class CartService {
     }
 
     await this.cartRepository.updateById(cart.id, summaryUpdate);
+  }
+
+  private resolveCartonQuantity(current: number, requested?: number | '+' | '-'): number {
+    if (requested === undefined) {
+      return current;
+    }
+
+    if (requested === '+') {
+      return current + 1;
+    }
+
+    if (requested === '-') {
+      return Math.max(1, current - 1);
+    }
+
+    if (!Number.isInteger(requested) || requested < 1) {
+      throw new BusinessException(ERROR_CODES.CART.INVALID_CARTON_QUANTITY);
+    }
+
+    return requested;
   }
 
   private getProductOrThrow(productId: number): ProductMock {
