@@ -1,14 +1,16 @@
 import { Type } from 'class-transformer';
-import { IsEnum, IsInt, IsNumberString, IsOptional, IsString, Min } from 'class-validator';
+import { IsEnum, IsInt, IsOptional, IsString, Min } from 'class-validator';
 import { SortByEnum } from '../enum/sort-by.enum';
 
 export class ProductQueryDto {
   @IsOptional()
-  @IsNumberString()
+  @Type(() => Number)
+  @IsInt()
   categoryId?: number;
 
   @IsOptional()
-  @IsNumberString()
+  @Type(() => Number)
+  @IsInt()
   subCategoryId?: number;
 
   @IsOptional()

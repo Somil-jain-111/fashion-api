@@ -19,6 +19,7 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
 import { AppConfigService } from './default/config/config.service';
 import { LoggerModule } from './default/logger/console/console.module';
 import { CloudwatchModule } from './default/logger/cloudwatch/cloudwatch.module';
+import { BullmqModule } from './default/common/services/bullmq/bullmq.module';
 import { LocalStorageInterceptor } from './default/common/interceptors/local-storage.interceptor';
 import { IdempotencyModule } from './default/idempotency/idempotency.module';
 import { APP_GUARD, APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
@@ -76,6 +77,7 @@ import { UserModule } from './modules/user/user.module';
     HttpModule,
     ErrorHandlingModule,
     CloudwatchModule,
+    BullmqModule,
     IdempotencyModule,
     BullSetupModule,
     AuditModule,

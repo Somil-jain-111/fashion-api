@@ -1,11 +1,17 @@
 export enum UserRole {
   RETAILER = 'retailer',
   DISTRIBUTOR = 'distributor',
+  SUB_DISTRIBUTOR = 'sub_distributor',
   SALESPERSON = 'sales_person',
   EMPLOYEE = 'employee',
   SUPERADMIN = 'super_admin',
   L1 = 'l1',
   L2 = 'l2',
+}
+
+export enum DistUserRoles {
+  DISTRIBUTOR = 'distributor',
+  SUB_DISTRIBUTOR = 'sub_distributor',
 }
 
 export enum UserType {
