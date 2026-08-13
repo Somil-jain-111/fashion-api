@@ -845,15 +845,15 @@ export class KycService {
       throw new BusinessException(ERROR_CODES.KYC.AADHAAR_ALREADY_IN_USE);
     }
 
-    const userVerifiedAadhaar = await this.kycVerificationRepository.findVerifiedByUserIdAndType(
-      userId,
-      KycType.BENE_AADHAAR,
-      queryRunner
-    );
+    // const userVerifiedAadhaar = await this.kycVerificationRepository.findVerifiedByUserIdAndType(
+    //   userId,
+    //   KycType.BENE_AADHAAR,
+    //   queryRunner
+    // );
 
-    if (userVerifiedAadhaar) {
-      throw new BusinessException(ERROR_CODES.KYC.AADHAAR_ALREADY_VERIFIED);
-    }
+    // if (userVerifiedAadhaar) {
+    //   throw new BusinessException(ERROR_CODES.KYC.AADHAAR_ALREADY_VERIFIED);
+    // }
 
     const referenceId = await ReferenceIdUtil.generateKycReferenceId(KycType.BENE_AADHAAR);
 
