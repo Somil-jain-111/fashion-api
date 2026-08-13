@@ -15,6 +15,7 @@ import { AppConfigService } from 'src/default/config/config.service';
 import { BeneficiaryRepository } from '../kyc/repository';
 import { RazorpayIntegration } from './integrations/razorpay.integration';
 import { RazorpayWebhookController } from './razorpay-webhook.controller';
+import { SmsModule } from '../sms/sms.module';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { RazorpayWebhookController } from './razorpay-webhook.controller';
     RewardsModule,
     RedisModule,
     IdempotencyModule,
+    SmsModule,
   ],
   controllers: [PaymentController, RazorpayWebhookController],
   providers: [

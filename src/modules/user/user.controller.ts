@@ -5,6 +5,7 @@ import { Roles } from 'src/default/common/decorators/roles.decorator';
 import { UserRole } from 'src/default/common/enums/user-type.enum';
 import { UserService } from './user.service';
 import { PermanentBlockUserDto, TempBlockUserDto, UnblockUserDto } from './dto/block-user.dto';
+import { UpdateUserDatesDto } from './dto/update-user.dto';
 import { ResponseMessage } from 'src/default/common/decorators/response-message.decorator';
 import { NoCache } from 'src/default/cache/cache.decorator';
 import { SkipThrottle } from '@nestjs/throttler';
@@ -39,5 +40,14 @@ export class UserController {
   @ResponseMessage('User permanent block removed successfully')
   async removePermanentBlock(@Body() dto: UnblockUserDto, @Req() req: any) {
     return await this.userService.removeBlock(dto, req.user);
+  }
+
+  @NoCache()
+  @SkipThrottle()
+  @Post('update')
+  @ResponseMessage('User profile updated successfully')
+  async updateUserProfile(@Body() dto: UpdateUserDatesDto, @Req() req: any) {
+    const userId = req.user.id;
+    return await this.userService.updateProfileDates(userId, dto);
   }
 }

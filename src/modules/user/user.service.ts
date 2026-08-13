@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { UserRepository } from 'src/modules/auth/repository';
 import { UserBlockRepository } from './repository/user-block.repository';
 import { PermanentBlockUserDto, TempBlockUserDto, UnblockUserDto } from './dto/block-user.dto';
+import { UpdateUserDatesDto } from './dto/update-user.dto';
 import { BlockType } from './enums/user-block.enum';
 import { UserStatus } from 'src/modules/auth/constants/auth.constants';
 import { BusinessException } from 'src/default/error/business.exception';
@@ -192,6 +193,43 @@ export class UserService {
       blockType: activeBlock.blockType,
       unblockedAt: unblockedAt.toISOString(),
       remarks: dto.remarks || activeBlock.remarks || null,
+    };
+  }
+
+  /**
+   * Update user's date of birth and anniversary date
+   *
+   * @param userId
+   * @param dto
+   * @returns
+   */
+  async updateProfileDates(userId: number, dto: UpdateUserDatesDto) {
+    const user = await this.userRepository.findById(userId);
+
+    if (!user) {
+      throw new BusinessException(ERROR_CODES.USER.USER_NOT_FOUND);
+    }
+
+    const updatePayload: any = {};
+
+    if (dto.dateOfBirth) {
+      updatePayload.date_of_birth = new Date(dto.dateOfBirth);
+    }
+
+    if (dto.anniversaryDate !== undefined && dto.anniversaryDate !== null) {
+      updatePayload.anniversary_date = new Date(dto.anniversaryDate);
+    }
+
+    if (Object.keys(updatePayload).length > 0) {
+      await this.userRepository.updateById(userId, updatePayload);
+    }
+
+    const updatedUser = await this.userRepository.findById(userId);
+
+    return {
+      id: updatedUser.id,
+      dateOfBirth: updatedUser.date_of_birth ? new Date(updatedUser.date_of_birth) : null,
+      anniversaryDate: updatedUser.anniversary_date ? new Date(updatedUser.anniversary_date) : null,
     };
   }
 }
