@@ -1,4 +1,14 @@
-import { Body, Controller, Get, Post, Req, UseGuards, UseInterceptors } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Post,
+  Req,
+  UseGuards,
+  UseInterceptors,
+} from '@nestjs/common';
 import { SkipThrottle } from '@nestjs/throttler';
 
 import {
@@ -134,6 +144,17 @@ export class KYCController {
   @ResponseMessage(SUCCESS_MESSAGES.KYC.BENEFICIARIES_RELATIONSHIPS_FETCHED)
   async getBeneficiaryRelationships() {
     const response = await this.kycService.getBeneficiaryRelationships();
+    return DataSanitizer.sanitizeData(response);
+  }
+
+  @NoCache()
+  @SkipThrottle()
+  @Post('beneficiary/delete/:id')
+  @ResponseMessage(SUCCESS_MESSAGES.KYC.BENEFICIARY_DELETED)
+  async deleteBeneficiaryPost(@Req() req: any, @Param('id') id: string) {
+    const userId = req.user.id;
+
+    const response = await this.kycService.deleteBeneficiary(userId, Number(id));
     return DataSanitizer.sanitizeData(response);
   }
 }

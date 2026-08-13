@@ -139,4 +139,37 @@ export class BeneficiaryRepository extends BaseRepository<UserBeneficiary> {
       relations: { user: true } as any,
     });
   }
+
+  async findActiveBeneficiaryWithVerifications(
+    beneId: number,
+    userId: number,
+    queryRunner?: QueryRunner
+  ): Promise<UserBeneficiary | null> {
+    return await this.getRepository(queryRunner).findOne({
+      where: {
+        id: beneId,
+        user: { id: userId },
+        active: true,
+      },
+      relations: ['panVerification', 'aadhaarVerification'],
+    });
+  }
+
+  async softDeleteBeneficiary(
+    beneId: number,
+    userId: number,
+    queryRunner?: QueryRunner
+  ): Promise<boolean> {
+    const result = await this.getRepository(queryRunner).update(
+      {
+        id: beneId,
+        user: { id: userId },
+        active: true,
+      },
+      {
+        active: false,
+      }
+    );
+    return Number(result.affected) > 0;
+  }
 }
