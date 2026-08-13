@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { DataSource, QueryRunner } from 'typeorm';
 import { BaseRepository } from 'src/default/common/repositories/base.repository';
 import { UserBeneficiary } from '../entities/beneficiary.entity';
+import { KycVerificationEntity } from '../entities/kyc-verification.entity';
 import { BeneficiaryType, BeneficiaryStatus } from 'src/default/common/enums/user-beneficiary.enum';
 
 @Injectable()
@@ -31,6 +32,8 @@ export class BeneficiaryRepository extends BaseRepository<UserBeneficiary> {
       otp?: string | null;
       otp_expiry?: Date | null;
       otp_attempt_count?: number;
+      panVerification?: KycVerificationEntity | null;
+      aadhaarVerification?: KycVerificationEntity | null;
     },
     queryRunner?: QueryRunner
   ): Promise<UserBeneficiary> {
@@ -55,11 +58,12 @@ export class BeneficiaryRepository extends BaseRepository<UserBeneficiary> {
         otp: data.otp,
         otp_expiry: data.otp_expiry,
         otp_attempt_count: data.otp_attempt_count ?? 0,
+        panVerification: data.panVerification ?? null,
+        aadhaarVerification: data.aadhaarVerification ?? null,
       },
       queryRunner
     );
   }
-
 
   async findUserBeneficiaries(
     userId: number,
@@ -77,6 +81,7 @@ export class BeneficiaryRepository extends BaseRepository<UserBeneficiary> {
 
     return await this.getRepository(queryRunner).find({
       where,
+      relations: ['panVerification', 'aadhaarVerification'],
       order: {
         createdAt: 'ASC',
       },
@@ -99,9 +104,8 @@ export class BeneficiaryRepository extends BaseRepository<UserBeneficiary> {
 
   /**
    * Looks up an active bank beneficiary by account number + IFSC across ALL users
-   * (not just the requesting user), mirroring how PAN/Aadhaar duplicate checks work
-   * in KycService. Returns the owning record (with `user` loaded) so callers can
-   * distinguish "already used by me" vs "already used by another account".
+   * (not just the requesting user).
+   * Returns the owning record.
    */
   async isAccountInfoExist(
     accountNumberENC: string,
@@ -114,7 +118,7 @@ export class BeneficiaryRepository extends BaseRepository<UserBeneficiary> {
         accountNumber: accountNumberENC,
         ifsc: ifscENC,
         active: true,
-        status: 1,
+        // status: BeneficiaryStatus.VERIFIED,
       } as any,
       relations: { user: true } as any,
     });
@@ -130,7 +134,7 @@ export class BeneficiaryRepository extends BaseRepository<UserBeneficiary> {
         type: BeneficiaryType.UPI,
         upi: upiENC,
         active: true,
-        status: 1,
+        // status: BeneficiaryStatus.VERIFIED,
       } as any,
       relations: { user: true } as any,
     });
