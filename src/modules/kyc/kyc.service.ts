@@ -31,6 +31,7 @@ import { ContextType } from 'src/default/common/constants/context.option';
 import { UserRepository } from '../auth/repository';
 import { TransactionService } from 'src/default/databases/transaction';
 import { UserBeneficiary } from './entities/beneficiary.entity';
+import { KycVerificationEntity } from './entities/kyc-verification.entity';
 import { UserValidator } from 'src/default/common/validators/user.validator';
 import { SmsService } from 'src/modules/sms/sms.service';
 import { OtpAttemptType } from 'src/default/common/enums/common.enum';
@@ -779,7 +780,7 @@ export class KycService {
       aadhaarLinked: panApiData?.aadhaar_linked,
     };
 
-    await this.kycVerificationRepository.upsertVerifiedKyc(
+    const panVerification = await this.kycVerificationRepository.upsertVerifiedKyc(
       {
         userId: userId,
         type: KycType.BENE_PAN,
@@ -807,6 +808,7 @@ export class KycService {
       verified: true,
       referenceId: transactionId,
       metadata,
+      panVerification,
     };
   }
 
@@ -859,7 +861,7 @@ export class KycService {
 
     const maskedAadhaar = this.aadhaarProvider.maskAadhaarNumber(aadharNumber);
 
-    await this.kycVerificationRepository.upsertVerifiedKyc(
+    const aadhaarVerification = await this.kycVerificationRepository.upsertVerifiedKyc(
       {
         userId,
         type: KycType.BENE_AADHAAR,
@@ -902,6 +904,7 @@ export class KycService {
       referenceId,
       maskedAadhaar,
       message: 'Beneficiary Aadhaar details saved successfully.',
+      aadhaarVerification,
     };
   }
 
@@ -1043,7 +1046,9 @@ export class KycService {
   private async verifyAndAddBankBeneficiary(
     userId: number,
     dto: AddBeneficiaryDto,
-    queryRunner?: QueryRunner
+    queryRunner?: QueryRunner,
+    panVerification?: KycVerificationEntity | null,
+    aadhaarVerification?: KycVerificationEntity | null
   ): Promise<any> {
     const tag = 'KycService.verifyAndAddBankBeneficiary';
     const {
@@ -1217,6 +1222,8 @@ export class KycService {
         address: addressENC,
         status: BeneficiaryStatus.PENDING,
         referenceId: transactionId,
+        panVerification: { id: panVerification?.id } as any,
+        aadhaarVerification: { id: aadhaarVerification?.id } as any,
         metadata: {
           matchScore,
           rawResponse: providerResponseENC,
@@ -1237,7 +1244,9 @@ export class KycService {
   private async verifyAndAddUpiBeneficiary(
     userId: number,
     dto: AddBeneficiaryDto,
-    queryRunner?: QueryRunner
+    queryRunner?: QueryRunner,
+    panVerification?: KycVerificationEntity | null,
+    aadhaarVerification?: KycVerificationEntity | null
   ): Promise<any> {
     const tag = 'KycService.verifyAndAddUpiBeneficiary';
     const {
@@ -1341,6 +1350,8 @@ export class KycService {
         address: addressENC,
         status: BeneficiaryStatus.PENDING,
         referenceId: transactionId,
+        panVerification: { id: panVerification?.id } as any,
+        aadhaarVerification: { id: aadhaarVerification?.id } as any,
         metadata: {
           rawResponse: providerResponseENC,
           ...metadata,
@@ -1391,21 +1402,24 @@ export class KycService {
     const result = await this.transactionService.runInTransaction(async (queryRunner) => {
       /** 1️⃣ If PAN provided, verify PAN & save under BENE_PAN in kyc_verifications */
       const panCard = dto.panNumber?.toUpperCase()?.trim();
+      let panVerification: KycVerificationEntity | null = null;
 
       if (panCard) {
-        await this.verifyBeneficiaryPanInternal(
+        const panRes = await this.verifyBeneficiaryPanInternal(
           userId,
           { panCard, panImage: '' },
           dto.beneficiary_name,
           queryRunner
         );
+        panVerification = panRes?.panVerification || null;
       }
 
       /** 2️⃣ If Aadhaar provided, save Aadhaar under BENE_AADHAAR in kyc_verifications */
       const aadharNumber = dto.aadhaarNumber?.trim();
+      let aadhaarVerification: KycVerificationEntity | null = null;
 
       if (aadharNumber) {
-        await this.saveBeneficiaryAadhaarInternal(
+        const aadhaarRes = await this.saveBeneficiaryAadhaarInternal(
           userId,
           {
             aadharNumber,
@@ -1415,15 +1429,28 @@ export class KycService {
           dto.beneficiary_name,
           queryRunner
         );
+        aadhaarVerification = aadhaarRes?.aadhaarVerification || null;
       }
 
       /** 3️⃣ Verify bank account or UPI and add beneficiary inside transaction */
       let beneResult: any;
 
       if (dto.type === BeneficiaryType.BANK) {
-        beneResult = await this.verifyAndAddBankBeneficiary(userId, dto, queryRunner);
+        beneResult = await this.verifyAndAddBankBeneficiary(
+          userId,
+          dto,
+          queryRunner,
+          panVerification,
+          aadhaarVerification
+        );
       } else if (dto.type === BeneficiaryType.UPI) {
-        beneResult = await this.verifyAndAddUpiBeneficiary(userId, dto, queryRunner);
+        beneResult = await this.verifyAndAddUpiBeneficiary(
+          userId,
+          dto,
+          queryRunner,
+          panVerification,
+          aadhaarVerification
+        );
       } else {
         throw new BusinessException(ERROR_CODES.KYC.INVALID_BENEFICIARY_TYPE);
       }

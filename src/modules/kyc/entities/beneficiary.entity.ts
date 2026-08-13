@@ -6,6 +6,7 @@ import {
   BeneficiaryType,
   BeneficiaryStatus,
 } from '../../../default/common/enums/user-beneficiary.enum';
+import { KycVerificationEntity } from './kyc-verification.entity';
 
 @Entity('user_beneficiaries')
 @Index(['user'])
@@ -14,6 +15,14 @@ export class UserBeneficiary extends BaseEntity {
   @ManyToOne(() => User, (user) => user.id, { nullable: false, onDelete: 'CASCADE' })
   @JoinColumn({ name: 'user_id' })
   user!: User;
+
+  @ManyToOne(() => KycVerificationEntity, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'pan_verification_id' })
+  panVerification?: KycVerificationEntity | null;
+
+  @ManyToOne(() => KycVerificationEntity, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'aadhaar_verification_id' })
+  aadhaarVerification?: KycVerificationEntity | null;
 
   @Column({
     type: 'enum',
