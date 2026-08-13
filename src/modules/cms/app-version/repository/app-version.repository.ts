@@ -1,12 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 
-import { BaseRepository } from 'src/modules/auth/repository';
 import { BusinessException } from 'src/default/error/business.exception';
 import { ERROR_CODES } from 'src/default/error/error.code';
 
 import { AppVersionEntity } from '../entities/app-version.entity';
 import { Platform } from '../enum/platform.enum';
+import { BaseRepository } from 'src/default/common/repositories';
 
 @Injectable()
 export class AppVersionRepository extends BaseRepository<AppVersionEntity> {

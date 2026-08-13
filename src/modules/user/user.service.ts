@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { UserRepository } from 'src/modules/auth/repository';
+import { UserRepository, UserMappingRepository } from 'src/modules/auth/repository';
 import { UserBlockRepository } from './repository/user-block.repository';
 import { PermanentBlockUserDto, TempBlockUserDto, UnblockUserDto } from './dto/block-user.dto';
 import { UpdateUserDatesDto } from './dto/update-user.dto';
@@ -7,13 +7,14 @@ import { BlockType } from './enums/user-block.enum';
 import { UserStatus } from 'src/modules/auth/constants/auth.constants';
 import { BusinessException } from 'src/default/error/business.exception';
 import { ERROR_CODES } from 'src/default/error/error.code';
-import { UserType } from 'src/default/common/enums/user-type.enum';
+import { DistUserRoles, UserRole, UserType } from 'src/default/common/enums/user-type.enum';
 
 @Injectable()
 export class UserService {
   constructor(
     private readonly userRepository: UserRepository,
-    private readonly userBlockRepository: UserBlockRepository
+    private readonly userBlockRepository: UserBlockRepository,
+    private readonly userMappingRepository: UserMappingRepository
   ) {}
 
   /**
@@ -231,5 +232,34 @@ export class UserService {
       dateOfBirth: updatedUser.date_of_birth ? new Date(updatedUser.date_of_birth) : null,
       anniversaryDate: updatedUser.anniversary_date ? new Date(updatedUser.anniversary_date) : null,
     };
+  }
+
+  /**
+   * Get mapped distributors for a user along with role id and name
+   *
+   * @param userId
+   * @returns List of mapped distributor profiles
+   */
+  async getMappedDistributors(userId: number, distRole: DistUserRoles) {
+    const mappings = await this.userMappingRepository.findMappedDistributors(userId, distRole);
+
+    return mappings.map((mapping) => {
+      const distributor = mapping.parent;
+
+      return {
+        id: distributor?.id,
+        uuid: distributor?.uuid,
+        username: distributor?.username,
+        firmName: distributor?.firmName,
+        mobile: distributor?.mobile,
+        status: distributor?.status,
+        role: distributor?.role
+          ? {
+              id: distributor.role.id,
+              name: distributor.role.name,
+            }
+          : null,
+      };
+    });
   }
 }

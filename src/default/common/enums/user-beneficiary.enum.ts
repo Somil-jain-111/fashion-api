@@ -19,3 +19,14 @@ export enum BeneficiaryRelationshipType {
   SHOP_STAFF_OR_EMPLOYEE = 'SHOP_STAFF_OR_EMPLOYEE',
   OTHER = 'OTHER',
 }
+
+export const BeneficiaryRelationshipTypeLabels = {
+  [BeneficiaryRelationshipType.SELF]: 'Self',
+  [BeneficiaryRelationshipType.SPOUSE]: 'Spouse',
+  [BeneficiaryRelationshipType.FATHER_OR_MOTHER]: 'Father Or Mother',
+  [BeneficiaryRelationshipType.SON_OR_DAUGHTER]: 'Son Or Daughter',
+  [BeneficiaryRelationshipType.BROTHER_OR_SISTER]: 'Brother Or Sister',
+  [BeneficiaryRelationshipType.BUSINESS_PARTNER]: 'Business Partner',
+  [BeneficiaryRelationshipType.SHOP_STAFF_OR_EMPLOYEE]: 'Shop Staff or Employee',
+  [BeneficiaryRelationshipType.OTHER]: 'Other',
+};

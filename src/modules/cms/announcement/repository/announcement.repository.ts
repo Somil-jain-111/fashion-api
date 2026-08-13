@@ -1,12 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { DataSource, In } from 'typeorm';
 
-import { BaseRepository } from 'src/modules/auth/repository';
 import { AnnouncementEntity } from '../entities/announcement.entity';
 import { BusinessException } from 'src/default/error/business.exception';
 import { ERROR_CODES } from 'src/default/error/error.code';
 import { AnnouncementQueryDto } from '../dto/query-announcement.dto';
 import { UserRole } from 'src/default/common/enums/user-type.enum';
+import { BaseRepository } from 'src/default/common/repositories';
 
 @Injectable()
 export class AnnouncementRepository extends BaseRepository<AnnouncementEntity> {

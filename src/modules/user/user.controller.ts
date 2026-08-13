@@ -1,4 +1,4 @@
-import { Body, Controller, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Post, Query, Req, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from 'src/default/common/guards/jwt-auth.guard';
 import { RolesGuard } from 'src/default/common/guards/roles.guard';
 import { Roles } from 'src/default/common/decorators/roles.decorator';
@@ -9,6 +9,8 @@ import { UpdateUserDatesDto } from './dto/update-user.dto';
 import { ResponseMessage } from 'src/default/common/decorators/response-message.decorator';
 import { NoCache } from 'src/default/cache/cache.decorator';
 import { SkipThrottle } from '@nestjs/throttler';
+import { DataSanitizer } from 'src/default/common/utils/sanitize.utils';
+import { DistMappingQueryDto } from './dto/dist-mapping-query.dto';
 
 @Controller('user')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -49,5 +51,16 @@ export class UserController {
   async updateUserProfile(@Body() dto: UpdateUserDatesDto, @Req() req: any) {
     const userId = req.user.id;
     return await this.userService.updateProfileDates(userId, dto);
+  }
+
+  @NoCache()
+  @SkipThrottle()
+  @Get('dist-mapping')
+  @ResponseMessage('Sub-distributors fetched successfully')
+  async getMappedDistributors(@Req() req: any, @Query() query: DistMappingQueryDto) {
+    const userId = req.user.id;
+
+    const response = await this.userService.getMappedDistributors(userId, query.distRole);
+    return DataSanitizer.sanitizeData(response);
   }
 }
