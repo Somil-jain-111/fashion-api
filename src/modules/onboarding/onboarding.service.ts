@@ -26,6 +26,7 @@ import {
   SendWhatsappOtpDto,
 } from './dto';
 import { LocationVerificationHelper } from 'src/default/common/helper/location-verification.helper';
+import { SUCCESS_MESSAGES } from 'src/default/common/constants/success-messages.constant';
 
 const CONTACT_OTP_EXPIRY_MINUTES = 5;
 
@@ -85,14 +86,18 @@ export class OnboardingService {
     let responsePincode = verificationResponse?.data?.pincode;
 
     // Verify using OSM (Fallback)
-    if (!responsePincode) {
-      verificationResponse = await this.locationVerificationHelper.getLocationByOSM(lat, lng);
-      responsePincode = verificationResponse?.data?.pincode;
-    }
+    // if (!responsePincode) {
+    //   verificationResponse = await this.locationVerificationHelper.getLocationByOSM(lat, lng);
+    //   responsePincode = verificationResponse?.data?.pincode;
+    // }
 
     const isValidPincode = Number(responsePincode) === Number(pincode);
 
     return {
+      message:
+        SUCCESS_MESSAGES.ONBOARDING[
+          isValidPincode ? 'VERIFICATION_SUCCESSFUL' : 'GEOLOCATION_VERIFICATION_UNSUCCESSFUL'
+        ],
       isValidPincode: isValidPincode,
       details: verificationResponse.data,
     };
