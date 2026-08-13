@@ -85,10 +85,10 @@ export class OnboardingService {
     let responsePincode = verificationResponse?.data?.pincode;
 
     // Verify using OSM (Fallback)
-    if (!responsePincode) {
-      verificationResponse = await this.locationVerificationHelper.getLocationByOSM(lat, lng);
-      responsePincode = verificationResponse?.data?.pincode;
-    }
+    // if (!responsePincode) {
+    //   verificationResponse = await this.locationVerificationHelper.getLocationByOSM(lat, lng);
+    //   responsePincode = verificationResponse?.data?.pincode;
+    // }
 
     const isValidPincode = Number(responsePincode) === Number(pincode);
 
