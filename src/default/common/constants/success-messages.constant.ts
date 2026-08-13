@@ -37,5 +37,6 @@ export const SUCCESS_MESSAGES = {
 
   ONBOARDING: {
     VERIFICATION_SUCCESSFUL: 'Verification successful',
+    GEOLOCATION_VERIFICATION_UNSUCCESSFUL: 'Geolocation verification unsuccessful',
   },
 } as const;

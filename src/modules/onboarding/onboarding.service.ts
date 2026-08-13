@@ -26,6 +26,7 @@ import {
   SendWhatsappOtpDto,
 } from './dto';
 import { LocationVerificationHelper } from 'src/default/common/helper/location-verification.helper';
+import { SUCCESS_MESSAGES } from 'src/default/common/constants/success-messages.constant';
 
 const CONTACT_OTP_EXPIRY_MINUTES = 5;
 
@@ -93,6 +94,10 @@ export class OnboardingService {
     const isValidPincode = Number(responsePincode) === Number(pincode);
 
     return {
+      message:
+        SUCCESS_MESSAGES.ONBOARDING[
+          isValidPincode ? 'VERIFICATION_SUCCESSFUL' : 'GEOLOCATION_VERIFICATION_UNSUCCESSFUL'
+        ],
       isValidPincode: isValidPincode,
       details: verificationResponse.data,
     };
