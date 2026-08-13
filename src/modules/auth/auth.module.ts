@@ -16,6 +16,7 @@ import {
   LoginHistoriesRepository,
   RevokedTokenRepository,
   OTPAttemptLogsRepository,
+  UserMappingRepository,
 } from './repository';
 import { UserRepository, RolesRepository, UserStoreInfoRepository } from '../auth/repository';
 import { AddressesModule } from '../addresses/addresses.module';
@@ -56,6 +57,7 @@ import { UserModule } from '../user/user.module';
     LoginHistoriesRepository,
     KycVerificationRepository,
     OTPAttemptLogsRepository,
+    UserMappingRepository,
   ],
   controllers: [AuthController],
   exports: [
@@ -70,6 +72,7 @@ import { UserModule } from '../user/user.module';
     LoginHistoriesRepository,
     KycVerificationRepository,
     OTPAttemptLogsRepository,
+    UserMappingRepository,
   ],
 })
 export class AuthModule {}

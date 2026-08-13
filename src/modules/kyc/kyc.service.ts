@@ -40,7 +40,7 @@ import { MAX_OTP_VERIFY_ATTEMPTS } from '../auth/constants/auth.constants';
 import { VerifyBeneficiaryOtpDto } from './dto/verify-beneficiary-otp.dto';
 import { ResendBeneficiaryOtpDto } from './dto/resend-beneficiary-otp.dto';
 import {
-  BeneficiaryRelationshipType,
+  BeneficiaryRelationshipTypeLabels,
   BeneficiaryStatus,
   BeneficiaryType,
 } from 'src/default/common/enums/user-beneficiary.enum';
@@ -682,15 +682,15 @@ export class KycService {
 
     const encryptedPan = await this.encryptKycData(pan);
 
-    const existingUserPan = await this.kycVerificationRepository.findByUserIdAndType(
-      userIdString,
-      KycType.BENE_PAN,
-      queryRunner
-    );
+    // const existingUserPan = await this.kycVerificationRepository.findByUserIdAndType(
+    //   userIdString,
+    //   KycType.BENE_PAN,
+    //   queryRunner
+    // );
 
-    if (existingUserPan?.status === KycStatus.VERIFIED) {
-      throw new BusinessException(ERROR_CODES.KYC.PAN_ALREADY_SUBMITTED);
-    }
+    // if (existingUserPan?.status === KycStatus.VERIFIED) {
+    //   throw new BusinessException(ERROR_CODES.KYC.PAN_ALREADY_SUBMITTED);
+    // }
 
     const existingPan = await this.kycVerificationRepository.findByDocumentNumberAndType(
       encryptedPan,
@@ -1662,6 +1662,9 @@ export class KycService {
   }
 
   async getBeneficiaryRelationships() {
-    return Object.values(BeneficiaryRelationshipType);
+    return Object.entries(BeneficiaryRelationshipTypeLabels).map((item) => ({
+      key: item[0],
+      label: item[1],
+    }));
   }
 }
