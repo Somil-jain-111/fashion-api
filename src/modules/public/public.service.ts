@@ -188,9 +188,9 @@ export class PublicService {
 
     const transactionId = await CommonUtils.generateUniqueRefCode();
 
-    const dummyPanNumber = 'ABCDE1234F';
+    const dummyPanNumber = dto.panNumber || 'ABCDE1234F';
     const dummyMaskedPanNumber = this.panProvider.maskPanNumber(dummyPanNumber);
-    const dummyAadhaarNumber = '999988887777';
+    const dummyAadhaarNumber = dto.aadhaarNumber || '999988887777';
     const dummyMaskedAadhaarNumber = this.aadhaarProvider.maskAadhaarNumber(dummyAadhaarNumber);
 
     const encryptedPan = this.kycService.encryptKycData(dummyPanNumber);
