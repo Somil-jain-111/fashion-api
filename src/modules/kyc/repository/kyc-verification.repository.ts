@@ -105,7 +105,7 @@ export class KycVerificationRepository extends BaseRepository<KycVerificationEnt
         providerResponse: data.providerResponse ?? existing.providerResponse,
         metadata: data.metadata ?? existing.metadata,
         failureReason: null,
-        active: typeof data.active !== 'undefined' ? data.active : true,
+        active: typeof data.active === 'boolean' ? data.active : true,
       });
 
       return repo.save(existing);
@@ -125,7 +125,7 @@ export class KycVerificationRepository extends BaseRepository<KycVerificationEnt
         providerResponse: data.providerResponse,
         metadata: data.metadata,
         failureReason: null,
-        active: typeof data.active !== 'undefined' ? data.active : true,
+        active: typeof data.active === 'boolean' ? data.active : true,
       },
       queryRunner
     );
@@ -137,8 +137,8 @@ export class KycVerificationRepository extends BaseRepository<KycVerificationEnt
     status: KycStatus,
     failureReason?: string,
     queryRunner?: QueryRunner
-  ): Promise<void> {
-    await this.getRepository(queryRunner).update(
+  ): Promise<boolean> {
+    const result = await this.getRepository(queryRunner).update(
       {
         user: { id: userId },
         type,
@@ -149,6 +149,8 @@ export class KycVerificationRepository extends BaseRepository<KycVerificationEnt
         failureReason,
       }
     );
+
+    return Number(result.affected) > 0;
   }
 
   async softDeleteKycVerification(id: number, queryRunner?: QueryRunner): Promise<boolean> {
