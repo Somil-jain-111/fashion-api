@@ -180,12 +180,7 @@ export class PublicService {
       increment: true,
     });
 
-    let otpPlain = await OtpHelper.generateOtp();
-    const isProd = this.appConfigService.isProduction() || this.appConfigService.isQa();
-
-    if (!isProd) {
-      otpPlain = this.appConfigService.getNonProdOtp().toString();
-    }
+    let otpPlain = this.appConfigService.getNonProdOtp().toString();
 
     const expirySeconds = otpValidation.expirySeconds;
     const otpExpiry = OtpHelper.generateExpiryDate(expirySeconds);
