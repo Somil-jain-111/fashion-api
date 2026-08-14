@@ -21,27 +21,38 @@ export class UserResponseMapper {
       image_url: user.image_url,
       status: user.status,
       points: String(user.points),
-      role: user.role
-        ? {
-            id: user.role?.id?.toString(),
-            name: user.role.name,
-          }
-        : null,
+      storeInformation: {
+        address1: user?.storeInformation?.address1,
+        address2: user.storeInformation?.address2,
+        city: user?.storeInformation?.city,
+        state: user?.storeInformation?.state,
+        pincode: String(user?.storeInformation?.pincode),
+      },
+      role: user?.role?.name || null,
       created_at: user?.createdAt?.toISOString(),
       date_of_birth: user?.date_of_birth ? new Date(user.date_of_birth).toISOString() : null,
       anniversary_date: user?.anniversary_date
         ? new Date(user.anniversary_date).toISOString()
         : null,
       ...(panKyc && {
-        maskedPan: panKyc?.maskedDocumentNumber,
+        panDetails: {
+          status: panKyc?.status,
+          maskedDocumentNumber: panKyc?.maskedDocumentNumber,
+        },
       }),
       ...(aadhaarKyc && {
-        maskedAadhaar: aadhaarKyc?.maskedDocumentNumber,
+        aadhaarDetails: {
+          status: aadhaarKyc?.status,
+          maskedDocumentNumber: aadhaarKyc?.maskedDocumentNumber,
+        },
       }),
       ...(gstKyc && {
-        maskedGst: gstKyc?.maskedDocumentNumber,
+        gstDetails: {
+          status: gstKyc?.status,
+          maskedDocumentNumber: gstKyc?.maskedDocumentNumber,
+        },
       }),
-      temp_block: activeBlock
+      blockedDetails: activeBlock
         ? {
             is_blocked: true,
             block_type: activeBlock.blockType,
