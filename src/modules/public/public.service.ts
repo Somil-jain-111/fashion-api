@@ -18,6 +18,10 @@ import { UpiProvider } from '../kyc/provider/upi.provider';
 import { BankProvider } from '../kyc/provider/bank.provider';
 import { AadhaarProvider } from '../kyc/provider/aadhaar.provider';
 import { PanProvider } from '../kyc/provider/pan.provider';
+import { UserAuthValidator } from '../auth/validators/user-auth.validator';
+import { UserValidator } from 'src/default/common/validators/user.validator';
+import { OtpAttemptType } from 'src/default/common/enums/common.enum';
+import { OtpHelper } from 'src/default/common/helper/otp.helper';
 
 @Injectable()
 export class PublicService {
@@ -30,8 +34,10 @@ export class PublicService {
     private readonly beneficiaryRepository: BeneficiaryRepository,
     private readonly upiProvider: UpiProvider,
     private readonly bankProvider: BankProvider,
-    private readonly AadhaarProvider: AadhaarProvider,
-    private readonly panProvider: PanProvider
+    private readonly aadhaarProvider: AadhaarProvider,
+    private readonly panProvider: PanProvider,
+    private readonly userAuthValidator: UserAuthValidator,
+    private readonly userValidator: UserValidator
   ) {}
 
   /**
@@ -142,10 +148,9 @@ export class PublicService {
   }
 
   /**
-   * Public service that fake adds and verifies a beneficiary (BANK or UPI) for a user.
+   * Public service that fake adds a beneficiary (BANK or UPI) for a user and sends OTP for verification.
    * Restricts adding more than one fake beneficiary per user.
    * Automatically adds mock BENE_PAN and BENE_AADHAAR records.
-   * Bypasses OTP verification and marks status as VERIFIED.
    *
    * @param dto
    * @returns
@@ -153,11 +158,8 @@ export class PublicService {
   async verifyManualBeneficiary(dto: ApproveBeneficiaryDto) {
     const { userId, type } = dto;
 
-    const user = await this.userRepository.findOne({ id: userId });
-
-    if (!user) {
-      throw new BusinessException(ERROR_CODES.USER.USER_NOT_FOUND);
-    }
+    const user = await this.userAuthValidator.validateActiveUserById(userId);
+    const mobile = dto.mobile?.trim() || user.mobile;
 
     const userBeneficiaries = await this.beneficiaryRepository.findUserBeneficiaries(userId);
     const existingFakeBeneficiary = userBeneficiaries.find(
@@ -170,12 +172,31 @@ export class PublicService {
       });
     }
 
+    const otpValidation = await this.userValidator.validateOtpAttempts({
+      mobile,
+      otpType: OtpAttemptType.BENEFICIARY,
+      userRole: user.role?.name,
+      userId: user.id,
+      increment: true,
+    });
+
+    let otpPlain = await OtpHelper.generateOtp();
+    const isProd = this.appConfigService.isProduction() || this.appConfigService.isQa();
+
+    if (!isProd) {
+      otpPlain = this.appConfigService.getNonProdOtp().toString();
+    }
+
+    const expirySeconds = otpValidation.expirySeconds;
+    const otpExpiry = OtpHelper.generateExpiryDate(expirySeconds);
+    const encryptedOtp = CommonUtils.encrypt(otpPlain);
+
     const transactionId = await CommonUtils.generateUniqueRefCode();
 
     const dummyPanNumber = 'ABCDE1234F';
     const dummyMaskedPanNumber = this.panProvider.maskPanNumber(dummyPanNumber);
     const dummyAadhaarNumber = '999988887777';
-    const dummyMaskedAadhaarNumber = this.AadhaarProvider.maskAadhaarNumber(dummyAadhaarNumber);
+    const dummyMaskedAadhaarNumber = this.aadhaarProvider.maskAadhaarNumber(dummyAadhaarNumber);
 
     const encryptedPan = this.kycService.encryptKycData(dummyPanNumber);
     const encryptedAadhaar = this.kycService.encryptKycData(dummyAadhaarNumber);
@@ -271,7 +292,7 @@ export class PublicService {
 
     const relationshipStr = dto.relationship || BeneficiaryRelationshipType.SELF;
     const nameStr = dto.beneficiary_name || user.username || 'Verified User';
-    const mobileStr = dto.mobile || user.mobile || '9999999999';
+    const mobileStr = mobile;
     const addressStr = dto.address || null;
 
     const relationshipENC = this.kycService.encryptKycData(relationshipStr);
@@ -293,26 +314,24 @@ export class PublicService {
       panNumber: encryptedPan,
       aadhaarNumber: encryptedAadhaar,
       address: addressENC,
-      status: BeneficiaryStatus.VERIFIED,
+      status: BeneficiaryStatus.PENDING,
       referenceId: transactionId,
       panVerification: { id: panVerification.id } as any,
       aadhaarVerification: { id: aadhaarVerification.id } as any,
       metadata: beneMetadata,
-      otp: null,
-      otp_expiry: null,
+      otp: encryptedOtp,
+      otp_expiry: otpExpiry,
       otp_attempt_count: 0,
     });
 
     return {
-      success: true,
-      verified: true,
-      message: `Fake ${type} beneficiary added and verified successfully for user ${userId}`,
-      transactionId,
-      beneficiaryId: beneficiary.id,
-      userId,
-      type,
-      status: beneficiary.status,
-      metadata: beneMetadata,
+      verified: false,
+      message: 'Beneficiary added successfully. OTP sent for verification.',
+      details: {
+        id: beneficiary.id,
+        ...beneMetadata,
+        otp_expiry_in_minutes: Math.ceil(expirySeconds / 60),
+      },
     };
   }
 

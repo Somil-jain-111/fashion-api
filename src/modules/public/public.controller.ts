@@ -24,7 +24,7 @@ export class PublicController {
 
   @NoCache()
   @Post('approve-beneficiary')
-  @ResponseMessage(SUCCESS_MESSAGES.KYC.BENEFICIARY_VERIFIED)
+  @ResponseMessage(SUCCESS_MESSAGES.KYC.BENEFICIARY_ADDED)
   async approveBeneficiaryOfUser(@Req() req, @Body() body: ApproveBeneficiaryDto) {
     const privateKey = req.headers?.['x-secret-key'];
 
