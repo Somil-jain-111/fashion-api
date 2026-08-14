@@ -71,6 +71,14 @@ export class ApproveBeneficiaryDto {
   @IsString()
   mobile?: string;
 
+  @IsNotEmpty()
+  @IsString()
+  panNumber?: string;
+
+  @IsNotEmpty()
+  @IsString()
+  aadhaarNumber?: string;
+
   @IsOptional()
   @IsString()
   address?: string;
