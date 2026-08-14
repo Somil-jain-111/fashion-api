@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { KycType, KycTypeFiltered } from 'src/default/common/enums/kyc.enum';
+import { KycStatus, KycType, KycTypeFiltered } from 'src/default/common/enums/kyc.enum';
 import {
   BeneficiaryType,
   BeneficiaryStatus,
@@ -189,6 +189,7 @@ export class PublicService {
       maskedDocumentNumber: dummyMaskedPanNumber,
       verifiedName: encryptedName,
       provider: 'PUBLIC_VERIFY',
+      status: KycStatus.VERIFIED,
       providerRequest: { publicVerify: true, userId },
       providerResponse: {
         publicVerify: true,
@@ -210,6 +211,7 @@ export class PublicService {
       maskedDocumentNumber: dummyMaskedAadhaarNumber,
       verifiedName: encryptedName,
       provider: 'PUBLIC_VERIFY',
+      status: KycStatus.VERIFIED,
       providerRequest: { publicVerify: true, userId },
       providerResponse: {
         publicVerify: true,
