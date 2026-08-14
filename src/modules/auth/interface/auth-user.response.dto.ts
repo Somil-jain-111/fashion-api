@@ -7,6 +7,11 @@ export class TempBlockResponseDto {
   remarks?: string | null;
 }
 
+export class KycDetailsResponseDto {
+  status?: string;
+  maskedDocumentNumber?: string;
+}
+
 export class AuthUserResponseDto {
   id!: string;
   uuid!: string;
@@ -18,15 +23,19 @@ export class AuthUserResponseDto {
   image_url!: string;
   status!: UserStatus;
   points!: string;
-  role!: {
-    id: string;
-    name: string;
-  } | null;
+  role?: string;
   created_at?: string;
   date_of_birth?: string | null;
   anniversary_date?: string | null;
-  maskedPan?: string;
-  maskedAadhaar?: string;
-  maskedGst?: string;
-  temp_block?: TempBlockResponseDto | null;
+  panDetails?: KycDetailsResponseDto;
+  aadhaarDetails?: KycDetailsResponseDto;
+  gstDetails?: KycDetailsResponseDto;
+  blockedDetails?: TempBlockResponseDto | null;
+  storeInformation?: {
+    address1?: string;
+    address2?: string;
+    city?: string;
+    state?: string;
+    pincode?: string;
+  };
 }
