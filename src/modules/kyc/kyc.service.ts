@@ -780,9 +780,9 @@ export class KycService {
       aadhaarLinked: panApiData?.aadhaar_linked,
     };
 
-    const panVerification = await this.kycVerificationRepository.upsertVerifiedKyc(
+    const panVerification = await this.kycVerificationRepository.save(
       {
-        userId: userId,
+        user: { id: userId },
         type: KycType.BENE_PAN,
         referenceId: transactionId,
         documentNumber: encryptedPan,
@@ -861,9 +861,9 @@ export class KycService {
 
     const maskedAadhaar = this.aadhaarProvider.maskAadhaarNumber(aadharNumber);
 
-    const aadhaarVerification = await this.kycVerificationRepository.upsertVerifiedKyc(
+    const aadhaarVerification = await this.kycVerificationRepository.save(
       {
-        userId,
+        user: { id: user.id },
         type: KycType.BENE_AADHAAR,
         status: KycStatus.VERIFIED,
         referenceId,

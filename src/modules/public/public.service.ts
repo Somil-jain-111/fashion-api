@@ -181,8 +181,8 @@ export class PublicService {
     const encryptedAadhaar = this.kycService.encryptKycData(dummyAadhaarNumber);
     const encryptedName = this.kycService.encryptKycData(user.username || 'Verified User');
 
-    const panVerification = await this.kycVerificationRepository.upsertVerifiedKyc({
-      userId,
+    const panVerification = await this.kycVerificationRepository.save({
+      user: { id: user.id },
       type: KycType.BENE_PAN,
       referenceId: `${transactionId}_PAN`,
       documentNumber: encryptedPan,
@@ -202,8 +202,8 @@ export class PublicService {
       },
     });
 
-    const aadhaarVerification = await this.kycVerificationRepository.upsertVerifiedKyc({
-      userId,
+    const aadhaarVerification = await this.kycVerificationRepository.save({
+      user: { id: user.id },
       type: KycType.BENE_AADHAAR,
       referenceId: `${transactionId}_AADHAAR`,
       documentNumber: encryptedAadhaar,
