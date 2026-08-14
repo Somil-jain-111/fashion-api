@@ -377,6 +377,7 @@ export class KycService {
     await this.kycVerificationRepository.upsertVerifiedKyc({
       userId: userId,
       type: KycType.AADHAAR,
+      status: KycStatus.VERIFIED,
       referenceId,
       documentNumber: otpLog.documentNumber,
       maskedDocumentNumber: maskedDocumentNumber,
@@ -631,6 +632,7 @@ export class KycService {
       documentNumber: encryptedPan,
       verifiedName: encryptedUserName,
       provider: 'REWARDS_API',
+      status: KycStatus.VERIFIED,
       maskedDocumentNumber: maskedDocumentNumber,
       providerRequest: panProviderResult.requestPayload,
       providerResponse: encryptedApiData,
@@ -788,6 +790,7 @@ export class KycService {
         documentNumber: encryptedPan,
         verifiedName: encryptedUserName,
         provider: 'REWARDS_API',
+        status: KycStatus.VERIFIED,
         maskedDocumentNumber: maskedDocumentNumber,
         providerRequest: panProviderResult.requestPayload,
         providerResponse: encryptedApiData,
@@ -1013,6 +1016,7 @@ export class KycService {
       verifiedName: this.encryptKycData(
         gstApiData.trade_name || gstApiData.legal_name || user.username
       ),
+      status: KycStatus.VERIFIED,
       provider: 'REWARDS_API',
       providerRequest: gstProviderResult.requestPayload,
       providerResponse: encryptedApiData,
