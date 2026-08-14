@@ -74,6 +74,9 @@ import { SmsModule } from '../sms/sms.module';
     BeneficiaryRepository,
     BankProvider,
     UpiProvider,
+    PanProvider,
+    AadhaarProvider,
+    GstProvider,
   ],
 })
 export class KycModule {}

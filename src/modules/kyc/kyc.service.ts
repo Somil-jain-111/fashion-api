@@ -464,7 +464,7 @@ export class KycService {
         aadharBackImage,
       },
       metadata: {
-        aadharNumber,
+        maskedDocumentNumber: maskedAadhaar,
       },
     });
 
