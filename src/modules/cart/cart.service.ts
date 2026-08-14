@@ -285,9 +285,19 @@ export class CartService {
     );
 
     const size = product.sizes.find((item) => item.size === dto.size);
+
+    if (!hasColor || !size?.isAvailable) {
+      throw new BusinessException(ERROR_CODES.CART.INVALID_CART_ITEM);
+    }
+
+    // cartonSize 1 = loose pair order, not tied to a defined carton tier
+    if (Number(dto.cartonSize) === 1) {
+      return;
+    }
+
     const carton = product.cartons.find((item) => Number(item.articles) === Number(dto.cartonSize));
 
-    if (!hasColor || !size?.isAvailable || !carton || !carton.sizes.includes(dto.size)) {
+    if (!carton || !carton.sizes.includes(dto.size)) {
       throw new BusinessException(ERROR_CODES.CART.INVALID_CART_ITEM);
     }
   }
