@@ -262,8 +262,6 @@ export class PublicService {
 
       beneMetadata = {
         publicVerify: true,
-        transactionId,
-        verifiedAt: new Date().toISOString(),
         bankName: rawBankName,
         ...this.bankProvider.maskAccountDetails({
           accountNumber: rawAccountNumber,
