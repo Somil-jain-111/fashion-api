@@ -13,6 +13,7 @@ import {
   Min,
 } from 'class-validator';
 import { InvoiceHistoryStatus } from '../enum/invoice-scan-session.enum';
+import { ScanExceptionStatus } from '../enum/exception.enum';
 
 export class ValidateInvoiceDto {
   @IsString()
@@ -93,4 +94,45 @@ export class InvoiceSummaryResponseDto {
   alreadyScanned: number;
   remainingPairs: number;
   resume: boolean;
+}
+
+
+export class RemovePairParamsDto {
+  @IsString()
+  @Length(1, 100)
+  pairUid: string;
+}
+
+export class UpdateScanAgeDto {
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(90)
+  scanAgeDays: number;
+
+  @IsString()
+  @Length(1, 500)
+  reason: string;
+
+  @IsOptional()
+  @IsString()
+  @Length(1, 100)
+  approvalReference?: string;
+}
+
+export class ReviewExceptionDto {
+  @IsString()
+  status: ScanExceptionStatus;
+
+  @IsOptional()
+  @IsString()
+  @Length(1, 1000)
+  notes?: string;
+}
+
+export class UpdatePointsExpiryDto {
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  expiryDays: number;
 }

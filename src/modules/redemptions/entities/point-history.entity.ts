@@ -57,6 +57,12 @@ export class PointHistory extends BaseEntity {
   @Column({ type: 'varchar', length: 100, nullable: true, unique: true })
   transaction_id?: string | null;
 
+  @Column({ name: 'expires_at', type: 'timestamp', nullable: true })
+  expires_at?: Date;
+
+  @Column({ name: 'remaining_points', type: 'int', default: 0 })
+  remaining_points: number;
+
   @ManyToOne(() => User, (user) => user.pointHistories, {
     nullable: false,
   })

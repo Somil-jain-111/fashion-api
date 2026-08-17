@@ -25,6 +25,7 @@ export class InvoiceRepository extends BaseRepository<InvoiceEntity> {
       .select([
         'invoice.id',
         'invoice.invoice_no',
+        'invoice.invoice_date',
         'invoice.status',
         'invoice.scan_status',
         'invoice.total_pairs',
@@ -185,6 +186,28 @@ export class PairHistoryRepository extends BaseRepository<PairScanHistoryEntity>
   async deleteBySession(sessionId: string, manager: EntityManager): Promise<void> {
     await manager.getRepository(PairScanHistoryEntity).delete({ sessionId });
   }
+
+    async deleteOneActive(sessionId: string, pairUid: string): Promise<boolean> {
+    const result = await this.repository.delete({
+      sessionId,
+      pairUid,
+      status: In([PairHistoryStatus.VALID, PairHistoryStatus.INVALID]),
+    });
+    return (result.affected ?? 0) > 0;
+  }
+
+    async deleteAllActiveBySession(sessionId: string): Promise<string[]> {
+    const rows = await this.repository.find({
+      where: { sessionId, status: In([PairHistoryStatus.VALID, PairHistoryStatus.INVALID]) },
+      select: ['pairUid'],
+    });
+    if (!rows.length) return [];
+    await this.repository.delete({
+      sessionId,
+      status: In([PairHistoryStatus.VALID, PairHistoryStatus.INVALID]),
+    });
+    return rows.map((row) => row.pairUid);
+  }
 }
 
 @Injectable()
@@ -294,6 +317,91 @@ export class InvoicePairRepository extends BaseRepository<InvoicePairDetailEntit
       { status, scanned_by: scannedBy, scanned_at: new Date() }
     );
   }
+
+   async revertStatusByUids(
+    invoiceId: string,
+    pairUids: string[],
+    manager?: EntityManager
+  ): Promise<void> {
+    if (!pairUids.length) return;
+    const repository = manager?.getRepository(InvoicePairDetailEntity) ?? this.repository;
+    const pairs = await repository
+      .createQueryBuilder('pair')
+      .select(['pair.id'])
+      .innerJoin('pair.assortment', 'assortment')
+      .where('assortment.invoice_id = :invoiceId', { invoiceId })
+      .andWhere('pair.pair_uid IN (:...pairUids)', { pairUids })
+      .getMany();
+    if (!pairs.length) return;
+    await repository.update(
+      { id: In(pairs.map((pair) => pair.id)) },
+      { status: InvoicePairScanStatus.UNSCANNED, scanned_by: null, scanned_at: null }
+    );
+  }
+
+  async findItemCodesForPairs(
+  invoiceId: string,
+  pairUids: string[],
+): Promise<Map<string, string>> {
+  if (!pairUids.length) {
+    return new Map();
+  }
+
+  const rows = await this.repository
+    .createQueryBuilder('pair')
+    .select('pair.pair_uid', 'pairUid')
+    .addSelect('assortment.parent_item_code', 'itemCode')
+    .innerJoin('pair.assortment', 'assortment')
+    .where('assortment.invoice_id = :invoiceId', {
+      invoiceId,
+    })
+    .andWhere('pair.pair_uid IN (:...pairUids)', {
+      pairUids,
+    })
+    .getRawMany();
+
+  return new Map(
+    rows.map((row) => [
+      row.pairUid,
+      row.itemCode,
+    ]),
+  );
+}
+
+async countScannedByItemCode(
+  invoiceId: string,
+): Promise<Map<string, number>> {
+  const rows = await this.repository
+    .createQueryBuilder('pair')
+    .select(
+      'assortment.parent_item_code',
+      'itemCode',
+    )
+    .addSelect('COUNT(*)', 'cnt')
+    .innerJoin('pair.assortment', 'assortment')
+    .where('assortment.invoice_id = :invoiceId', {
+      invoiceId,
+    })
+    .andWhere('pair.status IN (:...statuses)', {
+      statuses: [
+        InvoicePairScanStatus.SCANNED,
+        InvoicePairScanStatus.REDEEMED,
+      ],
+    })
+    .groupBy('assortment.parent_item_code')
+    .getRawMany();
+
+  const map = new Map<string, number>();
+
+  for (const row of rows) {
+    map.set(
+      row.itemCode,
+      Number(row.cnt),
+    );
+  }
+
+  return map;
+}
 }
 
 @Injectable()
@@ -303,6 +411,24 @@ export class UserRewardRepository {
   async addPoints(userId: string, points: number, manager: EntityManager): Promise<number> {
     const repository = manager.getRepository(User);
     await repository.increment({ id: Number(userId) }, 'points', points);
+    const user = await repository.findOne({
+      select: { id: true, points: true },
+      where: { id: Number(userId) },
+    });
+    return Number(user?.points ?? 0);
+  }
+
+   async deductPoints(userId: string, points: number, manager: EntityManager): Promise<number> {
+    if (points <= 0) return this.currentBalance(userId, manager);
+    const repository = manager.getRepository(User);
+    const current = await this.currentBalance(userId, manager);
+    const deduction = Math.min(current, points);
+    if (deduction > 0) await repository.decrement({ id: Number(userId) }, 'points', deduction);
+    return this.currentBalance(userId, manager);
+  }
+
+  private async currentBalance(userId: string, manager: EntityManager): Promise<number> {
+    const repository = manager.getRepository(User);
     const user = await repository.findOne({
       select: { id: true, points: true },
       where: { id: Number(userId) },
@@ -322,6 +448,7 @@ export class InvoicePointHistoryRepository {
       balance: number;
       transactionId: string;
       description: string;
+      expiresAt?: Date; 
     },
     manager: EntityManager
   ): Promise<PointHistory> {
@@ -338,7 +465,26 @@ export class InvoicePointHistoryRepository {
         year: String(new Date().getFullYear()),
         user_remaining_points: data.balance,
         transaction_id: data.transactionId,
+        expires_at: data.expiresAt,
+        remaining_points: data.points,
       })
     );
+  }
+
+    async findExpirable(asOf: Date, manager: EntityManager): Promise<PointHistory[]> {
+    return manager
+      .getRepository(PointHistory)
+      .createQueryBuilder('history')
+      .where('history.status = :status', { status: PointStatusEnum.added })
+      .andWhere('history.expires_at IS NOT NULL')
+      .andWhere('history.expires_at <= :asOf', { asOf })
+      .andWhere('history.remaining_points > 0')
+      .getMany();
+  }
+
+  async markExpired(id: string, manager: EntityManager): Promise<void> {
+    await manager
+      .getRepository(PointHistory)
+      .update({ id } as any, { status: PointStatusEnum.expired, remaining_points: 0 } as any);
   }
 }

@@ -12,6 +12,11 @@ import {
   InvoiceSessionRepository,
   PairHistoryRepository,
   UserRewardRepository,
+  RetailerScanAgeRepository,
+  MasterCatalogueRepository,
+  InvoiceExceptionRepository,
+  ScanAuditRepository,
+  InvoiceItemRepository,
 } from './repository';
 import {
   AuditService,
@@ -24,6 +29,15 @@ import {
   RewardService,
   ScanSessionService,
 } from './services';
+import { InvoiceAuditService } from './services/invoice-audit.service';
+import { RetailerScanAgeService } from './services/retailer-scan-age.service';
+import { RateValidationService } from './services/rate-validation.service';
+import { SkuQuantityValidationService } from './services/sku-quantity-validation.service';
+import { InvoiceExceptionService } from './services/invoice-exception.service';
+import { SystemConfigRepository } from 'src/default/common/repositories/system-config.repository';
+import { PointsExpiryConfigService } from '../redemptions/services/points-expiry.service';
+import { InvoiceExceptionsController } from './invoice-exceptions.controller';
+import { RetailerScanAgeController } from './retailer-scan-age.controller';
 
 @Module({
   imports: [
@@ -43,7 +57,7 @@ import {
     }),
     BullModule.registerQueue({ name: 'invoice-audit' }),
   ],
-  controllers: [InvoicesController],
+  controllers: [InvoicesController, InvoiceExceptionsController, RetailerScanAgeController ],
   providers: [
     InvoiceRepository,
     InvoiceSessionRepository,
@@ -61,6 +75,20 @@ import {
     InvoiceAuditProcessor,
     ScanSessionService,
     InvoiceService,
+
+    RetailerScanAgeRepository,
+    MasterCatalogueRepository,
+    InvoiceExceptionRepository,
+    ScanAuditRepository,
+    InvoiceItemRepository,
+
+    InvoiceAuditService,
+    RetailerScanAgeService,
+    RateValidationService,
+    SkuQuantityValidationService,
+    InvoiceExceptionService,
+    SystemConfigRepository,
+    PointsExpiryConfigService
   ],
   exports: [InvoiceService],
 })

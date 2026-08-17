@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   DefaultValuePipe,
+  Delete,
   Get,
   Param,
   ParseIntPipe,
@@ -59,6 +60,22 @@ export class InvoicesController {
     return DataSanitizer.sanitizeData(response);
   }
 
+    @Delete('session/:sessionId/pairs/:pairUid')
+    async removePair(
+      @Req() request: any,
+      @Param('sessionId') sessionId: string,
+      @Param('pairUid') pairUid: string
+    ) {
+      const response = await this.invoices.removePair(sessionId, String(request.user.id), pairUid);
+      return DataSanitizer.sanitizeData(response);
+    }
+  
+  @Delete('session/:sessionId/pairs')
+  async removeAllPairs(@Req() request: any, @Param('sessionId') sessionId: string) {
+    const response = await this.invoices.removeAllPairs(sessionId, String(request.user.id));
+    return DataSanitizer.sanitizeData(response);
+  }
+  
   @NoCache()
   @Get('session/:sessionId')
   async progress(@Req() request: any, @Param('sessionId') sessionId: string) {
