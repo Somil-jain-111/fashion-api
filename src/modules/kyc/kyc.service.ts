@@ -196,7 +196,7 @@ export class KycService {
     /**
      * 6. Call provider
      */
-    const transactionId = await ReferenceIdUtil.generateKycReferenceId(KycType.AADHAAR);
+    const transactionId = ReferenceIdUtil.generateKycReferenceId(KycType.AADHAAR);
 
     const providerResult = await this.aadhaarProvider.generateOtp({
       aadhaarNumber: aadharNumber,
@@ -448,7 +448,7 @@ export class KycService {
       throw new BusinessException(ERROR_CODES.KYC.AADHAAR_ALREADY_VERIFIED);
     }
 
-    const referenceId = await ReferenceIdUtil.generateKycReferenceId(KycType.AADHAAR);
+    const referenceId = ReferenceIdUtil.generateKycReferenceId(KycType.AADHAAR);
 
     const maskedAadhaar = this.aadhaarProvider.maskAadhaarNumber(aadharNumber);
 
@@ -547,7 +547,7 @@ export class KycService {
       throw new BusinessException(ERROR_CODES.KYC.PAN_ALREADY_IN_USE);
     }
 
-    const transactionId = await ReferenceIdUtil.generateKycReferenceId(KycType.PAN);
+    const transactionId = ReferenceIdUtil.generateKycReferenceId(KycType.PAN);
 
     const panProviderResult = await this.panProvider.verifyPan({
       panCard: pan,
@@ -586,7 +586,7 @@ export class KycService {
     const nameMatchResult = await this.nameMatchProvider.matchName({
       userName: panApiData?.full_name,
       apiUserName: user?.username,
-      transactionId: await ReferenceIdUtil.generateKycReferenceId(KycType.NAME_MATCH),
+      transactionId: ReferenceIdUtil.generateKycReferenceId(KycType.NAME_MATCH),
     });
 
     const matchScore = Number(nameMatchResult?.responseData?.data?.match_score || 0);
@@ -704,7 +704,7 @@ export class KycService {
       throw new BusinessException(ERROR_CODES.KYC.PAN_ALREADY_IN_USE);
     }
 
-    const transactionId = await ReferenceIdUtil.generateKycReferenceId(KycType.BENE_PAN);
+    const transactionId = ReferenceIdUtil.generateKycReferenceId(KycType.BENE_PAN);
 
     const panProviderResult = await this.panProvider.verifyPan({
       panCard: pan,
@@ -743,7 +743,7 @@ export class KycService {
     const nameMatchResult = await this.nameMatchProvider.matchName({
       userName: panApiData?.full_name,
       apiUserName: beneficiary_name,
-      transactionId: await ReferenceIdUtil.generateKycReferenceId(KycType.NAME_MATCH),
+      transactionId: ReferenceIdUtil.generateKycReferenceId(KycType.NAME_MATCH),
     });
 
     const matchScore = Number(nameMatchResult?.responseData?.data?.match_score || 0);
@@ -859,7 +859,7 @@ export class KycService {
     //   throw new BusinessException(ERROR_CODES.KYC.AADHAAR_ALREADY_VERIFIED);
     // }
 
-    const referenceId = await ReferenceIdUtil.generateKycReferenceId(KycType.BENE_AADHAAR);
+    const referenceId = ReferenceIdUtil.generateKycReferenceId(KycType.BENE_AADHAAR);
 
     const maskedAadhaar = this.aadhaarProvider.maskAadhaarNumber(aadharNumber);
 
@@ -965,7 +965,7 @@ export class KycService {
       });
     }
 
-    const transactionId = await ReferenceIdUtil.generateKycReferenceId(KycType.GST);
+    const transactionId = ReferenceIdUtil.generateKycReferenceId(KycType.GST);
 
     const gstProviderResult = await this.gstProvider.verifyGst({
       gstNumber: gst,
@@ -1108,7 +1108,7 @@ export class KycService {
     }
 
     /** 5️⃣ Call 3rd-party Bank Verification API */
-    const transactionId = await ReferenceIdUtil.generateKycReferenceId(KycType.BANK);
+    const transactionId = ReferenceIdUtil.generateKycReferenceId(KycType.BANK);
 
     const bankResult = await this.bankProvider.validateBankAccount({
       accountNumber: normalizedAccountNumber,
@@ -1147,7 +1147,7 @@ export class KycService {
     const nameMatchResult = await this.nameMatchProvider.matchName({
       userName: accountHolderNameFromApi,
       apiUserName: normalizedHolderName,
-      transactionId: await ReferenceIdUtil.generateKycReferenceId(KycType.NAME_MATCH),
+      transactionId: ReferenceIdUtil.generateKycReferenceId(KycType.NAME_MATCH),
     });
 
     const matchScore = Number(nameMatchResult?.responseData?.data?.match_score || 0);
@@ -1290,7 +1290,7 @@ export class KycService {
     }
 
     /** 4️⃣ Call 3rd-party UPI Verification API */
-    const transactionId = await ReferenceIdUtil.generateKycReferenceId(KycType.UPI);
+    const transactionId = ReferenceIdUtil.generateKycReferenceId(KycType.UPI);
 
     const upiResult = await this.upiProvider.validateUpi({
       upi: normalizedUpi,
@@ -1456,7 +1456,7 @@ export class KycService {
 
       if (isSelf && userPan && userAadhaar) {
         /** 1️⃣ If relationship is SELF, create copy of user PAN as BENE_PAN using existing values as is */
-        const refIdPan = await ReferenceIdUtil.generateKycReferenceId(KycType.BENE_PAN);
+        const refIdPan = ReferenceIdUtil.generateKycReferenceId(KycType.BENE_PAN);
 
         panVerification = await this.kycVerificationRepository.save(
           {
@@ -1476,7 +1476,7 @@ export class KycService {
         );
 
         /** 2️⃣ If relationship is SELF, create copy of user Aadhaar as BENE_AADHAAR using existing values as is */
-        const refIdAadhaar = await ReferenceIdUtil.generateKycReferenceId(KycType.BENE_AADHAAR);
+        const refIdAadhaar = ReferenceIdUtil.generateKycReferenceId(KycType.BENE_AADHAAR);
 
         aadhaarVerification = await this.kycVerificationRepository.save(
           {
@@ -1705,7 +1705,7 @@ export class KycService {
       increment: true,
     });
 
-    let otpPlain = await OtpHelper.generateOtp();
+    let otpPlain = OtpHelper.generateOtp();
     const isProd = this.appConfigService.isProduction() || this.appConfigService.isQa();
 
     if (!isProd) {
