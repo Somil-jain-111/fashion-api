@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { DataSource, EntityManager, In, QueryRunner } from 'typeorm';
+import { Brackets, DataSource, EntityManager, In, QueryRunner } from 'typeorm';
 import { BaseRepository } from 'src/default/common/repositories/base.repository';
 import { InvoiceEntity } from '../entities/invoice.entity';
 import { InvoiceScanSessionEntity } from '../entities/invoice-scan-session.entity';
@@ -339,69 +339,51 @@ export class InvoicePairRepository extends BaseRepository<InvoicePairDetailEntit
     );
   }
 
-  async findItemCodesForPairs(
-  invoiceId: string,
-  pairUids: string[],
-): Promise<Map<string, string>> {
-  if (!pairUids.length) {
-    return new Map();
+  /**
+   * Single query replacing the old findItemCodesForPairs + countScannedByItemCode pair —
+   * both hit the same pair-joined-to-assortment scan for the invoice, so they're merged
+   * into one round trip: fetch only the candidate pairs plus whatever is already scanned
+   * (not the whole invoice), then derive the item-code map and per-item scanned counts
+   * in memory instead of running two separate DB scans for large invoices.
+   */
+  async getPairScanContext(
+    invoiceId: string,
+    pairUids: string[],
+  ): Promise<{ itemCodeByPair: Map<string, string>; alreadyScanned: Map<string, number> }> {
+    const scannedStatuses = [InvoicePairScanStatus.SCANNED, InvoicePairScanStatus.REDEEMED];
+
+    const rows = await this.repository
+      .createQueryBuilder('pair')
+      .select('pair.pair_uid', 'pairUid')
+      .addSelect('assortment.parent_item_code', 'itemCode')
+      .addSelect('pair.status', 'status')
+      .innerJoin('pair.assortment', 'assortment')
+      .where('assortment.invoice_id = :invoiceId', { invoiceId })
+      .andWhere(
+        new Brackets((qb) => {
+          qb.where('pair.status IN (:...scannedStatuses)', { scannedStatuses });
+          if (pairUids.length) {
+            qb.orWhere('pair.pair_uid IN (:...pairUids)', { pairUids });
+          }
+        }),
+      )
+      .getRawMany();
+
+    const candidateUids = new Set(pairUids);
+    const itemCodeByPair = new Map<string, string>();
+    const alreadyScanned = new Map<string, number>();
+
+    for (const row of rows) {
+      if (candidateUids.has(row.pairUid)) {
+        itemCodeByPair.set(row.pairUid, row.itemCode);
+      }
+      if (scannedStatuses.includes(row.status)) {
+        alreadyScanned.set(row.itemCode, (alreadyScanned.get(row.itemCode) ?? 0) + 1);
+      }
+    }
+
+    return { itemCodeByPair, alreadyScanned };
   }
-
-  const rows = await this.repository
-    .createQueryBuilder('pair')
-    .select('pair.pair_uid', 'pairUid')
-    .addSelect('assortment.parent_item_code', 'itemCode')
-    .innerJoin('pair.assortment', 'assortment')
-    .where('assortment.invoice_id = :invoiceId', {
-      invoiceId,
-    })
-    .andWhere('pair.pair_uid IN (:...pairUids)', {
-      pairUids,
-    })
-    .getRawMany();
-
-  return new Map(
-    rows.map((row) => [
-      row.pairUid,
-      row.itemCode,
-    ]),
-  );
-}
-
-async countScannedByItemCode(
-  invoiceId: string,
-): Promise<Map<string, number>> {
-  const rows = await this.repository
-    .createQueryBuilder('pair')
-    .select(
-      'assortment.parent_item_code',
-      'itemCode',
-    )
-    .addSelect('COUNT(*)', 'cnt')
-    .innerJoin('pair.assortment', 'assortment')
-    .where('assortment.invoice_id = :invoiceId', {
-      invoiceId,
-    })
-    .andWhere('pair.status IN (:...statuses)', {
-      statuses: [
-        InvoicePairScanStatus.SCANNED,
-        InvoicePairScanStatus.REDEEMED,
-      ],
-    })
-    .groupBy('assortment.parent_item_code')
-    .getRawMany();
-
-  const map = new Map<string, number>();
-
-  for (const row of rows) {
-    map.set(
-      row.itemCode,
-      Number(row.cnt),
-    );
-  }
-
-  return map;
-}
 }
 
 @Injectable()

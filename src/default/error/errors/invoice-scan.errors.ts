@@ -78,4 +78,19 @@ export const INVOICE_SCAN_ERRORS = {
     message: 'This pair is not part of the current active scan session.',
     statusCode: 404,
   },
+  INVOICE_ALREADY_EXISTS: {
+    code: 'ISC_023',
+    message: 'An invoice with this invoice number and master ID has already been ingested',
+    statusCode: 409,
+  },
+  INVALID_ITEM_REFERENCE: {
+    code: 'ISC_024',
+    message: 'assortmentdetail[{index}].itemcode "{itemcode}" does not match any entry in itemlist',
+    statusCode: 422,
+  },
+  INVOICE_DISTRIBUTOR_MISMATCH: {
+    code: 'ISC_025',
+    message: 'This invoice does not belong to a distributor mapped to your account',
+    statusCode: 403,
+  },
 } as const;

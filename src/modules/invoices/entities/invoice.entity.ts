@@ -22,6 +22,7 @@ import { InvoiceType } from '../enum/invoice-scan-session.enum';
 @Index('idx_invoice_date', ['invoice_date'])
 @Index('idx_invoice_status', ['status'])
 @Index('idx_invoice_scan_status', ['scan_status'])
+@Index('idx_invoice_distributor_id', ['distributor'])
 export class InvoiceEntity extends BaseEntity {
   @PrimaryGeneratedColumn({ type: 'bigint', unsigned: true })
   id: string;
@@ -32,6 +33,15 @@ export class InvoiceEntity extends BaseEntity {
   })
   @JoinColumn({ name: 'user_id' })
   user!: User;
+
+  /**
+   * The distributor this invoice was issued by. Used by the retailer-invoice validate
+   * flow to confirm the invoice actually belongs to a distributor the retailer is
+   * mapped to (via UserMapping), independent of whichever user_id it was ingested under.
+   */
+  @ManyToOne(() => User, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'distributor_id' })
+  distributor?: User;
 
   @Column({ name: 'invoice_no', type: 'varchar', length: 100 })
   invoice_no: string;

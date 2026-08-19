@@ -9,7 +9,14 @@ export class RolesGuard implements CanActivate {
   constructor(private readonly reflector: Reflector) {}
 
   canActivate(context: ExecutionContext): boolean {
-    const requiredRoles = this.reflector.get<UserRole[]>('roles', context.getHandler());
+    // getAllAndOverride: a handler-level @Roles() wins over a class-level one (intentional
+    // per-method override), but a class-level-only @Roles() must still be enforced — reading
+    // only context.getHandler() silently no-ops every controller that applies @Roles() at
+    // the class level instead of per-method.
+    const requiredRoles = this.reflector.getAllAndOverride<UserRole[]>('roles', [
+      context.getHandler(),
+      context.getClass(),
+    ]);
     if (!requiredRoles || requiredRoles.length === 0) {
       return true;
     }

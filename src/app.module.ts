@@ -55,6 +55,7 @@ import { AdminModule } from './modules/admin/admin.module';
 import { RedemptionCartModule } from './modules/redemption-cart/redemption-cart.module';
 import { SmsModule } from './modules/sms/sms.module';
 import { UserModule } from './modules/user/user.module';
+import { RetailerInvoiceModule } from './modules/retailer-invoice/retailer-invoice.module';
 
 @Module({
   imports: [
@@ -108,6 +109,7 @@ import { UserModule } from './modules/user/user.module';
     RedemptionCartModule,
     SmsModule,
     UserModule,
+    RetailerInvoiceModule,
   ],
   providers: [
     {

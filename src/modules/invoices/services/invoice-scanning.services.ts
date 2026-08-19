@@ -490,7 +490,7 @@ export class ScanSessionService {
       // >>> NEW: rate validation (Q3), scoped to the item codes that made it
       // past the SKU-quantity check — no point rate-checking a SKU we're
       // about to reject anyway.
-      const itemCodesForAllowed = await this.pairRepository.findItemCodesForPairs(
+      const { itemCodeByPair: itemCodesForAllowed } = await this.pairRepository.getPairScanContext(
         session.invoiceId,
         skuResult.allowed
       );

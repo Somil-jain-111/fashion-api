@@ -7,9 +7,11 @@ import {
   Index,
   JoinColumn,
   ManyToOne,
+  OneToMany,
   PrimaryGeneratedColumn,
 } from 'typeorm';
 import { InvoiceEntity } from './invoice.entity';
+import { InvoiceAssortmentEntity } from '../../auth/entities';
 
 @Entity({ name: 'invoice_items' })
 @Index('idx_invoice_items_invoice_id', ['invoice_id'])
@@ -62,4 +64,7 @@ export class InvoiceItemEntity extends BaseEntity {
   })
   @JoinColumn({ name: 'invoice_id' })
   invoice: InvoiceEntity;
+
+  @OneToMany(() => InvoiceAssortmentEntity, (assortment) => assortment.item)
+  assortments: InvoiceAssortmentEntity[];
 }

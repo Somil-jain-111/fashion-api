@@ -38,6 +38,10 @@ import { SystemConfigRepository } from 'src/default/common/repositories/system-c
 import { PointsExpiryConfigService } from '../redemptions/services/points-expiry.service';
 import { InvoiceExceptionsController } from './invoice-exceptions.controller';
 import { RetailerScanAgeController } from './retailer-scan-age.controller';
+import { InvoiceIngestionController } from './invoice-ingestion.controller';
+import { InvoiceIngestionRepository } from './repository/invoice-ingestion.repository';
+import { InvoiceIngestionService } from './services/invoice-ingestion.service';
+import { UserModule } from '../user/user.module';
 
 @Module({
   imports: [
@@ -56,8 +60,14 @@ import { RetailerScanAgeController } from './retailer-scan-age.controller';
       }),
     }),
     BullModule.registerQueue({ name: 'invoice-audit' }),
+    UserModule,
   ],
-  controllers: [InvoicesController, InvoiceExceptionsController, RetailerScanAgeController ],
+  controllers: [
+    InvoicesController,
+    InvoiceExceptionsController,
+    RetailerScanAgeController,
+    InvoiceIngestionController,
+  ],
   providers: [
     InvoiceRepository,
     InvoiceSessionRepository,
@@ -88,7 +98,10 @@ import { RetailerScanAgeController } from './retailer-scan-age.controller';
     SkuQuantityValidationService,
     InvoiceExceptionService,
     SystemConfigRepository,
-    PointsExpiryConfigService
+    PointsExpiryConfigService,
+
+    InvoiceIngestionRepository,
+    InvoiceIngestionService,
   ],
   exports: [InvoiceService],
 })

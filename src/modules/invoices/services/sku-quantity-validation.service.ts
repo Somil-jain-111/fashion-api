@@ -29,16 +29,12 @@ export class SkuQuantityValidationService {
     }
 
     const [
-      itemCodeByPair,
-      alreadyScanned,
+      { itemCodeByPair, alreadyScanned },
       invoiceQuantity,
     ] = await Promise.all([
-      this.pairRepository.findItemCodesForPairs(
+      this.pairRepository.getPairScanContext(
         invoiceId,
         candidatePairUids,
-      ),
-      this.pairRepository.countScannedByItemCode(
-        invoiceId,
       ),
       this.invoiceItemRepository.quantityByItemCode(
         invoiceId,
