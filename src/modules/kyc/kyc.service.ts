@@ -41,6 +41,7 @@ import { MAX_OTP_VERIFY_ATTEMPTS } from '../auth/constants/auth.constants';
 import { VerifyBeneficiaryOtpDto } from './dto/verify-beneficiary-otp.dto';
 import { ResendBeneficiaryOtpDto } from './dto/resend-beneficiary-otp.dto';
 import {
+  BeneficiaryRelationshipType,
   BeneficiaryRelationshipTypeLabels,
   BeneficiaryStatus,
   BeneficiaryType,
@@ -1175,9 +1176,11 @@ export class KycService {
     }
 
     /** 7️⃣ Save Beneficiary */
+    const isSelf = relationship === BeneficiaryRelationshipType.SELF;
     const relationshipStr = relationship?.trim() || null;
-    const nameStr = (beneficiary_name || bankHolderName)?.trim() || null;
-    const mobileNumberStr = String(mobile)?.trim() || null;
+    const nameStr = (isSelf ? user.username : beneficiary_name || bankHolderName)?.trim() || null;
+    const mobileNumberStr =
+      (isSelf ? user.mobile : mobile ? String(mobile) : user.mobile)?.trim() || null;
     const panNumberStr = panNumber?.trim() || null;
     const aadhaarNumberStr = aadhaarNumber?.trim() || null;
     const addressStr = address?.trim() || null;
@@ -1312,9 +1315,11 @@ export class KycService {
     }
 
     /** 5️⃣ Save Beneficiary */
+    const isSelf = relationship === BeneficiaryRelationshipType.SELF;
     const relationshipStr = relationship?.trim() || null;
-    const nameStr = (beneficiary_name || bankHolderName)?.trim() || null;
-    const mobileNumberStr = String(mobile)?.trim() || null;
+    const nameStr = (isSelf ? user.username : beneficiary_name || bankHolderName)?.trim() || null;
+    const mobileNumberStr =
+      (isSelf ? user.mobile : mobile ? String(mobile) : user.mobile)?.trim() || null;
     const panNumberStr = panNumber?.trim() || null;
     const aadhaarNumberStr = aadhaarNumber?.trim() || null;
     const addressStr = address?.trim() || null;
@@ -1382,7 +1387,9 @@ export class KycService {
    */
   async addBeneficiary(userId: number, dto: AddBeneficiaryDto): Promise<any> {
     const user = await this.userAuthValidator.validateActiveUserById(userId);
-    const mobile = dto.mobile?.trim() || user.mobile;
+    const isSelf = dto.relationship === BeneficiaryRelationshipType.SELF;
+    const mobile = isSelf ? user.mobile : dto.mobile?.trim() || user.mobile;
+    const beneficiaryName = isSelf ? user.username : dto.beneficiary_name;
 
     const otpValidation = await this.userValidator.validateOtpAttempts({
       mobile,
@@ -1412,7 +1419,7 @@ export class KycService {
         const panRes = await this.verifyBeneficiaryPanInternal(
           userId,
           { panCard, panImage: '' },
-          dto.beneficiary_name,
+          beneficiaryName,
           queryRunner
         );
         panVerification = panRes?.panVerification || null;
@@ -1430,7 +1437,7 @@ export class KycService {
             aadharFrontImage: '',
             aadharBackImage: '',
           },
-          dto.beneficiary_name,
+          beneficiaryName,
           queryRunner
         );
         aadhaarVerification = aadhaarRes?.aadhaarVerification || null;
