@@ -214,6 +214,10 @@ export class OnboardingService {
         storeInfo.lng = dto.lng;
       }
 
+      if (dto.storeName) {
+        storeInfo.storeName = dto.storeName;
+      }
+
       if (dto.address1) {
         storeInfo.address1 = dto.address1;
       }
@@ -255,6 +259,7 @@ export class OnboardingService {
         user: { id: userId } as any,
         lat: dto.lat,
         lng: dto.lng,
+        storeName: dto.storeName,
         address1: dto.address1,
         address2: dto.address2 || null,
         pincode: dto.pincode,
@@ -265,59 +270,10 @@ export class OnboardingService {
         addressProofType: dto.addressProofType,
         addressProofImageUrl: dto.addressProofImageUrl || null,
       });
-
-      // Link store information to user
-      // await this.userRepository.updateById(userId, {
-      //   storeInformation: { id: storeInfo.id } as any,
-      // });
     }
 
-    return {
-      message: 'Store info saved successfully',
-      data: storeInfo,
-    };
+    return storeInfo;
   }
-
-  // async getStatus(userId: number) {
-  //   const user = await this.userRepository.findOne({ id: userId }, ['storeInformation']);
-
-  //   if (!user) {
-  //     throw new BusinessException(ERROR_CODES.USER.USER_NOT_FOUND);
-  //   }
-
-  //   const basicInfoComplete = !!(user.username && user.partnerType);
-
-  //   const panKyc = await this.kycVerificationRepository.findVerifiedByUserIdAndType(
-  //     userId,
-  //     KycType.PAN
-  //   );
-  //   const panKycComplete = !!panKyc;
-
-  //   let gstKycComplete = false;
-  //   let storeInfoComplete = false;
-
-  //   if (user.partnerType === UserPartnerType.ENTITY) {
-  //     const gstKyc = await this.kycVerificationRepository.findVerifiedByUserIdAndType(
-  //       userId,
-  //       KycType.GST
-  //     );
-  //     gstKycComplete = !!gstKyc;
-  //     storeInfoComplete = !!user.storeInformation;
-  //   } else {
-  //     // For individual, GST KYC and store info are not mandatory by flow description
-  //     gstKycComplete = true;
-  //     storeInfoComplete = true;
-  //   }
-
-  //   return {
-  //     partnerType: user.partnerType,
-  //     basicInfoComplete,
-  //     panKycComplete,
-  //     gstKycComplete,
-  //     storeInfoComplete,
-  //     overallStatus: user.status,
-  //   };
-  // }
 
   async getStatus(userId: number) {
     const user = await this.userRepository.findOne({ id: userId }, ['storeInformation']);

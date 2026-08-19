@@ -32,6 +32,7 @@ export class AuthUserResponseDto {
   gstDetails?: KycDetailsResponseDto;
   blockedDetails?: TempBlockResponseDto | null;
   storeInformation?: {
+    storeName?: string;
     address1?: string;
     address2?: string;
     city?: string;
