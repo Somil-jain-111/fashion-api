@@ -41,11 +41,20 @@ export class OrderPlacementHelper {
         color.name.toLowerCase() === input.color.toLowerCase() || color.code === input.color
     );
     const size = product.sizes.find((item) => item.size === input.size);
+
+    if (!hasColor || !size?.isAvailable) {
+      throw new BusinessException(ERROR_CODES.ORDER_ITEM.INVALID_ORDER_ITEM);
+    }
+
+    if (Number(input.cartonSize) === 1) {
+      return;
+    }
+
     const carton = product.cartons.find(
       (item) => Number(item.articles) === Number(input.cartonSize)
     );
 
-    if (!hasColor || !size?.isAvailable || !carton || !carton.sizes.includes(input.size)) {
+    if (!carton || !carton.sizes.includes(input.size)) {
       throw new BusinessException(ERROR_CODES.ORDER_ITEM.INVALID_ORDER_ITEM);
     }
   }
