@@ -22,6 +22,7 @@ export class UserResponseMapper {
       status: user.status,
       points: String(user.points),
       storeInformation: {
+        storeName: user?.storeInformation?.storeName,
         address1: user?.storeInformation?.address1,
         address2: user.storeInformation?.address2,
         city: user?.storeInformation?.city,
