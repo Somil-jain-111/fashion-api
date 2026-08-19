@@ -35,24 +35,24 @@ export class UserResponseMapper {
       anniversary_date: user?.anniversary_date
         ? new Date(user.anniversary_date).toISOString()
         : null,
-      ...(panKyc && {
-        panDetails: {
-          status: panKyc?.status,
-          maskedDocumentNumber: panKyc?.maskedDocumentNumber,
-        },
-      }),
-      ...(aadhaarKyc && {
-        aadhaarDetails: {
-          status: aadhaarKyc?.status,
-          maskedDocumentNumber: aadhaarKyc?.maskedDocumentNumber,
-        },
-      }),
-      ...(gstKyc && {
-        gstDetails: {
-          status: gstKyc?.status,
-          maskedDocumentNumber: gstKyc?.maskedDocumentNumber,
-        },
-      }),
+      panDetails: panKyc
+        ? {
+            status: panKyc?.status,
+            maskedDocumentNumber: panKyc?.maskedDocumentNumber,
+          }
+        : null,
+      aadhaarDetails: aadhaarKyc
+        ? {
+            status: aadhaarKyc?.status,
+            maskedDocumentNumber: aadhaarKyc?.maskedDocumentNumber,
+          }
+        : null,
+      gstDetails: gstKyc
+        ? {
+            status: gstKyc?.status,
+            maskedDocumentNumber: gstKyc?.maskedDocumentNumber,
+          }
+        : null,
       blockedDetails: activeBlock
         ? {
             is_blocked: true,
