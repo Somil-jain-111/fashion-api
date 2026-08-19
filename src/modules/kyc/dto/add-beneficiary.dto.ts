@@ -31,7 +31,9 @@ export class AddBeneficiaryDto {
   @Transform(({ value }) => value?.toUpperCase()?.trim())
   ifsc?: string;
 
-  @ValidateIf((o) => o.type === BeneficiaryType.BANK && !o.name && !o.beneficiaryName)
+  @ValidateIf(
+    (o) => o.type === BeneficiaryType.BANK && o.relationship !== BeneficiaryRelationshipType.SELF
+  )
   @IsString()
   @IsNotEmpty({ message: 'Bank holder name is required for bank verification' })
   bankHolderName?: string;
@@ -52,10 +54,12 @@ export class AddBeneficiaryDto {
   @IsNotEmpty()
   relationship?: BeneficiaryRelationshipType;
 
+  @ValidateIf((o) => o.relationship !== BeneficiaryRelationshipType.SELF)
   @IsNotEmpty()
   @IsString()
   beneficiary_name?: string;
 
+  @ValidateIf((o) => o.relationship !== BeneficiaryRelationshipType.SELF)
   @IsNotEmpty({ message: 'Mobile number is required' })
   @IsString()
   @Matches(/^[6-9]\d{9}$/, {
@@ -63,15 +67,17 @@ export class AddBeneficiaryDto {
   })
   mobile?: string;
 
-  @IsNotEmpty()
+  @ValidateIf((o) => o.relationship !== BeneficiaryRelationshipType.SELF)
+  @IsNotEmpty({ message: 'PAN number is required' })
   @IsString()
   panNumber?: string;
 
-  @IsNotEmpty()
+  @ValidateIf((o) => o.relationship !== BeneficiaryRelationshipType.SELF)
+  @IsNotEmpty({ message: 'Aadhaar number is required' })
   @IsString()
   aadhaarNumber?: string;
 
-  @IsNotEmpty()
+  @IsNotEmpty({ message: 'Address is required' })
   @IsString()
   address?: string;
 }

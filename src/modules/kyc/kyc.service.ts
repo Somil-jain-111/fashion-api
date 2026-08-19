@@ -131,7 +131,6 @@ export class KycService {
   /**
    * Aadhaar Verification
    */
-
   async generateAadhaarOtp(userId: number, body: GenerateAadharOtpDto): Promise<any> {
     const tag = 'KycService.generateAadhaarOtp';
 
@@ -499,7 +498,6 @@ export class KycService {
   /**
    * PAN Verification
    */
-
   async verifyPan(userId: number, body: VerifyPanDto): Promise<any> {
     const tag = 'KycService.verifyPan';
 
@@ -915,7 +913,6 @@ export class KycService {
   /**
    * GST Verification
    */
-
   async verifyGst(userId: number, body: VerifyGstDto): Promise<any> {
     const tag = 'KycService.verifyGst';
     const { gstNumber } = body;
@@ -1047,7 +1044,6 @@ export class KycService {
   /**
    * Bank/UPI Verification
    */
-
   private async verifyAndAddBankBeneficiary(
     userId: number,
     dto: AddBeneficiaryDto,
@@ -1171,7 +1167,7 @@ export class KycService {
 
     if (!isNameMatched) {
       throw new BusinessException(ERROR_CODES.KYC.NAME_MATCH_FAILED, {
-        reason: 'Bank account holder name does not match profile name',
+        reason: 'Bank account holder name does not match with account details',
       });
     }
 
@@ -1200,8 +1196,16 @@ export class KycService {
       relationshipStr ? this.encryptKycData(relationshipStr) : null,
       nameStr ? this.encryptKycData(nameStr) : null,
       mobileNumberStr ? this.encryptKycData(mobileNumberStr) : null,
-      panNumberStr ? this.encryptKycData(panNumberStr) : null,
-      aadhaarNumberStr ? this.encryptKycData(aadhaarNumberStr) : null,
+      panVerification?.documentNumber
+        ? panVerification.documentNumber
+        : panNumberStr
+          ? this.encryptKycData(panNumberStr)
+          : null,
+      aadhaarVerification?.documentNumber
+        ? aadhaarVerification?.documentNumber
+        : aadhaarNumberStr
+          ? this.encryptKycData(aadhaarNumberStr)
+          : null,
       addressStr ? this.encryptKycData(addressStr) : null,
     ]);
 
@@ -1337,8 +1341,16 @@ export class KycService {
       relationshipStr ? this.encryptKycData(relationshipStr) : null,
       nameStr ? this.encryptKycData(nameStr) : null,
       mobileNumberStr ? this.encryptKycData(mobileNumberStr) : null,
-      panNumberStr ? this.encryptKycData(panNumberStr) : null,
-      aadhaarNumberStr ? this.encryptKycData(aadhaarNumberStr) : null,
+      panVerification?.documentNumber
+        ? panVerification.documentNumber
+        : panNumberStr
+          ? this.encryptKycData(panNumberStr)
+          : null,
+      aadhaarVerification?.documentNumber
+        ? aadhaarVerification?.documentNumber
+        : aadhaarNumberStr
+          ? this.encryptKycData(aadhaarNumberStr)
+          : null,
       addressStr ? this.encryptKycData(addressStr) : null,
     ]);
 
@@ -1388,6 +1400,34 @@ export class KycService {
   async addBeneficiary(userId: number, dto: AddBeneficiaryDto): Promise<any> {
     const user = await this.userAuthValidator.validateActiveUserById(userId);
     const isSelf = dto.relationship === BeneficiaryRelationshipType.SELF;
+
+    let userPan: KycVerificationEntity | null = null;
+    let userAadhaar: KycVerificationEntity | null = null;
+
+    if (isSelf) {
+      userPan = await this.kycVerificationRepository.findVerifiedByUserIdAndType(
+        userId,
+        KycType.PAN
+      );
+
+      if (!userPan) {
+        throw new BusinessException(ERROR_CODES.KYC.PAN_KYC_REQUIRED, {
+          reason: 'User PAN KYC is not verified',
+        });
+      }
+
+      userAadhaar = await this.kycVerificationRepository.findVerifiedByUserIdAndType(
+        userId,
+        KycType.AADHAAR
+      );
+
+      if (!userAadhaar) {
+        throw new BusinessException(ERROR_CODES.KYC.AADHAAR_VERIFICATION_FAILED, {
+          reason: 'User Aadhaar KYC is not verified',
+        });
+      }
+    }
+
     const mobile = isSelf ? user.mobile : dto.mobile?.trim() || user.mobile;
     const beneficiaryName = isSelf ? user.username : dto.beneficiary_name;
 
@@ -1411,36 +1451,79 @@ export class KycService {
     const encryptedOtp = CommonUtils.encrypt(otpPlain);
 
     const result = await this.transactionService.runInTransaction(async (queryRunner) => {
-      /** 1️⃣ If PAN provided, verify PAN & save under BENE_PAN in kyc_verifications */
-      const panCard = dto.panNumber?.toUpperCase()?.trim();
       let panVerification: KycVerificationEntity | null = null;
-
-      if (panCard) {
-        const panRes = await this.verifyBeneficiaryPanInternal(
-          userId,
-          { panCard, panImage: '' },
-          beneficiaryName,
-          queryRunner
-        );
-        panVerification = panRes?.panVerification || null;
-      }
-
-      /** 2️⃣ If Aadhaar provided, save Aadhaar under BENE_AADHAAR in kyc_verifications */
-      const aadharNumber = dto.aadhaarNumber?.trim();
       let aadhaarVerification: KycVerificationEntity | null = null;
 
-      if (aadharNumber) {
-        const aadhaarRes = await this.saveBeneficiaryAadhaarInternal(
-          userId,
+      if (isSelf && userPan && userAadhaar) {
+        /** 1️⃣ If relationship is SELF, create copy of user PAN as BENE_PAN using existing values as is */
+        const refIdPan = await ReferenceIdUtil.generateKycReferenceId(KycType.BENE_PAN);
+
+        panVerification = await this.kycVerificationRepository.save(
           {
-            aadharNumber,
-            aadharFrontImage: '',
-            aadharBackImage: '',
+            user: { id: userId },
+            type: KycType.BENE_PAN,
+            status: KycStatus.VERIFIED,
+            referenceId: refIdPan,
+            documentNumber: userPan.documentNumber,
+            maskedDocumentNumber: userPan.maskedDocumentNumber,
+            verifiedName: userPan.verifiedName,
+            provider: userPan.provider,
+            providerRequest: userPan.providerRequest,
+            providerResponse: userPan.providerResponse,
+            metadata: { ...(userPan.metadata || {}), copiedFromUserPan: true },
           },
-          beneficiaryName,
           queryRunner
         );
-        aadhaarVerification = aadhaarRes?.aadhaarVerification || null;
+
+        /** 2️⃣ If relationship is SELF, create copy of user Aadhaar as BENE_AADHAAR using existing values as is */
+        const refIdAadhaar = await ReferenceIdUtil.generateKycReferenceId(KycType.BENE_AADHAAR);
+
+        aadhaarVerification = await this.kycVerificationRepository.save(
+          {
+            user: { id: userId },
+            type: KycType.BENE_AADHAAR,
+            status: KycStatus.VERIFIED,
+            referenceId: refIdAadhaar,
+            documentNumber: userAadhaar.documentNumber,
+            maskedDocumentNumber: userAadhaar.maskedDocumentNumber,
+            verifiedName: userAadhaar.verifiedName,
+            provider: userAadhaar.provider,
+            providerRequest: userAadhaar.providerRequest,
+            providerResponse: userAadhaar.providerResponse,
+            metadata: { ...(userAadhaar.metadata || {}), copiedFromUserAadhaar: true },
+          },
+          queryRunner
+        );
+      } else {
+        /** 1️⃣ If PAN provided, verify PAN & save under BENE_PAN in kyc_verifications */
+        const panCard = dto.panNumber?.toUpperCase()?.trim();
+
+        if (panCard) {
+          const panRes = await this.verifyBeneficiaryPanInternal(
+            userId,
+            { panCard, panImage: '' },
+            beneficiaryName,
+            queryRunner
+          );
+          panVerification = panRes?.panVerification || null;
+        }
+
+        /** 2️⃣ If Aadhaar provided, save Aadhaar under BENE_AADHAAR in kyc_verifications */
+        const aadharNumber = dto.aadhaarNumber?.trim();
+
+        if (aadharNumber) {
+          const aadhaarRes = await this.saveBeneficiaryAadhaarInternal(
+            userId,
+            {
+              aadharNumber,
+              aadharFrontImage: '',
+              aadharBackImage: '',
+            },
+            beneficiaryName,
+            queryRunner
+          );
+          aadhaarVerification = aadhaarRes?.aadhaarVerification || null;
+        }
       }
 
       /** 3️⃣ Verify bank account or UPI and add beneficiary inside transaction */
