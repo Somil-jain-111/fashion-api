@@ -1205,9 +1205,9 @@ export class KycService {
     const metadata = {
       ...this.bankProvider.maskAccountDetails({
         accountNumber: normalizedAccountNumber,
-        ifsc: normalizedIfsc,
         bankHolderName: normalizedHolderName,
       }),
+      ifsc: normalizedIfsc,
     };
 
     const beneficiary = await this.beneficiaryRepository.createBeneficiary(
