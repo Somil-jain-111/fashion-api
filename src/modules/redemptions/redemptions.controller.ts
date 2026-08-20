@@ -16,12 +16,12 @@ import { RolesGuard } from 'src/default/common/guards/roles.guard';
 import { Roles } from 'src/default/common/decorators/roles.decorator';
 import { UserRole } from 'src/default/common/enums/user-type.enum';
 import { PlaceOrderDto } from './dto/place-order.dto';
-import { PlaceCartOrderDto } from '../redemption-cart/dto';
 import { NoCache } from 'src/default/cache/cache.decorator';
-import { ResponseMessage } from 'src/default/common/decorators/response-message.decorator';
 import { VerifyOrderDto } from './dto/verify-order.dto';
+import { VerifyCartOrderDto } from './dto/verify-cart-order.dto';
 import { GetOrdersQueryDto } from './dto/get-orders-query.dto';
 import { ResendOtpDto } from './dto/resend-otp.dto';
+import { ResponseMessage } from 'src/default/common/decorators/response-message.decorator';
 
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles([UserRole.RETAILER, UserRole.EMPLOYEE])
@@ -51,9 +51,9 @@ export class RedemptionsController {
   @NoCache()
   @UseInterceptors(IdempotencyInterceptor)
   @Post('place-cart-order')
-  @ResponseMessage('Cart order placed successfully. OTP has been sent.')
-  async placeCartOrder(@Req() req: any, @Body() body: PlaceCartOrderDto) {
-    const response = await this.redemptionsService.placeCartOrder(req.user.id, body);
+  @ResponseMessage('Cart order OTP sent successfully.')
+  async placeCartOrder(@Req() req: any) {
+    const response = await this.redemptionsService.placeCartOrder(req.user.id);
     return DataSanitizer.sanitizeData(response);
   }
 
@@ -61,7 +61,7 @@ export class RedemptionsController {
   @UseInterceptors(IdempotencyInterceptor)
   @Post('verify-cart-order')
   @ResponseMessage('Redemption cart OTP verified and order placed successfully')
-  async verifyCartOrder(@Req() req: any, @Body() dto: VerifyOrderDto) {
+  async verifyCartOrder(@Req() req: any, @Body() dto: VerifyCartOrderDto) {
     const response = await this.redemptionsService.verifyCartOrder(req.user.id, dto);
     return DataSanitizer.sanitizeData(response);
   }

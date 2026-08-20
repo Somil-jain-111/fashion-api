@@ -24,6 +24,7 @@ import { AddressesModule } from '../addresses/addresses.module';
 import { RewardsModule } from '../rewards/rewards.module';
 import { DynamicConfigModule } from '../dynamic-config/dynamic-config.module';
 import { RedemptionCartModule } from '../redemption-cart/redemption-cart.module';
+import { SmsModule } from '../sms/sms.module';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { RedemptionCartModule } from '../redemption-cart/redemption-cart.module'
     AddressesModule,
     RewardsModule,
     DynamicConfigModule,
+    SmsModule,
     forwardRef(() => RedemptionCartModule),
   ],
   controllers: [RedemptionsController],
