@@ -1105,6 +1105,7 @@ export class RedemptionsService {
           orderNumber: rewardsOrderNumber || item.transactionId,
           productId: item.productId,
           productName: item.productName,
+          productImageUrl: item.productImageUrl,
           status: isSuccess ? OrderStatus.PLACED : OrderStatus.FAILED,
           transactionId: item.transactionId,
           voucher: handleRes || null,
