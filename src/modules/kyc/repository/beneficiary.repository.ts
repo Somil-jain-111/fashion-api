@@ -1,8 +1,9 @@
 import { Injectable } from '@nestjs/common';
-import { DataSource, EntityManager, QueryRunner, Repository } from 'typeorm';
+import { DataSource, QueryRunner } from 'typeorm';
 import { BaseRepository } from 'src/default/common/repositories/base.repository';
-import { BeneficiaryType } from 'src/default/common/enums/kyc.enum';
 import { UserBeneficiary } from '../entities/beneficiary.entity';
+import { KycVerificationEntity } from '../entities/kyc-verification.entity';
+import { BeneficiaryType, BeneficiaryStatus } from 'src/default/common/enums/user-beneficiary.enum';
 
 @Injectable()
 export class BeneficiaryRepository extends BaseRepository<UserBeneficiary> {
@@ -19,28 +20,49 @@ export class BeneficiaryRepository extends BaseRepository<UserBeneficiary> {
       bankName?: string | null;
       bankHolderName?: string | null;
       upi?: string | null;
-      status?: number;
+      relationship?: string | null;
+      beneficiary_name?: string | null;
+      mobileNumber?: string | null;
+      panNumber?: string | null;
+      aadhaarNumber?: string | null;
+      address?: string | null;
+      status: BeneficiaryStatus;
       referenceId?: string | null;
       metadata?: Record<string, any> | null;
+      otp?: string | null;
+      otp_expiry?: Date | null;
+      otp_attempt_count?: number;
+      panVerification?: KycVerificationEntity | null;
+      aadhaarVerification?: KycVerificationEntity | null;
     },
     queryRunner?: QueryRunner
   ): Promise<UserBeneficiary> {
-    const repo = this.getRepository(queryRunner);
-
-    const beneficiary = repo.create({
-      user: { id: data.userId } as any,
-      type: data.type,
-      accountNumber: data.accountNumber,
-      ifsc: data.ifsc,
-      bankName: data.bankName,
-      bankHolderName: data.bankHolderName,
-      upi: data.upi,
-      status: data.status ?? 1,
-      referenceId: data.referenceId,
-      metadata: data.metadata,
-    });
-
-    return await repo.save(beneficiary);
+    return await this.save(
+      {
+        user: { id: data.userId } as any,
+        type: data.type,
+        accountNumber: data.accountNumber,
+        ifsc: data.ifsc,
+        bankName: data.bankName,
+        bankHolderName: data.bankHolderName,
+        upi: data.upi,
+        relationship: data.relationship,
+        beneficiary_name: data.beneficiary_name,
+        mobileNumber: data.mobileNumber,
+        panNumber: data.panNumber,
+        aadhaarNumber: data.aadhaarNumber,
+        address: data.address,
+        status: data.status,
+        referenceId: data.referenceId,
+        metadata: data.metadata,
+        otp: data.otp,
+        otp_expiry: data.otp_expiry,
+        otp_attempt_count: data.otp_attempt_count ?? 0,
+        panVerification: data.panVerification ?? null,
+        aadhaarVerification: data.aadhaarVerification ?? null,
+      },
+      queryRunner
+    );
   }
 
   async findUserBeneficiaries(
@@ -59,6 +81,7 @@ export class BeneficiaryRepository extends BaseRepository<UserBeneficiary> {
 
     return await this.getRepository(queryRunner).find({
       where,
+      relations: ['panVerification', 'aadhaarVerification'],
       order: {
         createdAt: 'ASC',
       },
@@ -79,47 +102,74 @@ export class BeneficiaryRepository extends BaseRepository<UserBeneficiary> {
     });
   }
 
+  /**
+   * Looks up an active bank beneficiary by account number + IFSC across ALL users
+   * (not just the requesting user).
+   * Returns the owning record.
+   */
   async isAccountInfoExist(
     accountNumberENC: string,
     ifscENC: string,
-    userId?: number,
     queryRunner?: QueryRunner
-  ): Promise<boolean> {
-    const whereCondition: any = {
-      type: BeneficiaryType.BANK,
-      accountNumber: accountNumberENC,
-      ifsc: ifscENC,
-      active: true,
-      status: 1,
-    };
-
-    if (userId) {
-      whereCondition.user = { id: userId };
-    }
-
-    const existing = await this.getRepository(queryRunner).findOne({
-      where: whereCondition,
+  ): Promise<UserBeneficiary | null> {
+    return await this.getRepository(queryRunner).findOne({
+      where: {
+        type: BeneficiaryType.BANK,
+        accountNumber: accountNumberENC,
+        ifsc: ifscENC,
+        active: true,
+        // status: BeneficiaryStatus.VERIFIED,
+      } as any,
+      relations: { user: true } as any,
     });
-
-    return Boolean(existing);
   }
 
-  async isUpiExist(upiENC: string, userId?: number, queryRunner?: QueryRunner): Promise<boolean> {
-    const whereCondition: any = {
-      type: BeneficiaryType.UPI,
-      upi: upiENC,
-      active: true,
-      status: 1,
-    };
-
-    if (userId) {
-      whereCondition.user = { id: userId };
-    }
-
-    const existing = await this.getRepository(queryRunner).findOne({
-      where: whereCondition,
+  /**
+   * Looks up an active UPI beneficiary across ALL users (not just the requesting
+   * user) — see isAccountInfoExist for rationale.
+   */
+  async isUpiExist(upiENC: string, queryRunner?: QueryRunner): Promise<UserBeneficiary | null> {
+    return await this.getRepository(queryRunner).findOne({
+      where: {
+        type: BeneficiaryType.UPI,
+        upi: upiENC,
+        active: true,
+        // status: BeneficiaryStatus.VERIFIED,
+      } as any,
+      relations: { user: true } as any,
     });
+  }
 
-    return Boolean(existing);
+  async findActiveBeneficiaryWithVerifications(
+    beneId: number,
+    userId: number,
+    queryRunner?: QueryRunner
+  ): Promise<UserBeneficiary | null> {
+    return await this.getRepository(queryRunner).findOne({
+      where: {
+        id: beneId,
+        user: { id: userId },
+        active: true,
+      },
+      relations: ['panVerification', 'aadhaarVerification'],
+    });
+  }
+
+  async softDeleteBeneficiary(
+    beneId: number,
+    userId: number,
+    queryRunner?: QueryRunner
+  ): Promise<boolean> {
+    const result = await this.getRepository(queryRunner).update(
+      {
+        id: beneId,
+        user: { id: userId },
+        active: true,
+      },
+      {
+        active: false,
+      }
+    );
+    return Number(result.affected) > 0;
   }
 }

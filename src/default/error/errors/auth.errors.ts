@@ -140,4 +140,10 @@ export const AUTH_ERRORS = {
     message: 'Too many requests, please try again after sometime',
     statusCode: 429,
   },
+
+  OTP_SEND_FAILED: {
+    code: 'AUTH_027',
+    message: 'Failed to send OTP. Please try again later.',
+    statusCode: 502,
+  },
 } as const;

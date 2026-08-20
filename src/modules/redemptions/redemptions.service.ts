@@ -22,6 +22,7 @@ import { PlaceCartOrderDto } from '../redemption-cart/dto';
 import { OrderSummaryResponseDto } from './dto/order-summary-response.dto';
 import { PlaceOrderResponseDto } from './dto/place-order-response.dto';
 import { UserAuthValidator } from '../auth/validators/user-auth.validator';
+import { UserRepository } from 'src/modules/user/repository';
 import { TransactionService } from 'src/default/databases/transaction';
 import { VerifyOrderDto } from './dto/verify-order.dto';
 import { GetOrdersQueryDto } from './dto/get-orders-query.dto';
@@ -57,6 +58,7 @@ export class RedemptionsService {
     private orderStatusHistoryRepository: OrderStatusHistoryRepository,
     private userAuthValidator: UserAuthValidator,
     private userValidator: UserValidator,
+    private userRepository: UserRepository,
     private transactionUtils: TransactionService,
     private redemptionOtpValidator: RedemptionOtpValidator,
     private readonly redemptionProviderResponseHandler: RedemptionProviderResponseHandler,
@@ -709,10 +711,9 @@ export class RedemptionsService {
       throw new BusinessException(ERROR_CODES.REWARDS.INSUFFICIENT_POINTS);
     }
 
-    const userRemainingPoints = Number(user.points || 0) - grandTotalDeduction;
-
     const itemResults: any[] = [];
     let successCount = 0;
+    let successfulPointsDeduction = 0;
 
     for (const item of orderItems) {
       let itemShippingDetail = item.shippingDetail;
@@ -764,6 +765,7 @@ export class RedemptionsService {
 
         if (isSuccess) {
           successCount++;
+          successfulPointsDeduction += Number(item.totalPoints || item.pricePoint || 0);
         }
 
         const rewardsOrderNumber =
@@ -825,7 +827,50 @@ export class RedemptionsService {
           ? OrderStatus.PARTIAL
           : OrderStatus.FAILED;
 
+    // Default: if nothing succeeded, the user's balance is unchanged.
+    let userRemainingPoints = Number(user.points || 0);
+
     await this.transactionUtils.runInTransaction(async (queryRunner: QueryRunner) => {
+      // Deduct points (only for the items that actually succeeded) & write history.
+      // Lock the user row for the duration of the check + write so concurrent
+      // verify-order calls for the same user can't both pass the sufficiency
+      // check and double-spend points.
+      if (finalStatus !== OrderStatus.FAILED && successfulPointsDeduction > 0) {
+        const lockedUser = await this.userRepository.findByIdForUpdate(user.id, queryRunner);
+        if (!lockedUser) {
+          throw new BusinessException(ERROR_CODES.USER.USER_NOT_FOUND);
+        }
+
+        const currentPoints = Number(lockedUser.points || 0);
+        if (successfulPointsDeduction > currentPoints) {
+          throw new BusinessException(ERROR_CODES.REWARDS.INSUFFICIENT_POINTS);
+        }
+
+        userRemainingPoints = currentPoints - successfulPointsDeduction;
+
+        await this.userRepository.update(
+          { id: user.id },
+          { points: BigInt(userRemainingPoints) },
+          queryRunner
+        );
+
+        await this.pointHistoryRepository.save(
+          {
+            user: { id: user.id },
+            order: { id: order.id },
+            points: successfulPointsDeduction,
+            type: RedemptionType.REDEMPTION,
+            description: 'ORDER PLACED',
+            status: PointStatusEnum.redeem,
+            date: new Date(),
+            user_remaining_points: userRemainingPoints,
+            taxable_points: order.taxable_points,
+            tds_points: order.tds_points,
+          },
+          queryRunner
+        );
+      }
+
       // Update master order status
       await this.orderRepository.update(
         { id: order.id },
@@ -838,28 +883,6 @@ export class RedemptionsService {
         },
         queryRunner
       );
-
-      // Deduct points & write history
-      if (finalStatus !== OrderStatus.FAILED) {
-        const userRepo = queryRunner.manager.getRepository('users');
-        await userRepo.update({ id: user.id }, { points: BigInt(userRemainingPoints) });
-
-        await this.pointHistoryRepository.save(
-          {
-            user: { id: user.id },
-            order: { id: order.id },
-            points: grandTotalDeduction,
-            type: RedemptionType.REDEMPTION,
-            description: 'ORDER PLACED',
-            status: PointStatusEnum.redeem,
-            date: new Date(),
-            user_remaining_points: userRemainingPoints,
-            taxable_points: order.taxable_points,
-            tds_points: order.tds_points,
-          },
-          queryRunner
-        );
-      }
     });
 
     return {

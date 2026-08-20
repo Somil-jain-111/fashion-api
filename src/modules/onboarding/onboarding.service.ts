@@ -26,14 +26,15 @@ import {
   SendWhatsappOtpDto,
 } from './dto';
 import { LocationVerificationHelper } from 'src/default/common/helper/location-verification.helper';
+import { SUCCESS_MESSAGES } from 'src/default/common/constants/success-messages.constant';
 
 const CONTACT_OTP_EXPIRY_MINUTES = 5;
 
 @Injectable()
 export class OnboardingService {
   private BASIC_INFO_FIELDS = {
-    required: ['username', 'partnerType'],
-    optional: ['email', 'whatsappNumber'],
+    required: ['username', 'partnerType', 'date_of_birth'],
+    optional: ['email', 'whatsappNumber', 'anniversary_date'],
   };
 
   constructor(
@@ -48,18 +49,32 @@ export class OnboardingService {
 
   private resolveCurrentStep(user: any, activeApproval: any): string {
     // Check user status first — it's the source of truth
-    if (user.status === UserStatus.ACTIVE) return 'ACTIVE';
-    if (user.status === UserStatus.BLOCKED) return 'BLOCKED';
+    if (user.status === UserStatus.ACTIVE) {
+      return 'ACTIVE';
+    }
+    if (user.status === UserStatus.BLOCKED) {
+      return 'BLOCKED';
+    }
 
     if (!activeApproval) {
-      if (!user.username || !user.partnerType) return 'BASIC_INFO';
-      if (!user.storeInformation) return 'STORE_INFO';
+      if (!user.username || !user.partnerType || !user.date_of_birth) {
+        return 'BASIC_INFO';
+      }
+      if (!user.storeInformation) {
+        return 'STORE_INFO';
+      }
       return 'SUBMIT';
     }
 
-    if (activeApproval.level === 1) return 'PENDING_L1_REVIEW';
-    if (activeApproval.level === 2) return 'PENDING_L2_REVIEW';
-    if (activeApproval.level === 3) return 'PENDING_SO_VISIT';
+    if (activeApproval.level === 1) {
+      return 'PENDING_L1_REVIEW';
+    }
+    if (activeApproval.level === 2) {
+      return 'PENDING_L2_REVIEW';
+    }
+    if (activeApproval.level === 3) {
+      return 'PENDING_SO_VISIT';
+    }
 
     return 'UNKNOWN';
   }
@@ -71,14 +86,18 @@ export class OnboardingService {
     let responsePincode = verificationResponse?.data?.pincode;
 
     // Verify using OSM (Fallback)
-    if (!responsePincode) {
-      verificationResponse = await this.locationVerificationHelper.getLocationByOSM(lat, lng);
-      responsePincode = verificationResponse?.data?.pincode;
-    }
+    // if (!responsePincode) {
+    //   verificationResponse = await this.locationVerificationHelper.getLocationByOSM(lat, lng);
+    //   responsePincode = verificationResponse?.data?.pincode;
+    // }
 
     const isValidPincode = Number(responsePincode) === Number(pincode);
 
     return {
+      message:
+        SUCCESS_MESSAGES.ONBOARDING[
+          isValidPincode ? 'VERIFICATION_SUCCESSFUL' : 'GEOLOCATION_VERIFICATION_UNSUCCESSFUL'
+        ],
       isValidPincode: isValidPincode,
       details: verificationResponse.data,
     };
@@ -90,6 +109,16 @@ export class OnboardingService {
     if (!user) {
       throw new BusinessException(ERROR_CODES.USER.USER_NOT_FOUND);
     }
+
+    const dobStr = dto.dateOfBirth;
+
+    if (!dobStr) {
+      throw new BusinessException(ERROR_CODES.COMMON.BAD_REQUEST_RESON, {
+        reason: 'Date of birth is required',
+      });
+    }
+
+    const anniversaryStr = dto.anniversaryDate || null;
 
     // Check email uniqueness
     if (dto.email) {
@@ -116,6 +145,8 @@ export class OnboardingService {
     const updatedData = await this.userRepository.updateById(userId, {
       username: dto.name,
       partnerType: dto.partnerType,
+      date_of_birth: new Date(dobStr),
+      ...(anniversaryStr ? { anniversary_date: new Date(anniversaryStr) } : {}),
       ...(dto.email && { email: dto.email }),
       ...(dto.whatsappNumber && { whatsappNumber: dto.whatsappNumber }),
       // Reset whatsapp verification if number changed
@@ -183,6 +214,10 @@ export class OnboardingService {
         storeInfo.lng = dto.lng;
       }
 
+      if (dto.storeName) {
+        storeInfo.storeName = dto.storeName;
+      }
+
       if (dto.address1) {
         storeInfo.address1 = dto.address1;
       }
@@ -224,6 +259,7 @@ export class OnboardingService {
         user: { id: userId } as any,
         lat: dto.lat,
         lng: dto.lng,
+        storeName: dto.storeName,
         address1: dto.address1,
         address2: dto.address2 || null,
         pincode: dto.pincode,
@@ -234,59 +270,10 @@ export class OnboardingService {
         addressProofType: dto.addressProofType,
         addressProofImageUrl: dto.addressProofImageUrl || null,
       });
-
-      // Link store information to user
-      // await this.userRepository.updateById(userId, {
-      //   storeInformation: { id: storeInfo.id } as any,
-      // });
     }
 
-    return {
-      message: 'Store info saved successfully',
-      data: storeInfo,
-    };
+    return storeInfo;
   }
-
-  // async getStatus(userId: number) {
-  //   const user = await this.userRepository.findOne({ id: userId }, ['storeInformation']);
-
-  //   if (!user) {
-  //     throw new BusinessException(ERROR_CODES.USER.USER_NOT_FOUND);
-  //   }
-
-  //   const basicInfoComplete = !!(user.username && user.partnerType);
-
-  //   const panKyc = await this.kycVerificationRepository.findVerifiedByUserIdAndType(
-  //     userId,
-  //     KycType.PAN
-  //   );
-  //   const panKycComplete = !!panKyc;
-
-  //   let gstKycComplete = false;
-  //   let storeInfoComplete = false;
-
-  //   if (user.partnerType === UserPartnerType.ENTITY) {
-  //     const gstKyc = await this.kycVerificationRepository.findVerifiedByUserIdAndType(
-  //       userId,
-  //       KycType.GST
-  //     );
-  //     gstKycComplete = !!gstKyc;
-  //     storeInfoComplete = !!user.storeInformation;
-  //   } else {
-  //     // For individual, GST KYC and store info are not mandatory by flow description
-  //     gstKycComplete = true;
-  //     storeInfoComplete = true;
-  //   }
-
-  //   return {
-  //     partnerType: user.partnerType,
-  //     basicInfoComplete,
-  //     panKycComplete,
-  //     gstKycComplete,
-  //     storeInfoComplete,
-  //     overallStatus: user.status,
-  //   };
-  // }
 
   async getStatus(userId: number) {
     const user = await this.userRepository.findOne({ id: userId }, ['storeInformation']);
@@ -295,7 +282,7 @@ export class OnboardingService {
       throw new BusinessException(ERROR_CODES.USER.USER_NOT_FOUND);
     }
 
-    const basicInfoComplete = !!(user.username && user.partnerType);
+    const basicInfoComplete = !!(user.username && user.partnerType && user.date_of_birth);
 
     const panKyc = await this.kycVerificationRepository.findVerifiedByUserIdAndType(
       userId,
@@ -303,35 +290,19 @@ export class OnboardingService {
     );
     const panKycComplete = !!panKyc;
 
-    let aadhaarKycComplete = false;
+    const aadhaarKycComplete = !!(await this.kycVerificationRepository.findVerifiedByUserIdAndType(
+      userId,
+      KycType.AADHAAR
+    ));
 
-    if (user.partnerType === UserPartnerType.INDIVIDUAL) {
-      const aadhaarKyc = await this.kycVerificationRepository.findVerifiedByUserIdAndType(
-        userId,
-        KycType.AADHAAR
-      );
-      aadhaarKycComplete = !!aadhaarKyc;
-    }
-    // else {
-    //   aadhaarKycComplete = true;
-    // }
-
-    // GST only for entity Partner Type
-    let gstKycComplete = false;
     // Store info required regardless user is individual or entity
     const storeInfoComplete = !!user.storeInformation;
 
-    if (user.partnerType === UserPartnerType.ENTITY) {
-      const gstKyc = await this.kycVerificationRepository.findVerifiedByUserIdAndType(
-        userId,
-        KycType.GST
-      );
-
-      gstKycComplete = !!gstKyc;
-    }
-    // else {
-    //   gstKycComplete = true;
-    // }
+    // GST required for entity Partner Type, optional for Individual
+    const gstKycComplete = !!(await this.kycVerificationRepository.findVerifiedByUserIdAndType(
+      userId,
+      KycType.GST
+    ));
 
     // ---- Approval & routing info (merged from SO flow) ----
     const approvals = await this.approvalRepository.findByUserId(userId, ApprovalType.PROFILE);
@@ -349,7 +320,7 @@ export class OnboardingService {
         rejectedBy:
           activeApproval.level === 1 ? 'L1' : activeApproval.level === 2 ? 'L2' : 'Sales Officer',
         reason: activeApproval.remarks ?? 'Your profile was rejected.',
-        rejectedAt: activeApproval.approved_at,
+        rejectedAt: activeApproval.actionAt,
       };
     }
 
@@ -372,6 +343,8 @@ export class OnboardingService {
       aadhaarKycComplete,
       storeInfoComplete,
       overallStatus: user.status,
+      dateOfBirth: user.date_of_birth ? new Date(user.date_of_birth) : null,
+      anniversaryDate: user.anniversary_date ? new Date(user.anniversary_date) : null,
       // ---- New routing & approval fields ----
       currentStep,
       approvalStatus: activeApproval?.status ?? null,

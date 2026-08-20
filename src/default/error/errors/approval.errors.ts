@@ -39,4 +39,9 @@ export const APPROVAL_ERRORS = {
     message: 'Invalid approval level',
     statusCode: 400,
   },
+  REJECT_REASON_TYPE: {
+    code: 'APPROVAL_006',
+    message: 'Type of issue is required for rejection',
+    statusCode: 400,
+  },
 } as const;

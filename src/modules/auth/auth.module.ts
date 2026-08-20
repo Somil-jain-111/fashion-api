@@ -15,11 +15,15 @@ import {
   KycVerificationRepository,
   LoginHistoriesRepository,
   RevokedTokenRepository,
+  OTPAttemptLogsRepository,
+  UserMappingRepository,
 } from './repository';
 import { UserRepository, RolesRepository, UserStoreInfoRepository } from '../auth/repository';
 import { AddressesModule } from '../addresses/addresses.module';
 import { ApprovalRepository } from '../approvals/repository';
 import { DynamicConfigModule } from '../dynamic-config/dynamic-config.module';
+import { SmsModule } from '../sms/sms.module';
+import { UserModule } from '../user/user.module';
 
 @Module({
   imports: [
@@ -34,6 +38,8 @@ import { DynamicConfigModule } from '../dynamic-config/dynamic-config.module';
     RedisModule,
     AddressesModule,
     DynamicConfigModule,
+    SmsModule,
+    UserModule,
   ],
   providers: [
     AuthService,
@@ -50,6 +56,8 @@ import { DynamicConfigModule } from '../dynamic-config/dynamic-config.module';
     RevokedTokenRepository,
     LoginHistoriesRepository,
     KycVerificationRepository,
+    OTPAttemptLogsRepository,
+    UserMappingRepository,
   ],
   controllers: [AuthController],
   exports: [
@@ -63,6 +71,8 @@ import { DynamicConfigModule } from '../dynamic-config/dynamic-config.module';
     RevokedTokenRepository,
     LoginHistoriesRepository,
     KycVerificationRepository,
+    OTPAttemptLogsRepository,
+    UserMappingRepository,
   ],
 })
 export class AuthModule {}

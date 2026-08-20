@@ -1,13 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 
-import { BaseRepository } from 'src/modules/auth/repository';
 import { BusinessException } from 'src/default/error/business.exception';
 import { ERROR_CODES } from 'src/default/error/error.code';
 
 import { BannerEntity } from '../entities/banner.entity';
 import { BannerQueryDto } from '../dto/banner-query.dto';
 import { UserRole } from 'src/default/common/enums/user-type.enum';
+import { BaseRepository } from 'src/default/common/repositories';
 
 @Injectable()
 export class BannerRepository extends BaseRepository<BannerEntity> {
@@ -51,9 +51,6 @@ export class BannerRepository extends BaseRepository<BannerEntity> {
       .leftJoinAndSelect('banner.roles', 'role')
       .where('banner.isActive = :isActive', {
         isActive: true,
-      })
-      .andWhere('role.name = :userRole', {
-        userRole,
       });
 
     if (query.position) {

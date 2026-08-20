@@ -20,7 +20,9 @@ import { NoCache } from 'src/default/cache/cache.decorator';
 import { SkipThrottle } from '@nestjs/throttler';
 import { JwtAuthGuard } from 'src/default/common/guards/jwt-auth.guard';
 import { RolesGuard } from 'src/default/common/guards/roles.guard';
+import { ResponseMessage } from 'src/default/common/decorators/response-message.decorator';
 
+@UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('dynamic-config')
 export class DynamicConfigController {
   constructor(private readonly configService: DynamicConfigService) {}
@@ -29,11 +31,11 @@ export class DynamicConfigController {
    * Open to Entire application, ROLE is required
    */
   @NoCache()
-  @UseGuards(JwtAuthGuard)
   @SkipThrottle()
   @Get('role')
+  @ResponseMessage('Configuration fetched')
   async getConfig(@Req() req) {
-    const role = req.user.roles?.[0];
+    const role = req.user.role;
 
     if (!role) {
       throw new BadRequestException('Invalid User Role');
@@ -46,13 +48,12 @@ export class DynamicConfigController {
    * Fetch all configurations.
    */
   @NoCache()
-  @UseGuards(JwtAuthGuard)
-  // @Roles([RoleType.SUPERADMIN])
+  @Roles([UserRole.SUPERADMIN])
   @SkipThrottle()
   @Get()
+  @ResponseMessage('ALL Configuration fetched')
   async getAllConfigs(@Req() req, @Query('role') role?: UserRole) {
-    const isSuperAdmin =
-      String(req.user.roles?.[0])?.toLowerCase() === UserRole.SUPERADMIN.toLowerCase();
+    const isSuperAdmin = String(req.user.role)?.toLowerCase() === UserRole.SUPERADMIN.toLowerCase();
 
     if (role) {
       return DataSanitizer.sanitizeData(
@@ -68,10 +69,10 @@ export class DynamicConfigController {
    * Create a new configuration for a user type.
    */
   @NoCache()
-  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles([UserRole.SUPERADMIN])
   @SkipThrottle()
   @Post('create')
+  @ResponseMessage('Configuration created')
   async createConfig(@Body() dto: CreateDynamicConfigDto) {
     const result = await this.configService.createConfig(dto);
     return DataSanitizer.sanitizeData(result);
@@ -81,12 +82,12 @@ export class DynamicConfigController {
    * Update configuration with support for nested approval limit matrix.
    */
   @NoCache()
-  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles([UserRole.SUPERADMIN])
   @SkipThrottle()
   @Post('update')
+  @ResponseMessage('Configuration updated')
   async updateConfig(@Req() req, @Body() dto: EditDynamicConfigDto) {
-    const userId = req.user.userId;
+    const userId = req.user.id;
     const result = await this.configService.updateUserRoleConfig(dto, userId);
     return DataSanitizer.sanitizeData(result);
   }

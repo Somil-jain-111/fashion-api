@@ -24,4 +24,9 @@ export const VALIDATION_ERRORS = {
     message: 'Invalid date format',
     statusCode: 422,
   },
+  INVALID_PAYLOAD: {
+    code: 'VAL_006',
+    message: 'Invalid payload',
+    statusCode: 400,
+  },
 } as const;

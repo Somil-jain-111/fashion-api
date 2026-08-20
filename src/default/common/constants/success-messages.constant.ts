@@ -25,13 +25,19 @@ export const SUCCESS_MESSAGES = {
   KYC: {
     AADHAAR_OTP_GENERATED: 'Aadhaar OTP generated successfully',
     AADHAAR_VERIFIED: 'Aadhaar verified successfully',
+    AADHAAR_SAVED: 'Aadhaar details saved successfully',
     PAN_VERIFIED: 'PAN verified successfully',
     GST_VERIFIED: 'GST verified successfully',
     BENEFICIARY_ADDED: 'Beneficiary added successfully',
+    BENEFICIARY_VERIFIED: 'Beneficiary verified successfully',
+    BENEFICIARY_OTP_SENT: 'OTP sent for beneficiary verification',
     BENEFICIARIES_FETCHED: 'Beneficiaries retrieved successfully',
+    BENEFICIARIES_RELATIONSHIPS_FETCHED: 'Beneficiaries relationships retrieved successfully',
+    BENEFICIARY_DELETED: 'Beneficiary deleted successfully',
   },
 
   ONBOARDING: {
     VERIFICATION_SUCCESSFUL: 'Verification successful',
+    GEOLOCATION_VERIFICATION_UNSUCCESSFUL: 'Geolocation verification unsuccessful',
   },
 } as const;

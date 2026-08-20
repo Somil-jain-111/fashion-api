@@ -1,8 +1,9 @@
 import { Injectable } from '@nestjs/common';
-import { DataSource, FindOptionsWhere } from 'typeorm';
+import { DataSource, FindOptionsWhere, Not } from 'typeorm';
 //
 import { Address } from 'src/modules/addresses/entities/address.entity';
 import { BaseRepository } from 'src/default/common/repositories/base.repository';
+import { AddressType } from 'src/default/common/enums/address.enum';
 
 @Injectable()
 export class AddressRepository extends BaseRepository<Address> {
@@ -49,7 +50,7 @@ export class AddressRepository extends BaseRepository<Address> {
   }
 
   async softDeleteAddress(addressId: string, userId: number): Promise<void> {
-    await await this.repository.update(
+    await this.repository.update(
       {
         id: Number(addressId),
         user: { id: userId },
@@ -58,6 +59,21 @@ export class AddressRepository extends BaseRepository<Address> {
         active: false,
       }
     );
+  }
+
+  async demotePrimaryAddresses(userId: number, excludeAddressId?: number): Promise<void> {
+    const where: FindOptionsWhere<Address> = {
+      user: { id: userId },
+      addressType: AddressType.Primary,
+    };
+
+    if (excludeAddressId) {
+      where.id = Not(excludeAddressId);
+    }
+
+    await this.repository.update(where, {
+      addressType: AddressType.Secondary,
+    });
   }
 
   async findByUserIdPaginated(userId: number, page = 1, limit = 10): Promise<[Address[], number]> {

@@ -25,6 +25,7 @@ import {
 import { NameMatchProvider } from './provider/name-matching.provider';
 import { IdempotencyService } from 'src/default/idempotency/idempotency.service';
 import { RedisModule } from 'src/default/databases/redis/redis.module';
+import { SmsModule } from '../sms/sms.module';
 
 @Module({
   imports: [
@@ -43,6 +44,7 @@ import { RedisModule } from 'src/default/databases/redis/redis.module';
      */
     AuthModule,
     RedisModule,
+    SmsModule,
   ],
 
   controllers: [KYCController],
@@ -72,6 +74,9 @@ import { RedisModule } from 'src/default/databases/redis/redis.module';
     BeneficiaryRepository,
     BankProvider,
     UpiProvider,
+    PanProvider,
+    AadhaarProvider,
+    GstProvider,
   ],
 })
 export class KycModule {}

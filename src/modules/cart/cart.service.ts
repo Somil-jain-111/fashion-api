@@ -150,7 +150,7 @@ export class CartService {
       return this.emptyCartResponse(userId, distributorId);
     }
 
-    return await this.toResponse(cart);
+    return this.toResponse(cart);
   }
 
   async updateItem(
@@ -165,7 +165,7 @@ export class CartService {
     }
 
     const product = this.getProductOrThrow(item.productId);
-    const cartonQuantity = dto.cartonQuantity ?? item.cartonQuantity;
+    const cartonQuantity = this.resolveCartonQuantity(item.cartonQuantity, dto.cartonQuantity);
     const totals = CartCalculationHelper.calculateItem({
       cartonSize: item.cartonSize,
       cartonQuantity,
@@ -228,7 +228,7 @@ export class CartService {
       totalPayable: 0,
     } as Partial<Cart>);
 
-    return await this.emptyCartResponse(userId, distributorId);
+    return this.emptyCartResponse(userId, distributorId);
   }
 
   private async refreshCartSummary(cart: Cart, queryRunner?: QueryRunner): Promise<void> {
@@ -249,6 +249,26 @@ export class CartService {
     await this.cartRepository.updateById(cart.id, summaryUpdate);
   }
 
+  private resolveCartonQuantity(current: number, requested?: number | '+' | '-'): number {
+    if (requested === undefined) {
+      return current;
+    }
+
+    if (requested === '+') {
+      return current + 1;
+    }
+
+    if (requested === '-') {
+      return Math.max(1, current - 1);
+    }
+
+    if (!Number.isInteger(requested) || requested < 1) {
+      throw new BusinessException(ERROR_CODES.CART.INVALID_CARTON_QUANTITY);
+    }
+
+    return requested;
+  }
+
   private getProductOrThrow(productId: number): ProductMock {
     const product = (products as ProductMock[]).find((item) => item.id === Number(productId));
 
@@ -265,9 +285,19 @@ export class CartService {
     );
 
     const size = product.sizes.find((item) => item.size === dto.size);
+
+    if (!hasColor || !size?.isAvailable) {
+      throw new BusinessException(ERROR_CODES.CART.INVALID_CART_ITEM);
+    }
+
+    // cartonSize 1 = loose pair order, not tied to a defined carton tier
+    if (Number(dto.cartonSize) === 1) {
+      return;
+    }
+
     const carton = product.cartons.find((item) => Number(item.articles) === Number(dto.cartonSize));
 
-    if (!hasColor || !size?.isAvailable || !carton || !carton.sizes.includes(dto.size)) {
+    if (!carton || !carton.sizes.includes(dto.size)) {
       throw new BusinessException(ERROR_CODES.CART.INVALID_CART_ITEM);
     }
   }

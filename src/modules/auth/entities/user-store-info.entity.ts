@@ -16,6 +16,9 @@ export class UserStoreInfo extends BaseEntity {
   @Column({ type: 'decimal', nullable: false })
   lng!: number;
 
+  @Column({ type: 'varchar', length: 255, nullable: false, name: 'store_name' })
+  storeName!: string;
+
   @Column({ type: 'varchar', length: 255, nullable: false })
   address1!: string;
 

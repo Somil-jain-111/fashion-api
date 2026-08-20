@@ -35,3 +35,5 @@ export * from '../../invoices/entities/invoice-pair-scan-history.entity';
 export * from '../../invoices/entities/invoice-scan-history.entity';
 export * from '../../payment/entities/payout.entity';
 export * from '../../payment/entities/point-purchase.entity';
+export * from './otp-attempt-logs.entity';
+export * from './user-mapping.entity';

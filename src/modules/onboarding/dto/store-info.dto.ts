@@ -18,6 +18,10 @@ export class SaveStoreInfoDto {
   lng: number;
 
   @IsString()
+  @IsNotEmpty({ message: 'Store name is required' })
+  storeName: string;
+
+  @IsString()
   @IsNotEmpty({ message: 'Address Line 1 is required' })
   address1: string;
 

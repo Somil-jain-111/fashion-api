@@ -41,6 +41,16 @@ export class RedisService implements OnModuleDestroy {
       : await this.client.set(key, JSON.stringify(value));
   }
 
+  /**
+   * Atomic "set if not exists". Returns true only if this call created the key,
+   * so it's safe to use for locks/dedup where a race between concurrent callers must
+   * result in exactly one winner.
+   */
+  async setNX(key: string, value: any, ttlSeconds: number): Promise<boolean> {
+    const result = await this.client.set(key, JSON.stringify(value), 'EX', ttlSeconds, 'NX');
+    return result === 'OK';
+  }
+
   async get<T>(key: string): Promise<T | null> {
     const value = await this.client.get(key);
     return value ? JSON.parse(value) : null;

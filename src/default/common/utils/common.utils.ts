@@ -46,115 +46,6 @@ export class CommonUtils {
     return bcrypt.hash(password, salt);
   }
 
-  // static async sendSMS(data: any): Promise<any> {
-  //   try {
-  //     // let Apidata = JSON.stringify({
-  //     //   sender: "ATCHNS",
-  //     //   receiver: data.mobile,
-  //     //   content: `Your OTP code is ${data?.otp} ATECHNOS`,
-  //     //   msg_type: "TEXT",
-  //     //   template_id: "1007999557719618529",
-  //     //   project: "JWLP"
-  //     // });
-
-  //     // let config = {
-  //     //   method: 'post',
-  //     //   maxBodyLength: Infinity,
-  //     //   url: 'https://smsapi.almond.solutions/api/v2/send/message',
-  //     //   headers: {
-  //     //     'Content-Type': 'application/json',
-  //     //     'Authorization': 'Bearer iKUVpsFkIWrdLMvTjPZJbtRiKbEyEJAw'
-  //     //   },
-  //     //   data: Apidata
-  //     // };
-
-  //     // let response = await axios.request(config);
-  //     // return response.data;
-
-  //     const msg: string = `Your OTP is ${data?.otp} Team Go2Market`;
-  //     const url = `http://125.16.147.178/VoicenSMS/webresources/CreateSMSCampaignGet?ukey=Gh8Lh2sgjHdwhlBMHYuL5Rwh5&msisdn=${data.mobile}&language=0&credittype=7&senderid=GOMRKT&templateid=0&message=${msg}&filetype=2`;
-
-  //     const options = {
-  //       method: 'GET',
-  //       url: url,
-  //     };
-
-  //     const response = await axios.request(options);
-  //     return response.data;
-  //   } catch (err) {
-  //     throw new ConflictException(err?.message);
-  //   }
-  // }
-
-  static async sendSMS(data: any): Promise<any> {
-    try {
-      const msg = 'Your OTP for participation is ' + data.otp + '. Regards,Team Almonds';
-
-      const url = `http://125.16.147.178/VoicenSMS/webresources/CreateSMSCampaignPost`;
-
-      const payload = {
-        filetype: 2,
-        thirdpartyrefno: 'SKIPPER_PIPES',
-        msisdn: [String(data.mobile)],
-        language: 0,
-        credittype: 7,
-        senderid: 'TCHALM',
-        templateid: 0,
-        message: `${msg}`,
-        ukey: 'KTXq25wGcHqv6xcnGjl9UnAWK',
-        isrefno: true,
-      };
-
-      const options = {
-        method: 'POST',
-        url: url,
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        data: payload,
-      };
-      const response = await axios.request(options);
-      return response.data;
-    } catch (err) {
-      ConsoleLogger.log(err?.message);
-      throw new ConflictException('Something Went Wrong');
-    }
-  }
-  static async sendSmsForOrder(data: any): Promise<any> {
-    try {
-      const msg = 'Your OTP for participation is ' + data.otp + '. Regards,Team Almonds';
-
-      const url = `http://125.16.147.178/VoicenSMS/webresources/CreateSMSCampaignPost`;
-
-      const payload = {
-        filetype: 2,
-        thirdpartyrefno: 'SKIPPER_PIPES',
-        msisdn: [String(data.mobile)],
-        language: 0,
-        credittype: 7,
-        senderid: 'TCHALM',
-        templateid: 0,
-        message: `${msg}`,
-        ukey: 'KTXq25wGcHqv6xcnGjl9UnAWK',
-        isrefno: true,
-      };
-
-      //console.log(url);
-      const options = {
-        method: 'POST',
-        url: url,
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        data: payload,
-      };
-      const response = await axios.request(options);
-      return response.data;
-    } catch (err) {
-      ConsoleLogger.log(err?.message);
-      throw new ConflictException('Something Went Wrong');
-    }
-  }
   static encrypt(text: string): string {
     if (!this.secretKey) {
       throw new Error('CommonUtils.init() must be called before using encrypt()');
@@ -216,8 +107,9 @@ export class CommonUtils {
     const regex = /^[6-9]\d{9}$/;
     return regex.test(mobile);
   }
+
   static HmacKey(body: any): string {
-    const key = 'almondRewards';
+    const key = this.appConfigService.getKycSecretKey();
     const requestBody = JSON.stringify(body);
 
     const hmac = crypto.createHmac('sha256', key);
@@ -292,10 +184,8 @@ export class CommonUtils {
       transaction_id: data.transaction_id,
       sku: data.sku,
     };
-    const key =
-      process.env.NODE_ENV === 'production'
-        ? process.env.KYC_SECRET_KEY
-        : process.env.KYC_SECRET_KEY;
+
+    const key = this.appConfigService.getKycSecretKey();
 
     if (data?.pancard !== undefined) {
       body.pan_card = data.pancard;
@@ -329,10 +219,7 @@ export class CommonUtils {
     };
 
     // ✅ Secret key (from .env)
-    const key =
-      process.env.NODE_ENV === 'production'
-        ? process.env.KYC_SECRET_KEY
-        : process.env.KYC_SECRET_KEY;
+    const key = this.appConfigService.getKycSecretKey();
 
     if (!key) {
       throw new Error('Missing HMAC secret key in environment variables');
@@ -354,15 +241,15 @@ export class CommonUtils {
     page: number,
     limit: number
   ): {
-    total: number;
-    page: number;
-    limit: number;
+    totalItems: number;
+    currentPage: number;
+    pageSize: number;
     totalPages: number;
   } {
     return {
-      total,
-      page,
-      limit,
+      totalItems: total,
+      currentPage: page,
+      pageSize: limit,
       totalPages: Math.ceil(total / limit),
     };
   }

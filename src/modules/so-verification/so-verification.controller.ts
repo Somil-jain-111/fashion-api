@@ -34,6 +34,7 @@ async getQueue(
     soLat,
     soLng,
     status,
+    req.user.role as UserRole,
   );
   return DataSanitizer.sanitizeData(response);
 }

@@ -9,13 +9,17 @@ import { SwaggerModule } from './default/swagger/swagger.module';
 import { HttpModule } from '@nestjs/axios';
 import { ErrorHandlingModule } from './default/error/error.module';
 import { NotFoundMiddleware } from './default/common/middleware/not-found.middleware';
-import { ValidationPipe } from '@nestjs/common';
+import { ValidationPipe, ValidationError } from '@nestjs/common';
+import { BusinessException } from './default/error/business.exception';
+import { ERROR_CODES } from './default/error/error.code';
+import { ConsoleLogger } from './default/logger/console/console.service';
 import { ScheduleModule } from '@nestjs/schedule';
 import { UnifiedResponseInterceptor } from './default/common/interceptors/unified-response.interceptor';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { AppConfigService } from './default/config/config.service';
 import { LoggerModule } from './default/logger/console/console.module';
 import { CloudwatchModule } from './default/logger/cloudwatch/cloudwatch.module';
+import { BullmqModule } from './default/common/services/bullmq/bullmq.module';
 import { LocalStorageInterceptor } from './default/common/interceptors/local-storage.interceptor';
 import { IdempotencyModule } from './default/idempotency/idempotency.module';
 import { APP_GUARD, APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
@@ -49,6 +53,8 @@ import { CartModule } from './modules/cart/cart.module';
 import { EmployeeModule } from './modules/employee/employee.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { RedemptionCartModule } from './modules/redemption-cart/redemption-cart.module';
+import { SmsModule } from './modules/sms/sms.module';
+import { UserModule } from './modules/user/user.module';
 
 @Module({
   imports: [
@@ -71,6 +77,7 @@ import { RedemptionCartModule } from './modules/redemption-cart/redemption-cart.
     HttpModule,
     ErrorHandlingModule,
     CloudwatchModule,
+    BullmqModule,
     IdempotencyModule,
     BullSetupModule,
     AuditModule,
@@ -99,16 +106,29 @@ import { RedemptionCartModule } from './modules/redemption-cart/redemption-cart.
     EmployeeModule,
     AdminModule,
     RedemptionCartModule,
+    SmsModule,
+    UserModule,
   ],
   providers: [
     {
       provide: APP_PIPE,
-      useClass: ValidationPipe,
-      useValue: {
-        whitelist: true,
-        forbidNonWhitelisted: true,
-        transform: true,
-      },
+      useFactory: () =>
+        new ValidationPipe({
+          whitelist: true,
+          forbidNonWhitelisted: true,
+          transform: true,
+          transformOptions: {
+            enableImplicitConversion: true,
+          },
+          // Never leak per-field validation details (constraint names, property
+          // names/values) to the client — log them internally and return a single
+          // generic error instead.
+          exceptionFactory: (errors: ValidationError[]) => {
+            ConsoleLogger.error('DTO validation failed', JSON.stringify(errors), 'ValidationPipe');
+            console.log(errors);
+            return new BusinessException(ERROR_CODES.VALIDATION.INVALID_PAYLOAD);
+          },
+        }),
     },
     {
       provide: APP_GUARD,

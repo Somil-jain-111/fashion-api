@@ -1,4 +1,4 @@
-import { Repository } from 'typeorm';
+import { QueryRunner, Repository } from 'typeorm';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 //
@@ -29,8 +29,16 @@ export class DynamicConfigRepository {
     return await this.userRoleConfigRepo.save(createdConfig);
   }
 
-  async updateUserRoleConfig(configId: number, updatedConfig: Partial<UserRoleConfig>) {
-    return await this.userRoleConfigRepo.update(configId, updatedConfig);
+  async updateUserRoleConfig(
+    configId: number,
+    updatedConfig: Partial<UserRoleConfig>,
+    queryRunner?: QueryRunner
+  ) {
+    const repo = queryRunner
+      ? queryRunner.manager.getRepository(UserRoleConfig)
+      : this.userRoleConfigRepo;
+
+    return await repo.update(configId, updatedConfig);
   }
 
   async getAllUserRoleConfigs(filters: {
@@ -41,7 +49,7 @@ export class DynamicConfigRepository {
     const queryBuilder = this.userRoleConfigRepo.createQueryBuilder('UserRoleConfig');
 
     if (filters.active) {
-      queryBuilder.andWhere('UserRoleConfig.isActive = :active', { active: filters.active });
+      queryBuilder.andWhere('UserRoleConfig.active = :active', { active: filters.active });
     }
 
     if (filters.page && filters.limit) {
@@ -76,19 +84,24 @@ export class DynamicConfigRepository {
     });
   }
 
-  async saveConfigLog(logData: {
-    previousValues: Record<string, any>;
-    newValues: Record<string, any>;
-    userRole: UserRole;
-    userId: number;
-  }): Promise<ConfigLog> {
-    const log = await this.configLogsRepo.create({
+  async saveConfigLog(
+    logData: {
+      previousValues: Record<string, any>;
+      newValues: Record<string, any>;
+      userRole: UserRole;
+      userId: number;
+    },
+    queryRunner?: QueryRunner
+  ): Promise<ConfigLog> {
+    const repo = queryRunner ? queryRunner.manager.getRepository(ConfigLog) : this.configLogsRepo;
+
+    const log = repo.create({
       actionBy: { id: logData.userId },
       previousValues: logData.previousValues,
       newValues: logData.newValues,
       userRole: logData.userRole,
     });
 
-    return await this.configLogsRepo.save(log);
+    return await repo.save(log);
   }
 }

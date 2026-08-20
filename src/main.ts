@@ -2,7 +2,6 @@ import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { AppConfigService } from './default/config/config.service';
-import { ValidationPipe } from '@nestjs/common/pipes/validation.pipe';
 import { AppController } from './app.controller';
 import { SwaggerService } from './default/swagger/swagger.service';
 import { ConsoleLogger } from './default/logger/console/console.service';
@@ -12,7 +11,6 @@ import { NestExpressApplication } from '@nestjs/platform-express';
 
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
-import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { CommonUtils } from './default/common/utils/common.utils';
 // import { RepositoryFactory } from "./default/common/repositories/RepositoryFactory";
 
@@ -30,15 +28,7 @@ async function bootstrap() {
   app.useBodyParser('json', { limit: payloadLimit });
   app.useBodyParser('urlencoded', { limit: payloadLimit, extended: true });
 
-  const config = new DocumentBuilder()
-    .setTitle('Your API Title')
-    .setDescription('API documentation for your project')
-    .setVersion('1.0')
-    .addBearerAuth()
-    .build();
-
-  const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api-docs', app, document);
+  // Swagger UI is set up by SwaggerService below (gated to non-production there).
   app.use(
     helmet({
       contentSecurityPolicy: {
@@ -59,11 +49,12 @@ async function bootstrap() {
     })
   );
 
-  // CORS
+  // CORS. Auth is Bearer-token based (no cookies), so `credentials` stays false —
+  // combining a wildcard origin with credentials:true is an invalid/rejected combination.
   app.enableCors({
     origin: '*',
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
-    credentials: true,
+    credentials: false,
   });
 
   // Enable Cookie Parser
@@ -72,17 +63,7 @@ async function bootstrap() {
   // CSRF Protection
   // app.use(csurf({ cookie: true })); // Use cookies to store CSRF tokens
 
-  // Enable global validation
-  app.useGlobalPipes(
-    new ValidationPipe({
-      whitelist: true,
-      forbidNonWhitelisted: true,
-      transform: true,
-      transformOptions: {
-        enableImplicitConversion: true,
-      },
-    })
-  );
+  // Global validation is registered via APP_PIPE in AppModule.
 
   const expressApp = app.getHttpAdapter().getInstance();
   expressApp.get('/', (req: any, res: any) => {
@@ -129,4 +110,7 @@ async function bootstrap() {
     ConsoleLogger.error('Health Check Error', error?.stack || error, 'Bootstrap');
   }
 }
-bootstrap();
+bootstrap().catch((error) => {
+  console.error('Fatal error during application bootstrap:', error);
+  process.exit(1);
+});

@@ -72,7 +72,12 @@ export class LocationVerificationHelper {
     try {
       googleRes = await axios(requestConfig);
 
-      await this.apiResponseRepository.updateResponseByTransactionId(transactionId, googleRes.data);
+      const responseToSave = {
+        ...googleRes.data,
+        results: googleRes.data?.results?.[0] ? [googleRes.data.results[0]] : [],
+      };
+
+      await this.apiResponseRepository.updateResponseByTransactionId(transactionId, responseToSave);
     } catch (error) {
       const errorData = error.response?.data || {
         status: false,
