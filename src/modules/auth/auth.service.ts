@@ -307,13 +307,11 @@ export class AuthService {
   }
 
   async profile(userId: number) {
-    console.log('user');
-
     const user = await this.userRepository.findOne(
       {
         id: userId,
       },
-      ['role']
+      ['role', 'storeInformation']
     );
     const [panKyc, aadhaarKyc, gstKyc, activeBlock] = await Promise.all([
       this.kycVerificationRepository.findVerifiedByUserIdAndType(user.id, KycType.PAN),

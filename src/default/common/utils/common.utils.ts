@@ -107,8 +107,9 @@ export class CommonUtils {
     const regex = /^[6-9]\d{9}$/;
     return regex.test(mobile);
   }
+
   static HmacKey(body: any): string {
-    const key = 'almondRewards';
+    const key = this.appConfigService.getKycSecretKey();
     const requestBody = JSON.stringify(body);
 
     const hmac = crypto.createHmac('sha256', key);
@@ -183,10 +184,8 @@ export class CommonUtils {
       transaction_id: data.transaction_id,
       sku: data.sku,
     };
-    const key =
-      process.env.NODE_ENV === 'production'
-        ? process.env.KYC_SECRET_KEY
-        : process.env.KYC_SECRET_KEY;
+
+    const key = this.appConfigService.getKycSecretKey();
 
     if (data?.pancard !== undefined) {
       body.pan_card = data.pancard;
@@ -220,10 +219,7 @@ export class CommonUtils {
     };
 
     // ✅ Secret key (from .env)
-    const key =
-      process.env.NODE_ENV === 'production'
-        ? process.env.KYC_SECRET_KEY
-        : process.env.KYC_SECRET_KEY;
+    const key = this.appConfigService.getKycSecretKey();
 
     if (!key) {
       throw new Error('Missing HMAC secret key in environment variables');

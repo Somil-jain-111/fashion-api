@@ -33,6 +33,7 @@ export const SUCCESS_MESSAGES = {
     BENEFICIARY_OTP_SENT: 'OTP sent for beneficiary verification',
     BENEFICIARIES_FETCHED: 'Beneficiaries retrieved successfully',
     BENEFICIARIES_RELATIONSHIPS_FETCHED: 'Beneficiaries relationships retrieved successfully',
+    BENEFICIARY_DELETED: 'Beneficiary deleted successfully',
   },
 
   ONBOARDING: {
