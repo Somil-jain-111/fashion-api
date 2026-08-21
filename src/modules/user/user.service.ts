@@ -8,13 +8,18 @@ import { UserStatus } from 'src/modules/auth/constants/auth.constants';
 import { BusinessException } from 'src/default/error/business.exception';
 import { ERROR_CODES } from 'src/default/error/error.code';
 import { DistUserRoles, UserRole, UserType } from 'src/default/common/enums/user-type.enum';
+import { PointHistoryRepository } from '../redemptions/repository';
+import { GetPointHistoryQueryDto } from './dto/get-point-history-query.dto';
+import { PointHistoryItemDto, PointHistoryResponseDto } from './dto/point-history-response.dto';
+import { PointHistory } from '../auth/entities';
 
 @Injectable()
 export class UserService {
   constructor(
     private readonly userRepository: UserRepository,
     private readonly userBlockRepository: UserBlockRepository,
-    private readonly userMappingRepository: UserMappingRepository
+    private readonly userMappingRepository: UserMappingRepository,
+    private readonly pointHistoryRepository: PointHistoryRepository
   ) {}
 
   /**
@@ -262,4 +267,67 @@ export class UserService {
       };
     });
   }
+
+   async getPointHistory(
+    userId: string | number,
+    query: GetPointHistoryQueryDto
+  ): Promise<PointHistoryResponseDto> {
+    const page = query.page ?? 1;
+    const limit = query.limit ?? 10;
+
+    const [records, totalItems] = await this.pointHistoryRepository.findAllByUser(userId, {
+      page,
+      limit,
+      type: query.type,
+      status: query.status,
+      month: query.month,
+      year: query.year,
+    });
+
+    return {
+      items: records.map((record) => this.toResponse(record)),
+      meta: {
+        page,
+        limit,
+        totalItems,
+        totalPages: Math.ceil(totalItems / limit) || 1,
+      },
+    };
+  }
+
+  async findOne(userId: string | number, id: string): Promise<PointHistoryItemDto> {
+    const record = await this.pointHistoryRepository.findByIdAndUser(Number(id), userId);
+
+    if (!record) {
+      throw new BusinessException(ERROR_CODES.REDEMPTIONS.POINT_HISTORY_NOT_FOUND);
+    }
+
+    return this.toResponse(record);
+  }
+
+  async getRemainingPoints(userId: string | number): Promise<{ remainingPoints: number }> {
+    const remainingPoints = await this.pointHistoryRepository.getRemainingPointsForUser(userId);
+    return { remainingPoints };
+  }
+
+  private toResponse(record: PointHistory): PointHistoryItemDto {
+    return {
+      id: record.id?.toString(),
+      points: record.points,
+      description: record.description ?? null,
+      type: record.type,
+      status: record.status,
+      month: record.month ?? null,
+      year: record.year ?? null,
+      expiry: record.expiry ? record.expiry.toISOString() : null,
+      date: record.date.toISOString(),
+      userRemainingPoints: record.user_remaining_points,
+      taxablePoints: record.taxable_points,
+      tdsPoints: record.tds_points,
+      transactionId: record.transaction_id ?? null,
+      orderId: record.order?.id?.toString() ?? null,
+      payoutId: record.payout?.id?.toString() ?? null,
+    };
+  }
+
 }

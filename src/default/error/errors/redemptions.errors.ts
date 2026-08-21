@@ -10,4 +10,9 @@ export const REDEMPTIONS_ERRORS = {
     message: 'Redemption failed, please try again later.',
     statusCode: 500,
   },
+  POINT_HISTORY_NOT_FOUND: {
+    code: 'RE_003',
+    message: 'Point history record not found',
+    statusCode: 404,
+  },
 } as const;

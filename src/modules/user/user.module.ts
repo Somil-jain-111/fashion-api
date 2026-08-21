@@ -10,6 +10,7 @@ import {
   RolesRepository,
   UserMappingRepository,
 } from 'src/modules/auth/repository';
+import { PointHistoryRepository } from '../redemptions/repository';
 
 @Module({
   imports: [TypeOrmModule.forFeature([UserBlock, UserMapping])],
@@ -20,6 +21,7 @@ import {
     UserMappingRepository,
     UserRepository,
     RolesRepository,
+    PointHistoryRepository
   ],
   exports: [
     UserService,
