@@ -32,6 +32,7 @@ import { CMS_PAGE_ERRORS } from './errors/cms-page.errors';
 import { FAQ_ERRORS } from './errors/faq.errors';
 import { INVOICE_SCAN_ERRORS } from './errors/invoice-scan.errors';
 import { DISTRIBUTOR_RETURN_ERRORS } from './errors/distributor-return.errors';
+import { DISTRIBUTOR_TRANSFER_ERRORS } from './errors/distributor-transfer.errors';
 
 export type ErrorCodeValue = {
   code: string;
@@ -72,6 +73,7 @@ export const ERROR_CODES = {
   FAQ: FAQ_ERRORS,
   INVOICE_SCAN: INVOICE_SCAN_ERRORS,
   DISTRIBUTOR_RETURN: DISTRIBUTOR_RETURN_ERRORS,
+  DISTRIBUTOR_TRANSFER: DISTRIBUTOR_TRANSFER_ERRORS,
 } as const;
 
 export type ErrorCodeGroups = typeof ERROR_CODES;

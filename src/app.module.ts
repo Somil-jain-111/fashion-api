@@ -56,6 +56,7 @@ import { RedemptionCartModule } from './modules/redemption-cart/redemption-cart.
 import { SmsModule } from './modules/sms/sms.module';
 import { UserModule } from './modules/user/user.module';
 import { DistributorReturnModule } from './modules/distributor-return/distributor-return.module';
+import { DistributorTransferModule } from './modules/distributor-transfer/distributor-transfer.module';
 
 @Module({
   imports: [
@@ -110,6 +111,7 @@ import { DistributorReturnModule } from './modules/distributor-return/distributo
     SmsModule,
     UserModule,
     DistributorReturnModule,
+    DistributorTransferModule,
   ],
   providers: [
     {

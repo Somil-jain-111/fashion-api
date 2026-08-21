@@ -4,6 +4,7 @@ import { BaseRepository } from 'src/default/common/repositories/base.repository'
 import { User } from 'src/modules/auth/entities/users.entity';
 import { InvoiceEntity } from 'src/modules/invoices/entities/invoice.entity';
 import { InvoicePairDetailEntity } from 'src/modules/invoices/entities/invoice-pair-detail.entity';
+import { InvoiceItemEntity } from 'src/modules/invoices/entities/invoice-item.entity';
 import { PointHistory } from 'src/modules/redemptions/entities/point-history.entity';
 import { PointStatusEnum } from 'src/modules/redemptions/enum/point-history-status.enum.';
 import { RedemptionType } from 'src/modules/redemptions/enum/redemption-type.enum';
@@ -23,22 +24,48 @@ export class DistributorReturnRepository extends BaseRepository<InvoicePairRetur
   }
 
   /**
-   * invoice_no is only unique per distributor (master_id), so returns are scoped the same
-   * way scans are — see InvoiceValidationService.getValidInvoice's lock-key comment.
+   * Looks the pair up on its own — the invoice is derived from it (via its assortment)
+   * rather than taken as input. A physical QR scan may decode to either pair_uid or the
+   * pair_qr payload depending on the scanner/label, so both columns are matched.
+   */
+  findPairByCode(pairCode: string, manager?: EntityManager) {
+    return (
+      manager?.getRepository(InvoicePairDetailEntity) ??
+      this.dataSource.getRepository(InvoicePairDetailEntity)
+    )
+      .createQueryBuilder('pair')
+      .innerJoin('pair.assortment', 'assortment')
+      .addSelect(['assortment.id', 'assortment.invoice_id', 'assortment.parent_item_code'])
+      .where('(pair.pair_uid = :pairCode OR pair.pair_qr = :pairCode)', { pairCode })
+      .getOne();
+  }
+
+  /**
+   * invoice_assortments only carries the item code (parent_item_code), not a direct FK to
+   * invoice_items — join on (invoice_id, item_code) to resolve the product name for display.
+   */
+  findProductForPair(
+    invoiceId: string,
+    itemCode: string,
+    manager?: EntityManager
+  ): Promise<InvoiceItemEntity | null> {
+    return (manager?.getRepository(InvoiceItemEntity) ?? this.dataSource.getRepository(InvoiceItemEntity))
+      .createQueryBuilder('item')
+      .select(['item.id', 'item.item_code', 'item.item_name'])
+      .where('item.invoice_id = :invoiceId', { invoiceId })
+      .andWhere('item.item_code = :itemCode', { itemCode })
+      .getOne();
+  }
+
+  /**
    * `forUpdate` locks both the invoice row and the joined retailer/user row in one query,
    * since a SELECT ... FOR UPDATE with a join locks every table it touches in MySQL.
    */
-  findInvoiceForDistributor(
-    invoiceNumber: string,
-    distributorCode: string,
-    manager?: EntityManager,
-    forUpdate = false
-  ) {
+  findInvoiceById(invoiceId: string, manager?: EntityManager, forUpdate = false) {
     const query = (manager?.getRepository(InvoiceEntity) ?? this.dataSource.getRepository(InvoiceEntity))
       .createQueryBuilder('invoice')
       .innerJoinAndSelect('invoice.user', 'retailer')
-      .where('invoice.invoice_no = :invoiceNumber', { invoiceNumber })
-      .andWhere('invoice.master_id = :distributorCode', { distributorCode });
+      .where('invoice.id = :invoiceId', { invoiceId });
 
     if (forUpdate) {
       query.setLock('pessimistic_write');
@@ -49,22 +76,6 @@ export class DistributorReturnRepository extends BaseRepository<InvoicePairRetur
 
   saveInvoice(invoice: InvoiceEntity, manager: EntityManager): Promise<InvoiceEntity> {
     return manager.getRepository(InvoiceEntity).save(invoice);
-  }
-
-  /**
-   * A physical QR scan may decode to either pair_uid or the pair_qr payload depending on the
-   * scanner/label — match against whichever the scanned pairCode actually is.
-   */
-  findPairInInvoice(invoiceId: string, pairCode: string, manager?: EntityManager) {
-    return (
-      manager?.getRepository(InvoicePairDetailEntity) ??
-      this.dataSource.getRepository(InvoicePairDetailEntity)
-    )
-      .createQueryBuilder('pair')
-      .innerJoin('pair.assortment', 'assortment')
-      .where('assortment.invoice_id = :invoiceId', { invoiceId })
-      .andWhere('(pair.pair_uid = :pairCode OR pair.pair_qr = :pairCode)', { pairCode })
-      .getOne();
   }
 
   findExistingReturn(pairId: string, manager?: EntityManager) {

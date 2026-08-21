@@ -6,7 +6,7 @@ export const DISTRIBUTOR_RETURN_ERRORS = {
   },
   PAIR_NOT_FOUND: {
     code: 'DRT_002',
-    message: 'Pair QR does not belong to this invoice',
+    message: 'Pair QR not found',
     statusCode: 404,
   },
   PAIR_NOT_ELIGIBLE: {
@@ -23,5 +23,15 @@ export const DISTRIBUTOR_RETURN_ERRORS = {
     code: 'DRT_005',
     message: 'Retailer for this invoice was not found',
     statusCode: 404,
+  },
+  INVOICE_NOT_APPROVED: {
+    code: 'DRT_006',
+    message: 'Invoice must be approved before its pairs can be returned',
+    statusCode: 422,
+  },
+  INVOICE_EXPIRED: {
+    code: 'DRT_007',
+    message: 'Invoice has expired and its pairs can no longer be returned',
+    statusCode: 422,
   },
 } as const;

@@ -1,0 +1,356 @@
+{
+  "info": {
+    "_postman_id": "b7f3a6d0-9d2e-4c1a-8f9a-6c6b2a9c1e11",
+    "name": "Campus Shoes - Super Admin",
+    "description": "All /super-admin/* endpoints: user 360 view, user-mapping management, cross-user reports (redemption orders, stock orders, points, DBT payouts), and thin proxies over the existing banner and dynamic-config services. Every route is SUPERADMIN-role-gated (JwtAuthGuard + RolesGuard).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{superAdminToken}}", "type": "string" }]
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:4050/api/v1", "type": "string" },
+    { "key": "superAdminToken", "value": "", "type": "string" },
+    { "key": "userId", "value": "1", "type": "string" },
+    { "key": "mappingId", "value": "1", "type": "string" },
+    { "key": "bannerId", "value": "1", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "Users",
+      "item": [
+        {
+          "name": "List users",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/super-admin/users?role=retailer&status=active&search=&page=1&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["super-admin", "users"],
+              "query": [
+                { "key": "role", "value": "retailer", "description": "UserRole: retailer | distributor | sub_distributor | sales_person | employee | super_admin | l1 | l2" },
+                { "key": "status", "value": "active", "description": "UserStatus: active | inactive | blocked | in_approval | partial_approved | deleted" },
+                { "key": "search", "value": "", "description": "Matches mobile, email, firm name, or username" },
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "User detail (360 view)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/super-admin/users/{{userId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["super-admin", "users", "{{userId}}"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "User Mappings",
+      "item": [
+        {
+          "name": "List mappings",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/super-admin/user-mappings?childId=&parentId=&mappingType=RETAILER_TO_DISTRIBUTOR&active=true&page=1&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["super-admin", "user-mappings"],
+              "query": [
+                { "key": "childId", "value": "", "description": "Retailer user id" },
+                { "key": "parentId", "value": "", "description": "Distributor/sub-distributor user id" },
+                { "key": "mappingType", "value": "RETAILER_TO_DISTRIBUTOR", "description": "RETAILER_TO_DISTRIBUTOR | RETAILER_TO_SUB_DISTRIBUTOR" },
+                { "key": "active", "value": "true" },
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create mapping",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"childId\": 10,\n  \"parentId\": 20,\n  \"mappingType\": \"RETAILER_TO_DISTRIBUTOR\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/super-admin/user-mappings",
+              "host": ["{{baseUrl}}"],
+              "path": ["super-admin", "user-mappings"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update mapping",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"active\": false,\n  \"parentId\": 21\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/super-admin/user-mappings/{{mappingId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["super-admin", "user-mappings", "{{mappingId}}"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Reports",
+      "item": [
+        {
+          "name": "Redemption orders",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/super-admin/reports/redemption-orders?userId=&status=placed&fromDate=&toDate=&page=1&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["super-admin", "reports", "redemption-orders"],
+              "query": [
+                { "key": "userId", "value": "" },
+                { "key": "status", "value": "placed", "description": "OrderStatus: placed | order_review | otp_triggered | otp_verified | otp_expired | cancelled | failed | partial" },
+                { "key": "fromDate", "value": "", "description": "ISO date" },
+                { "key": "toDate", "value": "", "description": "ISO date" },
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Stock orders",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/super-admin/reports/stock-orders?userId=&distributorId=&status=PLACED&page=1&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["super-admin", "reports", "stock-orders"],
+              "query": [
+                { "key": "userId", "value": "" },
+                { "key": "distributorId", "value": "" },
+                { "key": "status", "value": "PLACED", "description": "OrderPlacementStatus: PLACED | CANCELLED" },
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Points ledger",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/super-admin/reports/points?userId=&type=earn&status=earn&page=1&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["super-admin", "reports", "points"],
+              "query": [
+                { "key": "userId", "value": "" },
+                { "key": "type", "value": "earn", "description": "RedemptionType: redemption | earn | upi | bank" },
+                { "key": "status", "value": "earn", "description": "PointStatusEnum: pending | earn | redeem | expired | cancelled | blocked | pointZero | refund" },
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "DBT payouts",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/super-admin/reports/dbt-payouts?userId=&status=SUCCESS&page=1&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["super-admin", "reports", "dbt-payouts"],
+              "query": [
+                { "key": "userId", "value": "" },
+                { "key": "status", "value": "SUCCESS", "description": "PayoutStatus: INITIATED | PENDING_APPROVAL | SUCCESS | FAILED | REJECTED" },
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Banners",
+      "item": [
+        {
+          "name": "List banners",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/super-admin/banners?position=home_top&search=&page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["super-admin", "banners"],
+              "query": [
+                { "key": "position", "value": "home_top", "description": "BannerPosition: home_top | home_middle | home_bottom | login | profile | rewards | popup | splash" },
+                { "key": "search", "value": "" },
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Banner detail",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/super-admin/banners/{{bannerId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["super-admin", "banners", "{{bannerId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create banner",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Festive Offer\",\n  \"subtitle\": \"Up to 500 bonus points\",\n  \"image\": \"https://cdn.example.com/banners/festive.png\",\n  \"position\": \"home_top\",\n  \"redirectType\": \"url\",\n  \"redirectValue\": \"https://example.com/offer\",\n  \"roleIds\": [\"3\"],\n  \"priority\": 1,\n  \"isActive\": true,\n  \"startDate\": \"2026-08-21T00:00:00.000Z\",\n  \"endDate\": \"2026-09-21T00:00:00.000Z\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/super-admin/banners",
+              "host": ["{{baseUrl}}"],
+              "path": ["super-admin", "banners"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update banner",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Festive Offer - Extended\",\n  \"isActive\": true,\n  \"endDate\": \"2026-10-05T00:00:00.000Z\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/super-admin/banners/{{bannerId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["super-admin", "banners", "{{bannerId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete banner",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/super-admin/banners/delete/{{bannerId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["super-admin", "banners", "delete", "{{bannerId}}"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Dynamic Config",
+      "item": [
+        {
+          "name": "List all configs",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/super-admin/dynamic-config",
+              "host": ["{{baseUrl}}"],
+              "path": ["super-admin", "dynamic-config"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get config by role",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/super-admin/dynamic-config?role=retailer",
+              "host": ["{{baseUrl}}"],
+              "path": ["super-admin", "dynamic-config"],
+              "query": [
+                { "key": "role", "value": "retailer", "description": "UserRole" }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create config",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userRole\": \"retailer\",\n  \"redemptionEnabled\": true,\n  \"physicalRedemptionEnabled\": true,\n  \"digitalRedemptionEnabled\": true,\n  \"dbtEnabled\": true,\n  \"redemptionLimits\": {\n    \"dbt\": { \"dailyLimit\": 5000, \"monthlyLimit\": 50000 },\n    \"digital\": { \"maxDailyRedemptions\": 5, \"maxMonthlyRedemptions\": 50 },\n    \"physical\": { \"maxDailyRedemptions\": 2, \"maxMonthlyRedemptions\": 20 }\n  },\n  \"additionalSettings\": {\n    \"skipKyc\": false\n  },\n  \"loginMaxOtpAttempts\": 5,\n  \"loginOtpTimeoutSeconds\": 30,\n  \"loginOtpExpirySeconds\": 300,\n  \"redemptionMaxOtpAttempts\": 5,\n  \"redemptionOtpTimeoutSeconds\": 30,\n  \"redemptionOtpExpirySeconds\": 300\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/super-admin/dynamic-config/create",
+              "host": ["{{baseUrl}}"],
+              "path": ["super-admin", "dynamic-config", "create"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update config",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userRole\": \"retailer\",\n  \"redemptionEnabled\": true,\n  \"dbtEnabled\": false,\n  \"redemptionLimits\": {\n    \"dbt\": { \"dailyLimit\": 3000, \"monthlyLimit\": 30000 }\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/super-admin/dynamic-config/update",
+              "host": ["{{baseUrl}}"],
+              "path": ["super-admin", "dynamic-config", "update"]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}

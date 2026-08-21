@@ -1,0 +1,188 @@
+{
+  "info": {
+    "_postman_id": "c4a1e9f0-7b3d-4e2a-9c6f-1a8d5b2e3f77",
+    "name": "Campus Shoes - Distributor Return & Transfer",
+    "description": "Distributor-facing endpoints: (1) /distributor-return/* — a distributor scans just a pair code (the invoice is derived from the pair) to reverse a retailer's already-earned points on a returned pair, and (2) /distributor-transfer/* — a distributor transfers a whole approved invoice's stock to another distributor, creating a PENDING_APPROVAL request. Both are gated to DISTRIBUTOR/SUB_DISTRIBUTOR roles (JwtAuthGuard + RolesGuard).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{distributorToken}}", "type": "string" }]
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:4050/api/v1", "type": "string" },
+    { "key": "distributorToken", "value": "", "type": "string" },
+    { "key": "invoiceNumber", "value": "IN1242006273", "type": "string" },
+    { "key": "pairCode", "value": "436111561054", "type": "string", "description": "Either the pair_uid or the pair_qr value scanned off the physical pair" },
+    { "key": "receivingDistributorId", "value": "48", "type": "string" },
+    { "key": "requestNo", "value": "TRF-CAMPUS-000123", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "Distributor Return",
+      "description": "Distributor scans a pair code to return a redeemed pair — the invoice is derived from the pair itself. Validates it (not found / not redeemed / already returned / invoice not approved / not owned by this distributor), then reverses the retailer's earned points.",
+      "item": [
+        {
+          "name": "Validate return",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"pairCode\": \"{{pairCode}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/distributor-return/validate",
+              "host": ["{{baseUrl}}"],
+              "path": ["distributor-return", "validate"]
+            },
+            "description": "Preview only — no mutation. Returns the matched invoice/retailer and the estimated refund points. Errors: DRT_001 invoice not found (or not owned by this distributor), DRT_002 pair QR not found, DRT_003 pair not redeemed, DRT_004 already returned, DRT_005 retailer not found, DRT_006 invoice not approved, DRT_007 invoice expired. Every error's `data` field carries { reasonCode, reasonLabel, pair: {pairUid, pairQr}, product: {sku, name} } for UI display, plus { previousReturn: {returnId, returnedAt, minutesAgo} } on DRT_004."
+          },
+          "response": []
+        },
+        {
+          "name": "Process return",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"pairCode\": \"{{pairCode}}\",\n  \"remarks\": \"Customer returned - size issue\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/distributor-return/process",
+              "host": ["{{baseUrl}}"],
+              "path": ["distributor-return", "process"]
+            },
+            "description": "Runs the same validation as /validate, then commits: debits the retailer's points (clamped to their balance), writes a point_histories refund row, updates the invoice's earned_points/scanned_pairs/scan_status, and records an audit row keyed by pair_id (so the same physical pair can never be returned twice)."
+          },
+          "response": []
+        },
+        {
+          "name": "Return history",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/distributor-return/history?page=1&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["distributor-return", "history"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" }
+              ]
+            },
+            "description": "This distributor's own past returns, newest first. Response: { items, pagination: { totalItems, totalPages, currentPage, pageSize } }."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Distributor Transfer",
+      "description": "Distributor transfers a whole approved invoice's stock to another distributor. No per-pair scanning, no receiving distributor picked upfront — the request is created open (invoice number + optional remark only) and any other distributor can claim it via allocate. No approve/reject endpoints yet.",
+      "item": [
+        {
+          "name": "Validate transfer",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"invoiceNumber\": \"{{invoiceNumber}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/distributor-transfer/validate",
+              "host": ["{{baseUrl}}"],
+              "path": ["distributor-transfer", "validate"]
+            },
+            "description": "Preview only — no mutation, only the invoice number needed. Returns totalPairs, skuCount, billingEstimate. Errors: DTR_001 invoice not found, DTR_002 invoice not approved, DTR_006 a transfer for this invoice is already pending."
+          },
+          "response": []
+        },
+        {
+          "name": "Create transfer request",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"invoiceNumber\": \"{{invoiceNumber}}\",\n  \"remarks\": \"Excess stock, open to any distributor\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/distributor-transfer/request",
+              "host": ["{{baseUrl}}"],
+              "path": ["distributor-transfer", "request"]
+            },
+            "description": "Runs the same validation as /validate, then creates the transfer request row with a generated request_no (TRF-CAMPUS-######), status PENDING_APPROVAL, and no receiving distributor yet (to_distributor_id null) — it sits open for any other distributor to claim via 'Allocate transfer request'. Only one pending request per invoice is allowed at a time."
+          },
+          "response": []
+        },
+        {
+          "name": "List open (unclaimed) requests",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/distributor-transfer/open?page=1&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["distributor-transfer", "open"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" }
+              ]
+            },
+            "description": "PENDING_APPROVAL requests with no receiving distributor yet, excluding this distributor's own outgoing requests. Response: { items, pagination: { totalItems, totalPages, currentPage, pageSize } }."
+          },
+          "response": []
+        },
+        {
+          "name": "Allocate transfer request",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/distributor-transfer/{{requestNo}}/allocate",
+              "host": ["{{baseUrl}}"],
+              "path": ["distributor-transfer", "{{requestNo}}", "allocate"]
+            },
+            "description": "The calling distributor claims an open request as its receiver, setting to_distributor_id. Errors: DTR_007 request not found, DTR_005 cannot allocate your own request, DTR_008 already allocated."
+          },
+          "response": []
+        },
+        {
+          "name": "Transfer request detail",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/distributor-transfer/{{requestNo}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["distributor-transfer", "{{requestNo}}"]
+            },
+            "description": "Set {{requestNo}} to the value returned by 'Create transfer request'. Viewable by either the sending or the receiving distributor; DTR_007 if neither."
+          },
+          "response": []
+        },
+        {
+          "name": "Transfer history",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/distributor-transfer/history?page=1&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["distributor-transfer", "history"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" }
+              ]
+            },
+            "description": "This distributor's own sent transfer requests, newest first. Response: { items, pagination: { totalItems, totalPages, currentPage, pageSize } }."
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}
