@@ -57,6 +57,7 @@ import { SmsModule } from './modules/sms/sms.module';
 import { UserModule } from './modules/user/user.module';
 import { DistributorReturnModule } from './modules/distributor-return/distributor-return.module';
 import { DistributorTransferModule } from './modules/distributor-transfer/distributor-transfer.module';
+import { SuperAdminModule } from './modules/super-admin/super-admin.module';
 
 @Module({
   imports: [
@@ -112,6 +113,7 @@ import { DistributorTransferModule } from './modules/distributor-transfer/distri
     UserModule,
     DistributorReturnModule,
     DistributorTransferModule,
+    SuperAdminModule,
   ],
   providers: [
     {

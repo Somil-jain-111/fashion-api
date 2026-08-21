@@ -34,6 +34,7 @@ import { INVOICE_SCAN_ERRORS } from './errors/invoice-scan.errors';
 import { DISTRIBUTOR_RETURN_ERRORS } from './errors/distributor-return.errors';
 import { DISTRIBUTOR_TRANSFER_ERRORS } from './errors/distributor-transfer.errors';
 import { SUPPORT_ERRORS } from './errors/support.errors';
+import { SUPER_ADMIN_ERRORS } from './errors/super-admin.errors';
 
 export type ErrorCodeValue = {
   code: string;
@@ -76,6 +77,7 @@ export const ERROR_CODES = {
   DISTRIBUTOR_RETURN: DISTRIBUTOR_RETURN_ERRORS,
   DISTRIBUTOR_TRANSFER: DISTRIBUTOR_TRANSFER_ERRORS,
   SUPPORT: SUPPORT_ERRORS,
+  SUPER_ADMIN: SUPER_ADMIN_ERRORS,
 } as const;
 
 export type ErrorCodeGroups = typeof ERROR_CODES;

@@ -16,7 +16,7 @@ export class AppController {
     // @InjectDataSource("mongodbConnection")
     // private readonly mongoConnection: DataSource,
     private readonly redisService: RedisService,
-    private cacheService: CacheService,
+    private readonly cacheService: CacheService,
     private readonly appConfigService: AppConfigService,
     private readonly httpService: HttpService
   ) {}
