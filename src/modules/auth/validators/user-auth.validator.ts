@@ -103,7 +103,7 @@ export class UserAuthValidator {
         return;
 
       case UserStatus.PARTIAL_APPROVED:
-        throw new BusinessException(ERROR_CODES.USER.USER_HOLD);
+        throw new BusinessException(ERROR_CODES.USER.PENDING_SO_VERIFICATION);
 
       case UserStatus.IN_APPROVAL:
         throw new BusinessException(ERROR_CODES.USER.USER_PENDING);
