@@ -249,7 +249,7 @@ export class InvoiceHistoryRepository extends BaseRepository<InvoiceScanAuditEnt
     userId: string,
     queryRunner?: QueryRunner
   ): Promise<InvoiceScanAuditEntity | null> {
-    return await this.getRepository(queryRunner).findOne({ where: { id, userId } });
+    return await this.getRepository(queryRunner).findOne({ where: { id: Number(id), userId } });
   }
 
   async findHistory(

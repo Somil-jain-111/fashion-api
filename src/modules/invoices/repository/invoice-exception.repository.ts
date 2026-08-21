@@ -1,21 +1,16 @@
 import { Injectable } from '@nestjs/common';
-import {
-  DataSource,
-  EntityManager,
-} from 'typeorm';
+import { DataSource, QueryRunner } from 'typeorm';
 import { InvoiceScanExceptionEntity } from '../entities/invoice-scan-exception.entity';
-import {
-  ScanExceptionStatus,
-  ScanExceptionType,
-} from '../enum/exception.enum';
+import { ScanExceptionStatus, ScanExceptionType } from '../enum/exception.enum';
+import { BaseRepository } from 'src/default/common/repositories';
 
 @Injectable()
-export class InvoiceExceptionRepository {
-  constructor(
-    private readonly dataSource: DataSource,
-  ) {}
+export class InvoiceExceptionRepository extends BaseRepository<InvoiceScanExceptionEntity> {
+  constructor(private readonly dataSource: DataSource) {
+    super(dataSource.getRepository(InvoiceScanExceptionEntity));
+  }
 
-  async create(
+  async createException(
     data: {
       invoiceId: string;
       sessionId?: string;
@@ -24,72 +19,39 @@ export class InvoiceExceptionRepository {
       exceptionType: ScanExceptionType;
       rawPayload?: Record<string, unknown>;
     },
-    manager?: EntityManager,
+    queryRunner?: QueryRunner
   ): Promise<InvoiceScanExceptionEntity> {
-    const repo =
-      manager?.getRepository(
-        InvoiceScanExceptionEntity,
-      ) ??
-      this.dataSource.getRepository(
-        InvoiceScanExceptionEntity,
-      );
-
-    return repo.save(
-      repo.create(data),
-    );
+    const repo = this.getRepository(queryRunner);
+    return await repo.save(repo.create(data));
   }
 
-  findByInvoice(
-    invoiceId: string,
-    status?: ScanExceptionStatus,
-  ) {
-    return this.dataSource
-      .getRepository(
-        InvoiceScanExceptionEntity,
-      )
-      .find({
-        where: status
-          ? {
-              invoiceId,
-              status,
-            }
-          : {
-              invoiceId,
-            },
-        order: {
-          createdAt: 'DESC',
-        },
-      });
-  }
-
-  findById(id: string) {
-    return this.dataSource
-      .getRepository(
-        InvoiceScanExceptionEntity,
-      )
-      .findOne({
-        where: {
-          id,
-        },
-      });
+  findByInvoice(invoiceId: string, status?: ScanExceptionStatus) {
+    return this.findMany({
+      where: status
+        ? {
+            invoiceId,
+            status,
+          }
+        : {
+            invoiceId,
+          },
+      order: {
+        createdAt: 'DESC',
+      },
+    });
   }
 
   async updateReview(
     id: string,
     reviewerId: string,
     status: ScanExceptionStatus,
-    notes?: string,
-  ): Promise<
-    InvoiceScanExceptionEntity | null
-  > {
-    const repo =
-      this.dataSource.getRepository(
-        InvoiceScanExceptionEntity,
-      );
+    notes?: string
+  ): Promise<InvoiceScanExceptionEntity | null> {
+    const repo = this.getRepository();
 
     const row = await repo.findOne({
       where: {
-        id,
+        id: Number(id),
       },
     });
 
