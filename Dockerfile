@@ -11,8 +11,8 @@ RUN npm install
 
 COPY . .
 
-EXPOSE 4050
+RUN npm run build
 
-CMD ["npm", "run" "build"]
+EXPOSE 4050
 
 CMD ["npm", "start"]
