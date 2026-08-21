@@ -1,9 +1,10 @@
-import { DataSource } from 'typeorm';
+import { DataSource, QueryRunner } from 'typeorm';
 import { Injectable } from '@nestjs/common';
 //
 import { PointHistory } from 'src/modules/auth/entities';
 import { BaseRepository } from 'src/default/common/repositories/base.repository';
 import { PointStatusEnum } from '../enum/point-history-status.enum.';
+import { RedemptionType } from '../enum/redemption-type.enum';
 
 @Injectable()
 export class PointHistoryRepository extends BaseRepository<PointHistory> {
@@ -56,4 +57,80 @@ export class PointHistoryRepository extends BaseRepository<PointHistory> {
 
     return Number(result?.totalPoints || 0);
   }
+
+   async findByIdAndUser(
+    id: number,
+    userId: string | number,
+    queryRunner?: QueryRunner
+  ): Promise<PointHistory | null> {
+    const repo = queryRunner ? queryRunner.manager.getRepository(PointHistory) : this.repository;
+
+    return repo.findOne({
+      where: {
+        id,
+        user: { id: userId } as any,
+      } as any,
+      relations: ['order', 'payout'],
+    });
+  }
+
+  async findAllByUser(
+    userId: string | number,
+    options: {
+      page: number;
+      limit: number;
+      type?: RedemptionType;
+      status?: PointStatusEnum;
+      month?: string;
+      year?: string;
+    },
+    queryRunner?: QueryRunner
+  ): Promise<[PointHistory[], number]> {
+    const manager = queryRunner ? queryRunner.manager : this.repository.manager;
+
+    const qb = manager
+      .createQueryBuilder(PointHistory, 'point')
+      .leftJoinAndSelect('point.order', 'order')
+      .leftJoinAndSelect('point.payout', 'payout')
+      .where('point.user_id = :userId', { userId: String(userId) })
+      .orderBy('point.date', 'DESC')
+      .skip((options.page - 1) * options.limit)
+      .take(options.limit);
+
+    if (options.type) {
+      qb.andWhere('point.type = :type', { type: options.type });
+    }
+
+    if (options.status) {
+      qb.andWhere('point.status = :status', { status: options.status });
+    }
+
+    if (options.month) {
+      qb.andWhere('point.month = :month', { month: options.month });
+    }
+
+    if (options.year) {
+      qb.andWhere('point.year = :year', { year: options.year });
+    }
+
+    return qb.getManyAndCount();
+  }
+
+  async getRemainingPointsForUser(
+    userId: string | number,
+    queryRunner?: QueryRunner
+  ): Promise<number> {
+    const manager = queryRunner ? queryRunner.manager : this.repository.manager;
+
+    const latest = await manager
+      .createQueryBuilder(PointHistory, 'point')
+      .where('point.user_id = :userId', { userId: String(userId) })
+      .orderBy('point.date', 'DESC')
+      .addOrderBy('point.id', 'DESC')
+      .limit(1)
+      .getOne();
+
+    return latest?.user_remaining_points ?? 0;
+  }
+
 }

@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Query, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Query, Req, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from 'src/default/common/guards/jwt-auth.guard';
 import { RolesGuard } from 'src/default/common/guards/roles.guard';
 import { Roles } from 'src/default/common/decorators/roles.decorator';
@@ -11,6 +11,7 @@ import { NoCache } from 'src/default/cache/cache.decorator';
 import { SkipThrottle } from '@nestjs/throttler';
 import { DataSanitizer } from 'src/default/common/utils/sanitize.utils';
 import { DistMappingQueryDto } from './dto/dist-mapping-query.dto';
+import { GetPointHistoryQueryDto } from './dto/get-point-history-query.dto';
 
 @Controller('user')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -61,6 +62,24 @@ export class UserController {
     const userId = req.user.id;
 
     const response = await this.userService.getMappedDistributors(userId, query.distRole);
+    return DataSanitizer.sanitizeData(response);
+  }
+
+    @Get('point-history')
+  async getPointHistory(@Req() req: any, @Query() query: GetPointHistoryQueryDto) {
+    const response = await this.userService.getPointHistory(req.user.id, query);
+    return DataSanitizer.sanitizeData(response);
+  }
+
+  @Get('summary')
+  async getRemainingPoints(@Req() req: any) {
+    const response = await this.userService.getRemainingPoints(req.user.id);
+    return DataSanitizer.sanitizeData(response);
+  }
+
+  @Get(':id')
+  async findOne(@Req() req: any, @Param('id') id: string) {
+    const response = await this.userService.findOne(req.user.id, id);
     return DataSanitizer.sanitizeData(response);
   }
 }
