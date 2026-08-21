@@ -14,6 +14,8 @@ import { OrderPlacement } from './entities/order-placement.entity';
 import { OrderPlacementSource, OrderPlacementStatus } from './enum/order-placement.enum';
 import { OrderPlacementHelper } from './helper/order-placement.helper';
 import { OrderPlacementItemRepository, OrderPlacementRepository } from './repository';
+import { GetOrderHistoryQueryDto } from './dto/get-order-history-query.dto';
+import { OrderHistoryResponseDto } from './dto/order-history-response.dto';
 
 @Injectable()
 export class OrderPlacementService {
@@ -218,4 +220,30 @@ export class OrderPlacementService {
       })),
     };
   }
+
+
+  async getOrderHistory(
+  userId: string | number,
+  query: GetOrderHistoryQueryDto
+): Promise<OrderHistoryResponseDto> {
+  const page = query.page ?? 1;
+  const limit = query.limit ?? 10;
+
+  const [orders, totalItems] = await this.orderPlacementRepository.findAllByUser(userId, {
+    page,
+    limit,
+    status: query.status,
+    source: query.source,
+  });
+
+  return {
+    items: orders.map((order) => this.toResponse(order)),
+    meta: {
+      page,
+      limit,
+      totalItems,
+      totalPages: Math.ceil(totalItems / limit) || 1,
+    },
+  };
+}
 }

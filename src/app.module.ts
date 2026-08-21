@@ -56,6 +56,8 @@ import { RedemptionCartModule } from './modules/redemption-cart/redemption-cart.
 import { SmsModule } from './modules/sms/sms.module';
 import { UserModule } from './modules/user/user.module';
 import { RetailerInvoiceModule } from './modules/retailer-invoice/retailer-invoice.module';
+import { DistributorReturnModule } from './modules/distributor-return/distributor-return.module';
+import { DistributorTransferModule } from './modules/distributor-transfer/distributor-transfer.module';
 
 @Module({
   imports: [
@@ -110,6 +112,8 @@ import { RetailerInvoiceModule } from './modules/retailer-invoice/retailer-invoi
     SmsModule,
     UserModule,
     RetailerInvoiceModule,
+    DistributorReturnModule,
+    DistributorTransferModule,
   ],
   providers: [
     {
