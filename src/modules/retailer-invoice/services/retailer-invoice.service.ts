@@ -30,7 +30,7 @@ export class RetailerInvoiceService {
     }
 
     return {
-      invoiceId: invoice.id,
+      invoiceId: String(invoice.id),
       invoiceNumber: invoice.invoice_no,
       invoiceType: invoice.invoice_type,
       distributorId: String(invoice.distributor.id),

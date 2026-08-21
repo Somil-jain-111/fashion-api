@@ -7,9 +7,9 @@ import {
   JoinColumn,
   ManyToOne,
   OneToMany,
-  PrimaryGeneratedColumn,
 } from 'typeorm';
 import { InvoiceEntity, InvoiceItemEntity, InvoicePairDetailEntity } from '../../auth/entities';
+import { BaseEntity } from '../../../default/common/entities';
 
 @Entity({ name: 'invoice_assortments' })
 @Index('idx_invoice_assortments_invoice_id', ['invoice_id'])
@@ -17,10 +17,7 @@ import { InvoiceEntity, InvoiceItemEntity, InvoicePairDetailEntity } from '../..
 @Index('idx_invoice_assortments_parent_item_code', ['parent_item_code'])
 @Index('idx_invoice_assortments_packing_item_code', ['packing_item_code'])
 @Index('idx_invoice_assortments_uid', ['uid'])
-export class InvoiceAssortmentEntity {
-  @PrimaryGeneratedColumn({ type: 'bigint', unsigned: true })
-  id: string;
-
+export class InvoiceAssortmentEntity extends BaseEntity {
   @Column({ type: 'bigint', unsigned: true })
   invoice_id: string;
 
@@ -37,6 +34,14 @@ export class InvoiceAssortmentEntity {
    */
   @Column({ name: 'parent_item_code', type: 'varchar', length: 150 })
   parent_item_code: string;
+
+  get item_code(): string {
+    return this.parent_item_code;
+  }
+
+  set item_code(val: string) {
+    this.parent_item_code = val;
+  }
 
   /**
    * assortmentdetail.uid
@@ -55,12 +60,6 @@ export class InvoiceAssortmentEntity {
    */
   @Column({ type: 'decimal', precision: 12, scale: 3, default: 0 })
   quantity: string;
-
-  @Column({
-    type: 'timestamp',
-    default: () => 'CURRENT_TIMESTAMP',
-  })
-  created_at: Date;
 
   @ManyToOne(() => InvoiceEntity, (invoice) => invoice.assortments, {
     onDelete: 'CASCADE',

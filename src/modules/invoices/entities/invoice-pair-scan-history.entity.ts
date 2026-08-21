@@ -1,24 +1,13 @@
-import {
-  BaseEntity,
-  Column,
-  CreateDateColumn,
-  Entity,
-  Index,
-  JoinColumn,
-  ManyToOne,
-  PrimaryGeneratedColumn,
-} from 'typeorm';
+import { Column, CreateDateColumn, Entity, Index, JoinColumn, ManyToOne } from 'typeorm';
 import { InvoiceScanHistory } from './invoice-scan-history.entity';
 import { InvoicePairDetailEntity } from './invoice-pair-detail.entity';
 import { InvoicePairScanStatus } from '../enum/invoice-pair-scan-status.enum';
+import { BaseEntity } from '../../../default/common/entities';
 
 @Entity('invoice_pair_scan_histories')
 @Index('idx_pair_uid', ['pair_uid'])
 @Index('idx_scan_history', ['invoiceScanHistory'])
 export class InvoicePairScanHistory extends BaseEntity {
-  @PrimaryGeneratedColumn('increment', { type: 'bigint' })
-  id!: bigint;
-
   @ManyToOne(() => InvoiceScanHistory, (scan) => scan.pairScans)
   @JoinColumn({ name: 'invoice_scan_history_id' })
   invoiceScanHistory!: InvoiceScanHistory;

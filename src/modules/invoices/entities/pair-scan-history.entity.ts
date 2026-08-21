@@ -1,14 +1,12 @@
-import { Column, CreateDateColumn, Entity, Index, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, Entity, Index } from 'typeorm';
 import { PairHistoryStatus, ScanSource } from '../enum/invoice-scan-session.enum';
+import { BaseEntity } from '../../../default/common/entities';
 
 @Entity('pair_scan_history')
 @Index('uq_pair_invoice', ['invoiceId', 'pairUid'], { unique: true })
 @Index('uq_pair_session', ['sessionId', 'pairUid'], { unique: true })
 @Index('idx_pair_history_user_created', ['userId', 'createdAt'])
-export class PairScanHistoryEntity {
-  @PrimaryGeneratedColumn({ type: 'bigint', unsigned: true })
-  id: string;
-
+export class PairScanHistoryEntity extends BaseEntity {
   @Column({ name: 'session_id', type: 'char', length: 36 })
   sessionId: string;
 
@@ -29,7 +27,4 @@ export class PairScanHistoryEntity {
 
   @Column({ name: 'failure_reason', type: 'varchar', length: 255, nullable: true })
   failureReason?: string;
-
-  @CreateDateColumn({ name: 'created_at' })
-  createdAt: Date;
 }

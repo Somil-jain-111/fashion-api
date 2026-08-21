@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { DataSource, EntityManager } from 'typeorm';
+import { DataSource, QueryRunner } from 'typeorm';
 import { InvoiceEntity } from '../entities/invoice.entity';
 import { InvoiceItemEntity } from '../entities/invoice-item.entity';
 import { InvoiceAssortmentEntity } from '../entities/invoice-assortment.entity';
@@ -15,21 +15,28 @@ import { InvoicePairDetailEntity } from '../entities/invoice-pair-detail.entity'
 export class InvoiceIngestionRepository {
   constructor(private readonly dataSource: DataSource) {}
 
-  findDuplicate(
+  private getRepo<T extends object>(entity: new () => T, queryRunner?: QueryRunner) {
+    return queryRunner
+      ? queryRunner.manager.getRepository(entity)
+      : this.dataSource.getRepository(entity);
+  }
+
+  async findDuplicate(
     invoiceNo: string,
     masterId: string,
-    manager?: EntityManager
+    queryRunner?: QueryRunner
   ): Promise<InvoiceEntity | null> {
-    return (manager?.getRepository(InvoiceEntity) ?? this.dataSource.getRepository(InvoiceEntity))
-      .findOne({ where: { invoice_no: invoiceNo, master_id: masterId } });
+    return await this.getRepo(InvoiceEntity, queryRunner).findOne({
+      where: { invoice_no: invoiceNo, master_id: masterId },
+    });
   }
 
   async createInvoice(
     data: Partial<InvoiceEntity>,
-    manager: EntityManager
+    queryRunner?: QueryRunner
   ): Promise<InvoiceEntity> {
-    const repo = manager.getRepository(InvoiceEntity);
-    return repo.save(repo.create(data));
+    const repo = this.getRepo(InvoiceEntity, queryRunner);
+    return await repo.save(repo.create(data));
   }
 
   /**
@@ -37,11 +44,10 @@ export class InvoiceIngestionRepository {
    */
   async createItems(
     rows: Partial<InvoiceItemEntity>[],
-    manager: EntityManager
+    queryRunner?: QueryRunner
   ): Promise<string[]> {
     if (!rows.length) return [];
-    const result = await manager
-      .getRepository(InvoiceItemEntity)
+    const result = await this.getRepo(InvoiceItemEntity, queryRunner)
       .createQueryBuilder()
       .insert()
       .into(InvoiceItemEntity)
@@ -56,11 +62,10 @@ export class InvoiceIngestionRepository {
    */
   async createAssortments(
     rows: Partial<InvoiceAssortmentEntity>[],
-    manager: EntityManager
+    queryRunner?: QueryRunner
   ): Promise<string[]> {
     if (!rows.length) return [];
-    const result = await manager
-      .getRepository(InvoiceAssortmentEntity)
+    const result = await this.getRepo(InvoiceAssortmentEntity, queryRunner)
       .createQueryBuilder()
       .insert()
       .into(InvoiceAssortmentEntity)
@@ -75,14 +80,19 @@ export class InvoiceIngestionRepository {
    */
   async createPairDetails(
     rows: Partial<InvoicePairDetailEntity>[],
-    manager: EntityManager
+    queryRunner?: QueryRunner
   ): Promise<void> {
     if (!rows.length) return;
     const CHUNK_SIZE = 500;
-    const repo = manager.getRepository(InvoicePairDetailEntity);
+    const repo = this.getRepo(InvoicePairDetailEntity, queryRunner);
     for (let i = 0; i < rows.length; i += CHUNK_SIZE) {
       const chunk = rows.slice(i, i + CHUNK_SIZE);
-      await repo.createQueryBuilder().insert().into(InvoicePairDetailEntity).values(chunk).execute();
+      await repo
+        .createQueryBuilder()
+        .insert()
+        .into(InvoicePairDetailEntity)
+        .values(chunk)
+        .execute();
     }
   }
 }

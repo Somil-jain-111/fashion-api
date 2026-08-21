@@ -1,10 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { InvoiceScanAttemptAuditEntity } from '../entities/invoice-scan-attempt-audit.entity';
-import {
-  ScanAttemptType,
-  ValidationOutcome,
-} from '../enum/scan-attempt.enum';
+import { ScanAttemptType, ValidationOutcome } from '../enum/scan-attempt.enum';
 import { ScanSource } from '../enum/invoice-scan-session.enum';
 
 export type ScanAuditAttempt = {
@@ -25,20 +22,11 @@ export type ScanAuditAttempt = {
 
 @Injectable()
 export class ScanAuditRepository {
-  constructor(
-    private readonly dataSource: DataSource,
-  ) {}
+  constructor(private readonly dataSource: DataSource) {}
 
-  async insert(
-    data: ScanAuditAttempt,
-  ): Promise<void> {
-    const repo =
-      this.dataSource.getRepository(
-        InvoiceScanAttemptAuditEntity,
-      );
+  async insert(data: ScanAuditAttempt): Promise<void> {
+    const repo = this.dataSource.getRepository(InvoiceScanAttemptAuditEntity);
 
-    await repo.save(
-      repo.create(data),
-    );
+    await repo.save(repo.create(data));
   }
 }

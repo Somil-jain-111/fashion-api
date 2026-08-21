@@ -1,18 +1,10 @@
 // src/default/common/entities/invoice.entity.ts
 
-import {
-  BaseEntity,
-  Column,
-  Entity,
-  Index,
-  JoinColumn,
-  ManyToOne,
-  OneToMany,
-  PrimaryGeneratedColumn,
-} from 'typeorm';
+import { Column, Entity, Index, JoinColumn, ManyToOne, OneToMany } from 'typeorm';
 import { User, InvoiceItemEntity, InvoiceAssortmentEntity } from '../../auth/entities';
 import { InvoiceScanStatus, InvoiceStatus } from '../enum/invoice.enum';
 import { InvoiceType } from '../enum/invoice-scan-session.enum';
+import { BaseEntity } from '../../../default/common/entities';
 
 @Entity({ name: 'invoices' })
 @Index('uq_invoice_no_master_id', ['invoice_no', 'master_id'], { unique: true })
@@ -24,11 +16,8 @@ import { InvoiceType } from '../enum/invoice-scan-session.enum';
 @Index('idx_invoice_scan_status', ['scan_status'])
 @Index('idx_invoice_distributor_id', ['distributor'])
 export class InvoiceEntity extends BaseEntity {
-  @PrimaryGeneratedColumn({ type: 'bigint', unsigned: true })
-  id: string;
-
   @ManyToOne(() => User, (user) => user.invoices, {
-    nullable: false,
+    nullable: true,
     onDelete: 'CASCADE',
   })
   @JoinColumn({ name: 'user_id' })
@@ -113,12 +102,6 @@ export class InvoiceEntity extends BaseEntity {
 
   @Column({ type: 'varchar', length: 255, nullable: true })
   remarks: string;
-
-  @Column({ type: 'bigint', unsigned: true, nullable: true })
-  created_by: string;
-
-  @Column({ type: 'bigint', unsigned: true, nullable: true })
-  updated_by: string;
 
   @OneToMany(() => InvoiceItemEntity, (item) => item.invoice)
   items: InvoiceItemEntity[];

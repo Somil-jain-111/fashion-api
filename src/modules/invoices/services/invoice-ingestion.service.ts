@@ -48,11 +48,12 @@ export class InvoiceIngestionService {
 
     const totalPairs = dto.assortmentdetail.reduce(
       (sum, assortment) =>
-        sum + assortment.packingInfo.reduce((inner, packing) => inner + packing.pairdetail.length, 0),
+        sum +
+        assortment.packingInfo.reduce((inner, packing) => inner + packing.pairdetail.length, 0),
       0
     );
 
-    return this.transactionService.execute(async (manager) => {
+    return this.transactionService.runInTransaction(async (queryRunner) => {
       const invoice = await this.ingestion.createInvoice(
         {
           user: { id: dto.userId } as any,
@@ -72,11 +73,11 @@ export class InvoiceIngestionService {
           status: InvoiceStatus.APPROVED,
           scan_status: InvoiceScanStatus.NOT_SCANNED,
         },
-        manager
+        queryRunner
       );
 
       const itemRows: Partial<InvoiceItemEntity>[] = dto.itemlist.map((item) => ({
-        invoice_id: invoice.id,
+        invoice_id: String(invoice.id),
         item_code: item.itemcode,
         item_name: item.itemname,
         unit: item.unit,
@@ -88,8 +89,10 @@ export class InvoiceIngestionService {
         igst: String(item.igst),
         total_amount: String(item.totalamount),
       }));
-      const itemIds = await this.ingestion.createItems(itemRows, manager);
-      const itemCodeToId = new Map(dto.itemlist.map((item, index) => [item.itemcode, itemIds[index]]));
+      const itemIds = await this.ingestion.createItems(itemRows, queryRunner);
+      const itemCodeToId = new Map(
+        dto.itemlist.map((item, index) => [item.itemcode, itemIds[index]])
+      );
 
       const assortmentRows: Partial<InvoiceAssortmentEntity>[] = [];
       const pairsPerAssortment: (typeof dto.assortmentdetail)[number]['packingInfo'][number]['pairdetail'][] =
@@ -98,7 +101,7 @@ export class InvoiceIngestionService {
         const itemId = itemCodeToId.get(assortment.itemcode)!;
         for (const packing of assortment.packingInfo) {
           assortmentRows.push({
-            invoice_id: invoice.id,
+            invoice_id: String(invoice.id),
             item_id: itemId,
             parent_item_code: assortment.itemcode,
             uid: assortment.uid,
@@ -108,7 +111,7 @@ export class InvoiceIngestionService {
           pairsPerAssortment.push(packing.pairdetail);
         }
       }
-      const assortmentIds = await this.ingestion.createAssortments(assortmentRows, manager);
+      const assortmentIds = await this.ingestion.createAssortments(assortmentRows, queryRunner);
 
       const pairRows: Partial<InvoicePairDetailEntity>[] = [];
       assortmentIds.forEach((assortmentId, index) => {
@@ -121,10 +124,10 @@ export class InvoiceIngestionService {
           });
         }
       });
-      await this.ingestion.createPairDetails(pairRows, manager);
+      await this.ingestion.createPairDetails(pairRows, queryRunner);
 
       return {
-        invoiceId: invoice.id,
+        invoiceId: String(invoice.id),
         invoiceNumber: invoice.invoice_no,
         invoiceType: invoice.invoice_type,
         totalPairs,

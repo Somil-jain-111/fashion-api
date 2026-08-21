@@ -1,24 +1,9 @@
-import {
-  Column,
-  Entity,
-  Index,
-  PrimaryGeneratedColumn,
-  UpdateDateColumn,
-} from 'typeorm';
+import { BaseEntity } from '../../../default/common/entities';
+import { Column, Entity, Index } from 'typeorm';
 
 @Entity('master_catalogue')
-@Index(
-  'uq_master_catalogue_item_code',
-  ['itemCode'],
-  { unique: true },
-)
-export class MasterCatalogueEntity {
-  @PrimaryGeneratedColumn({
-    type: 'bigint',
-    unsigned: true,
-  })
-  id: string;
-
+@Index('uq_master_catalogue_item_code', ['itemCode'], { unique: true })
+export class MasterCatalogueEntity extends BaseEntity {
   @Column({
     name: 'item_code',
     type: 'varchar',
@@ -50,20 +35,9 @@ export class MasterCatalogueEntity {
   mrp?: string;
 
   @Column({
-    type: 'boolean',
-    default: true,
-  })
-  active: boolean;
-
-  @Column({
     name: 'effective_from',
     type: 'date',
     nullable: true,
   })
   effectiveFrom?: Date;
-
-  @UpdateDateColumn({
-    name: 'updated_at',
-  })
-  updatedAt: Date;
 }

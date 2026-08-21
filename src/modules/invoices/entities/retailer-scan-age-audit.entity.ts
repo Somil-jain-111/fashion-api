@@ -1,23 +1,9 @@
-import {
-  Column,
-  CreateDateColumn,
-  Entity,
-  Index,
-  PrimaryGeneratedColumn,
-} from 'typeorm';
+import { BaseEntity } from '../../../default/common/entities';
+import { Column, Entity, Index } from 'typeorm';
 
 @Entity('retailer_scan_age_audit_log')
-@Index(
-  'idx_scan_age_audit_retailer',
-  ['retailerId', 'createdAt'],
-)
-export class RetailerScanAgeAuditEntity {
-  @PrimaryGeneratedColumn({
-    type: 'bigint',
-    unsigned: true,
-  })
-  id: string;
-
+@Index('idx_scan_age_audit_retailer', ['retailerId', 'createdAt'])
+export class RetailerScanAgeAuditEntity extends BaseEntity {
   @Column({
     name: 'retailer_id',
     type: 'bigint',
@@ -59,9 +45,4 @@ export class RetailerScanAgeAuditEntity {
     nullable: true,
   })
   approvalReference?: string;
-
-  @CreateDateColumn({
-    name: 'created_at',
-  })
-  createdAt: Date;
 }

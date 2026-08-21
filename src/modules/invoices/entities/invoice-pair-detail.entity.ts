@@ -37,6 +37,18 @@ export class InvoicePairDetailEntity extends BaseEntity {
   pair_uid: string;
 
   /**
+   * Sub item code from packing info
+   */
+  @Column({ name: 'sub_item_code', type: 'varchar', length: 150, nullable: true })
+  sub_item_code: string;
+
+  /**
+   * Session ID for active scanning session
+   */
+  @Column({ name: 'session_id', type: 'varchar', length: 100, nullable: true })
+  session_id: string;
+
+  /**
    * Scan status
    */
   @Column({
@@ -51,6 +63,26 @@ export class InvoicePairDetailEntity extends BaseEntity {
    */
   @Column({ type: 'bigint', unsigned: true, nullable: true })
   scanned_by: string;
+
+  get scanned_by_user_id(): string {
+    return this.scanned_by;
+  }
+
+  set scanned_by_user_id(val: string) {
+    this.scanned_by = val;
+  }
+
+  get is_scanned(): boolean {
+    return (
+      this.status === InvoicePairScanStatus.SCANNED ||
+      this.status === InvoicePairScanStatus.REDEEMED ||
+      this.status === InvoicePairScanStatus.USED
+    );
+  }
+
+  set is_scanned(val: boolean) {
+    this.status = val ? InvoicePairScanStatus.SCANNED : InvoicePairScanStatus.UNSCANNED;
+  }
 
   @Column({ type: 'timestamp', nullable: true })
   scanned_at: Date;

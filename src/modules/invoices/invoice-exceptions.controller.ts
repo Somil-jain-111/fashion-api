@@ -1,5 +1,4 @@
-
-import { Body, Controller, Get, Param, Patch, Query, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Query, Req, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard } from 'src/default/common/guards/jwt-auth.guard';
 import { DataSanitizer } from 'src/default/common/utils/sanitize.utils';
@@ -9,7 +8,7 @@ import { ReviewExceptionDto } from './dto';
 
 @ApiTags('Invoice Scan Exceptions')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard) // TODO: restrict to Admin/Sales review roles
+@UseGuards(JwtAuthGuard)
 @Controller('admin')
 export class InvoiceExceptionsController {
   constructor(private readonly exceptions: InvoiceExceptionService) {}
@@ -23,7 +22,7 @@ export class InvoiceExceptionsController {
     return DataSanitizer.sanitizeData(response);
   }
 
-  @Patch('exceptions/:exceptionId')
+  @Post('exceptions/:exceptionId/review')
   async review(
     @Req() request: any,
     @Param('exceptionId') exceptionId: string,

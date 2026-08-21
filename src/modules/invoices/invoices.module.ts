@@ -22,13 +22,15 @@ import {
   AuditService,
   InvoiceAuditProcessor,
   InvoiceService,
-  InvoiceValidationService,
   PairValidationService,
   PointCalculationService,
   RedisLockService,
   RewardService,
-  ScanSessionService,
 } from './services';
+import { InvoiceValidationService } from './services/invoice-validation.service';
+import { ScanSessionService } from './services/scan-session.service';
+import { PairScanningService } from './services/pair-scanning.service';
+import { RewardSettlementService } from './services/reward-settlement.service';
 import { InvoiceAuditService } from './services/invoice-audit.service';
 import { RetailerScanAgeService } from './services/retailer-scan-age.service';
 import { RateValidationService } from './services/rate-validation.service';
@@ -42,6 +44,8 @@ import { InvoiceIngestionController } from './invoice-ingestion.controller';
 import { InvoiceIngestionRepository } from './repository/invoice-ingestion.repository';
 import { InvoiceIngestionService } from './services/invoice-ingestion.service';
 import { UserModule } from '../user/user.module';
+import { UserMappingRepository } from '../auth/repository/user-mapping.repository';
+import { IdempotencyModule } from 'src/default/idempotency/idempotency.module';
 
 @Module({
   imports: [
@@ -61,6 +65,7 @@ import { UserModule } from '../user/user.module';
     }),
     BullModule.registerQueue({ name: 'invoice-audit' }),
     UserModule,
+    IdempotencyModule,
   ],
   controllers: [
     InvoicesController,
@@ -76,14 +81,17 @@ import { UserModule } from '../user/user.module';
     InvoiceHistoryRepository,
     UserRewardRepository,
     InvoicePointHistoryRepository,
+    UserMappingRepository,
     RedisLockService,
     InvoiceValidationService,
+    ScanSessionService,
+    PairScanningService,
+    RewardSettlementService,
     PairValidationService,
     PointCalculationService,
     RewardService,
     AuditService,
     InvoiceAuditProcessor,
-    ScanSessionService,
     InvoiceService,
 
     RetailerScanAgeRepository,
@@ -103,6 +111,13 @@ import { UserModule } from '../user/user.module';
     InvoiceIngestionRepository,
     InvoiceIngestionService,
   ],
-  exports: [InvoiceService],
+  exports: [
+    RedisLockService,
+    InvoiceService,
+    InvoiceValidationService,
+    ScanSessionService,
+    PairScanningService,
+    RewardSettlementService,
+  ],
 })
 export class InvoicesModule {}

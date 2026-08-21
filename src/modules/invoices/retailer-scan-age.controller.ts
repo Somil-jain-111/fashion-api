@@ -3,11 +3,11 @@ import { JwtAuthGuard } from 'src/default/common/guards/jwt-auth.guard';
 import { DataSanitizer } from 'src/default/common/utils/sanitize.utils';
 import { UpdateScanAgeDto } from './dto';
 import { RetailerScanAgeService } from './services/retailer-scan-age.service';
-import { Body, Controller, Get, Param, Put, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Req, UseGuards } from '@nestjs/common';
 
 @ApiTags('Retailer Scan-Age Config')
 @ApiBearerAuth()
-@UseGuards(JwtAuthGuard) // TODO: add role guard restricting this to Sales/Admin users
+@UseGuards(JwtAuthGuard)
 @Controller('admin/retailers/:retailerId/scan-age')
 export class RetailerScanAgeController {
   constructor(private readonly scanAge: RetailerScanAgeService) {}
@@ -18,7 +18,7 @@ export class RetailerScanAgeController {
     return DataSanitizer.sanitizeData(response);
   }
 
-  @Put()
+  @Post()
   async update(
     @Req() request: any,
     @Param('retailerId') retailerId: string,

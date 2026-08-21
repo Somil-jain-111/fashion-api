@@ -15,17 +15,14 @@ export class RetailerScanAgeService {
   constructor(
     private readonly dataSource: DataSource,
     private readonly systemConfig: SystemConfigRepository,
-    private readonly scanAgeRepo: RetailerScanAgeRepository,
+    private readonly scanAgeRepo: RetailerScanAgeRepository
   ) {}
 
-  async getEffectiveScanAgeDays(
-    retailerId: string,
-  ): Promise<{
+  async getEffectiveScanAgeDays(retailerId: string): Promise<{
     days: number;
     source: 'override' | 'default';
   }> {
-    const override =
-      await this.scanAgeRepo.findOverride(retailerId);
+    const override = await this.scanAgeRepo.findOverride(retailerId);
 
     if (override) {
       return {
@@ -34,11 +31,10 @@ export class RetailerScanAgeService {
       };
     }
 
-    const days =
-      await this.systemConfig.getNumber(
-        SystemConfigKey.DEFAULT_SCAN_AGE_DAYS,
-        DEFAULT_SCAN_AGE_DAYS_FALLBACK,
-      );
+    const days = await this.systemConfig.getNumber(
+      SystemConfigKey.DEFAULT_SCAN_AGE_DAYS,
+      DEFAULT_SCAN_AGE_DAYS_FALLBACK
+    );
 
     return {
       days,
@@ -51,59 +47,40 @@ export class RetailerScanAgeService {
     newDays: number,
     changedBy: string,
     reason: string,
-    approvalReference?: string,
+    approvalReference?: string
   ): Promise<void> {
-    if (
-      !Number.isInteger(newDays) ||
-      newDays < MIN_SCAN_AGE_DAYS ||
-      newDays > MAX_SCAN_AGE_DAYS
-    ) {
-      throw new BusinessException(
-        ERROR_CODES.INVOICE_SCAN.INVALID_SCAN_AGE_VALUE,
-      );
+    if (!Number.isInteger(newDays) || newDays < MIN_SCAN_AGE_DAYS || newDays > MAX_SCAN_AGE_DAYS) {
+      throw new BusinessException(ERROR_CODES.INVOICE_SCAN.INVALID_SCAN_AGE_VALUE);
     }
 
     if (!reason || !reason.trim()) {
-      throw new BusinessException(
-        ERROR_CODES.INVOICE_SCAN.SCAN_AGE_REASON_REQUIRED,
-      );
+      throw new BusinessException(ERROR_CODES.INVOICE_SCAN.SCAN_AGE_REASON_REQUIRED);
     }
 
-    await this.dataSource.transaction(
-      async (manager) => {
-        const existing =
-          await this.scanAgeRepo.findOverride(
-            retailerId,
-            manager,
-          );
+    await this.dataSource.transaction(async (manager) => {
+      const existing = await this.scanAgeRepo.findOverride(retailerId, manager);
 
-        const oldValue =
-          existing?.scanAgeDays ??
-          (await this.systemConfig.getNumber(
-            SystemConfigKey.DEFAULT_SCAN_AGE_DAYS,
-            DEFAULT_SCAN_AGE_DAYS_FALLBACK,
-          ));
+      const oldValue =
+        existing?.scanAgeDays ??
+        (await this.systemConfig.getNumber(
+          SystemConfigKey.DEFAULT_SCAN_AGE_DAYS,
+          DEFAULT_SCAN_AGE_DAYS_FALLBACK
+        ));
 
-        await this.scanAgeRepo.upsertOverride(
+      await this.scanAgeRepo.upsertOverride(retailerId, newDays, changedBy, manager);
+
+      await this.scanAgeRepo.writeAuditLog(
+        {
           retailerId,
-          newDays,
+          oldValue,
+          newValue: newDays,
           changedBy,
-          manager,
-        );
-
-        await this.scanAgeRepo.writeAuditLog(
-          {
-            retailerId,
-            oldValue,
-            newValue: newDays,
-            changedBy,
-            reason,
-            approvalReference,
-          },
-          manager,
-        );
-      },
-    );
+          reason,
+          approvalReference,
+        },
+        manager
+      );
+    });
   }
 
   history(retailerId: string) {
@@ -118,29 +95,19 @@ export class RetailerScanAgeService {
   static computeEligibility(
     invoiceDate: Date,
     scanAgeDays: number,
-    now: Date = new Date(),
+    now: Date = new Date()
   ): {
     eligible: boolean;
     eligibleUntil: Date;
   } {
-    const eligibleUntil =
-      new Date(invoiceDate);
+    const eligibleUntil = new Date(invoiceDate);
 
-    eligibleUntil.setDate(
-      eligibleUntil.getDate() + scanAgeDays,
-    );
+    eligibleUntil.setDate(eligibleUntil.getDate() + scanAgeDays);
 
-    eligibleUntil.setHours(
-      23,
-      59,
-      59,
-      999,
-    );
+    eligibleUntil.setHours(23, 59, 59, 999);
 
     return {
-      eligible:
-        now.getTime() <=
-        eligibleUntil.getTime(),
+      eligible: now.getTime() <= eligibleUntil.getTime(),
       eligibleUntil,
     };
   }

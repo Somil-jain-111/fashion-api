@@ -1,24 +1,9 @@
-import {
-  Column,
-  Entity,
-  Index,
-  PrimaryGeneratedColumn,
-  UpdateDateColumn,
-} from 'typeorm';
+import { BaseEntity } from '../../../default/common/entities';
+import { Column, Entity, Index } from 'typeorm';
 
 @Entity('retailer_scan_age_config')
-@Index(
-  'uq_retailer_scan_age_retailer',
-  ['retailerId'],
-  { unique: true },
-)
-export class RetailerScanAgeConfigEntity {
-  @PrimaryGeneratedColumn({
-    type: 'bigint',
-    unsigned: true,
-  })
-  id: string;
-
+@Index('uq_retailer_scan_age_retailer', ['retailerId'], { unique: true })
+export class RetailerScanAgeConfigEntity extends BaseEntity {
   @Column({
     name: 'retailer_id',
     type: 'bigint',
@@ -39,9 +24,4 @@ export class RetailerScanAgeConfigEntity {
     unsigned: true,
   })
   updatedBy: string;
-
-  @UpdateDateColumn({
-    name: 'updated_at',
-  })
-  updatedAt: Date;
 }

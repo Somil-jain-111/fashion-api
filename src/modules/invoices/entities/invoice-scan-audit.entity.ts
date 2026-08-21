@@ -1,14 +1,12 @@
-import { Column, CreateDateColumn, Entity, Index, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, Entity, Index } from 'typeorm';
 import { InvoiceHistoryStatus } from '../enum/invoice-scan-session.enum';
+import { BaseEntity } from '../../../default/common/entities';
 
 @Entity('invoice_scan_history')
 @Index('idx_invoice_history_user_created', ['userId', 'createdAt'])
 @Index('idx_invoice_history_invoice_status', ['invoiceId', 'status'])
 @Index('idx_invoice_history_session', ['sessionId'])
-export class InvoiceScanAuditEntity {
-  @PrimaryGeneratedColumn({ type: 'bigint', unsigned: true })
-  id: string;
-
+export class InvoiceScanAuditEntity extends BaseEntity {
   @Column({ name: 'invoice_id', type: 'bigint', unsigned: true })
   invoiceId: string;
 
@@ -29,7 +27,4 @@ export class InvoiceScanAuditEntity {
 
   @Column({ type: 'json', nullable: true })
   metadata?: Record<string, unknown>;
-
-  @CreateDateColumn({ name: 'created_at' })
-  createdAt: Date;
 }

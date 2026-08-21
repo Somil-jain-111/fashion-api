@@ -1,25 +1,14 @@
 // src/default/common/entities/invoice-item.entity.ts
 
-import {
-  BaseEntity,
-  Column,
-  Entity,
-  Index,
-  JoinColumn,
-  ManyToOne,
-  OneToMany,
-  PrimaryGeneratedColumn,
-} from 'typeorm';
+import { Column, Entity, Index, JoinColumn, ManyToOne, OneToMany } from 'typeorm';
 import { InvoiceEntity } from './invoice.entity';
 import { InvoiceAssortmentEntity } from '../../auth/entities';
+import { BaseEntity } from '../../../default/common/entities';
 
 @Entity({ name: 'invoice_items' })
 @Index('idx_invoice_items_invoice_id', ['invoice_id'])
 @Index('idx_invoice_items_item_code', ['item_code'])
 export class InvoiceItemEntity extends BaseEntity {
-  @PrimaryGeneratedColumn({ type: 'bigint', unsigned: true })
-  id: string;
-
   @Column({ type: 'bigint', unsigned: true })
   invoice_id: string;
 
@@ -52,12 +41,6 @@ export class InvoiceItemEntity extends BaseEntity {
 
   @Column({ name: 'total_amount', type: 'decimal', precision: 15, scale: 2, default: 0 })
   total_amount: string;
-
-  @Column({
-    type: 'timestamp',
-    default: () => 'CURRENT_TIMESTAMP',
-  })
-  created_at: Date;
 
   @ManyToOne(() => InvoiceEntity, (invoice) => invoice.items, {
     onDelete: 'CASCADE',

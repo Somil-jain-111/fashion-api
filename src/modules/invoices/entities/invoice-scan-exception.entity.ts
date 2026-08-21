@@ -1,36 +1,12 @@
-import {
-  Column,
-  CreateDateColumn,
-  Entity,
-  Index,
-  PrimaryGeneratedColumn,
-  UpdateDateColumn,
-} from 'typeorm';
-import {
-  ScanExceptionStatus,
-  ScanExceptionType,
-} from '../enum/exception.enum';
+import { Column, Entity, Index } from 'typeorm';
+import { ScanExceptionStatus, ScanExceptionType } from '../enum/exception.enum';
+import { BaseEntity } from '../../../default/common/entities';
 
 @Entity('invoice_scan_exceptions')
-@Index(
-  'idx_scan_exceptions_invoice',
-  ['invoiceId'],
-)
-@Index(
-  'idx_scan_exceptions_status',
-  ['status'],
-)
-@Index(
-  'idx_scan_exceptions_session',
-  ['sessionId'],
-)
-export class InvoiceScanExceptionEntity {
-  @PrimaryGeneratedColumn({
-    type: 'bigint',
-    unsigned: true,
-  })
-  id: string;
-
+@Index('idx_scan_exceptions_invoice', ['invoiceId'])
+@Index('idx_scan_exceptions_status', ['status'])
+@Index('idx_scan_exceptions_session', ['sessionId'])
+export class InvoiceScanExceptionEntity extends BaseEntity {
   @Column({
     name: 'invoice_id',
     type: 'bigint',
@@ -105,14 +81,4 @@ export class InvoiceScanExceptionEntity {
     nullable: true,
   })
   resolutionNotes?: string;
-
-  @CreateDateColumn({
-    name: 'created_at',
-  })
-  createdAt: Date;
-
-  @UpdateDateColumn({
-    name: 'updated_at',
-  })
-  updatedAt: Date;
 }

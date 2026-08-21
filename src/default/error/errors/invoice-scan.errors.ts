@@ -1,4 +1,3 @@
-
 export const INVOICE_SCAN_ERRORS = {
   INVOICE_NOT_FOUND: { code: 'ISC_001', message: 'Invoice not found', statusCode: 404 },
   INVOICE_INACTIVE: { code: 'ISC_002', message: 'Invoice is not active', statusCode: 422 },
@@ -92,5 +91,15 @@ export const INVOICE_SCAN_ERRORS = {
     code: 'ISC_025',
     message: 'This invoice does not belong to a distributor mapped to your account',
     statusCode: 403,
+  },
+  INVOICE_ALREADY_CLAIMED: {
+    code: 'ISC_026',
+    message: 'This invoice is already claimed by another retailer',
+    statusCode: 422,
+  },
+  INVOICE_IN_PROGRESS_OTHER_USER: {
+    code: 'ISC_027',
+    message: 'Invoice is currently being scanned in another active session',
+    statusCode: 409,
   },
 } as const;

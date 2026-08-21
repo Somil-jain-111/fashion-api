@@ -1,4 +1,3 @@
-
 import { Injectable } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { DataSource } from 'typeorm';
@@ -7,6 +6,7 @@ import { SystemConfigKey } from 'src/default/common/entities/system-config.entit
 import { SystemConfigRepository } from 'src/default/common/repositories/system-config.repository';
 import { InvoicePointHistoryRepository } from 'src/modules/invoices/repository';
 import { UserRewardRepository } from 'src/modules/invoices/repository';
+import { TransactionService } from 'src/default/databases/transaction';
 
 export const DEFAULT_POINTS_EXPIRY_DAYS_FALLBACK = 365;
 
@@ -39,7 +39,7 @@ export class PointsExpiryConfigService {
 @Injectable()
 export class PointsExpiryJobService {
   constructor(
-    private readonly dataSource: DataSource,
+    private readonly transactionService: TransactionService,
     private readonly pointHistories: InvoicePointHistoryRepository,
     private readonly userRewards: UserRewardRepository
   ) {}
@@ -56,14 +56,21 @@ export class PointsExpiryJobService {
     let expiredRows = 0;
     let totalPointsExpired = 0;
 
-    await this.dataSource.transaction(async (manager) => {
-      const expirable = await this.pointHistories.findExpirable(asOf, manager);
+    await this.transactionService.runInTransaction(async (queryRunner) => {
+      const expirable = await this.pointHistories.findExpirable(asOf, queryRunner);
+
       for (const row of expirable) {
         const remaining = Number((row as any).remaining_points ?? 0);
-        if (remaining <= 0) continue;
+
+        if (remaining <= 0) {
+          continue;
+        }
+
         const userId = String((row as any).user?.id ?? (row as any).userId);
-        await this.userRewards.deductPoints(userId, remaining, manager);
-        await this.pointHistories.markExpired(String((row as any).id), manager);
+
+        await this.userRewards.deductPoints(userId, remaining, queryRunner);
+        await this.pointHistories.markExpired(String((row as any).id), queryRunner);
+
         expiredRows += 1;
         totalPointsExpired += remaining;
       }
@@ -73,6 +80,7 @@ export class PointsExpiryJobService {
       `Points expiry run: ${expiredRows} rows expired, ${totalPointsExpired} points removed`,
       'PointsExpiryJobService'
     );
+
     return { expiredRows, totalPointsExpired };
   }
 }

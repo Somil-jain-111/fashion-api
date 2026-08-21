@@ -1,40 +1,14 @@
-import {
-  Column,
-  CreateDateColumn,
-  Entity,
-  Index,
-  PrimaryGeneratedColumn,
-} from 'typeorm';
-import {
-  ScanAttemptType,
-  ValidationOutcome,
-} from '../enum/scan-attempt.enum';
+import { Column, Entity, Index } from 'typeorm';
+import { ScanAttemptType, ValidationOutcome } from '../enum/scan-attempt.enum';
 import { ScanSource } from '../enum/invoice-scan-session.enum';
+import { BaseEntity } from '../../../default/common/entities';
 
 @Entity('invoice_scan_attempt_audit')
-@Index(
-  'idx_attempt_audit_user_created',
-  ['userId', 'createdAt'],
-)
-@Index(
-  'idx_attempt_audit_invoice',
-  ['invoiceNumber'],
-)
-@Index(
-  'idx_attempt_audit_session',
-  ['sessionId'],
-)
-@Index(
-  'idx_attempt_audit_outcome',
-  ['outcome'],
-)
-export class InvoiceScanAttemptAuditEntity {
-  @PrimaryGeneratedColumn({
-    type: 'bigint',
-    unsigned: true,
-  })
-  id: string;
-
+@Index('idx_attempt_audit_user_created', ['userId', 'createdAt'])
+@Index('idx_attempt_audit_invoice', ['invoiceNumber'])
+@Index('idx_attempt_audit_session', ['sessionId'])
+@Index('idx_attempt_audit_outcome', ['outcome'])
+export class InvoiceScanAttemptAuditEntity extends BaseEntity {
   @Column({
     name: 'user_id',
     type: 'bigint',
@@ -131,9 +105,4 @@ export class InvoiceScanAttemptAuditEntity {
     nullable: true,
   })
   metadata?: Record<string, unknown>;
-
-  @CreateDateColumn({
-    name: 'created_at',
-  })
-  createdAt: Date;
 }
