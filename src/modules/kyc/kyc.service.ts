@@ -1245,6 +1245,7 @@ export class KycService {
         address: addressENC,
         status: BeneficiaryStatus.PENDING,
         referenceId: transactionId,
+        otherRelationship: dto.otherRelationship ? dto.otherRelationship?.trim() : null,
         panVerification: { id: panVerification?.id } as any,
         aadhaarVerification: { id: aadhaarVerification?.id } as any,
         metadata: {
@@ -1383,6 +1384,7 @@ export class KycService {
         address: addressENC,
         status: BeneficiaryStatus.PENDING,
         referenceId: transactionId,
+        otherRelationship: dto.otherRelationship ? dto.otherRelationship?.trim() : null,
         panVerification: { id: panVerification?.id } as any,
         aadhaarVerification: { id: aadhaarVerification?.id } as any,
         metadata: {
@@ -1762,6 +1764,7 @@ export class KycService {
     return list.map((item) => {
       const extraFields = {
         relationship: item.relationship ? this.decryptKycData(item.relationship) : null,
+        otherRelationship: item.otherRelationship ? item.otherRelationship : null,
         beneficiary_name: item.beneficiary_name ? this.decryptKycData(item.beneficiary_name) : null,
         mobileNumber: item.mobileNumber ? this.decryptKycData(item.mobileNumber) : null,
         panNumber: item.panNumber ? this.decryptKycData(item.panNumber) : null,

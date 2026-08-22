@@ -80,4 +80,9 @@ export class AddBeneficiaryDto {
   @IsNotEmpty({ message: 'Address is required' })
   @IsString()
   address?: string;
+
+  @ValidateIf((o) => o.relationship === BeneficiaryRelationshipType.OTHER)
+  @IsNotEmpty({ message: 'Other relationship is required' })
+  @IsString()
+  otherRelationship?: string;
 }

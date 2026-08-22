@@ -84,4 +84,7 @@ export class UserBeneficiary extends BaseEntity {
 
   @Column({ type: 'bigint', default: 0, name: 'otp_attempt_count' })
   otp_attempt_count!: number;
+
+  @Column({ type: 'varchar', length: 255, name: 'other_relationship', nullable: true })
+  otherRelationship?: string;
 }
