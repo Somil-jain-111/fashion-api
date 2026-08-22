@@ -65,19 +65,25 @@ export class UserController {
     return DataSanitizer.sanitizeData(response);
   }
 
-    @Get('point-history')
+  @NoCache()
+  @SkipThrottle()
+  @Get('point-history')
   async getPointHistory(@Req() req: any, @Query() query: GetPointHistoryQueryDto) {
     const response = await this.userService.getPointHistory(req.user.id, query);
     return DataSanitizer.sanitizeData(response);
   }
 
-  @Get('summary')
+  @NoCache()
+  @SkipThrottle()
+  @Get('point-summary')
   async getRemainingPoints(@Req() req: any) {
     const response = await this.userService.getRemainingPoints(req.user.id);
     return DataSanitizer.sanitizeData(response);
   }
 
-  @Get(':id')
+  @NoCache()
+  @SkipThrottle()
+  @Get('point-history/:id')
   async findOne(@Req() req: any, @Param('id') id: string) {
     const response = await this.userService.findOne(req.user.id, id);
     return DataSanitizer.sanitizeData(response);

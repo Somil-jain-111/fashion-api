@@ -1226,56 +1226,58 @@ export class RedemptionsService {
         created_at: order.createdAt,
         updated_at: order.updatedAt,
         items: (order.items || []).map((item) => ({
-          orderItemId: item.id.toString(),
-          orderNumber: item.orderNumber || null,
-          productId: item.productId,
-          productName: item.productName,
-          productType: item.productType,
-          productSku: item.productSku || null,
-          productImageUrl: item.productImageUrl || null,
-          shortDesc: item.shortDesc || null,
-          pricePoint: Number(item.pricePoint),
-          quantity: Number(item.quantity),
-          totalPoints: Number(item.totalPoints),
-          cost: Number(item.cost),
-          mrp: Number(item.mrp),
-          status: item.status,
-          errorMessage: item.errorMessage || null,
-          shippingDetail: item.shippingDetail
+          orderItemId: item?.id?.toString(),
+          orderNumber: item?.orderNumber || null,
+          productId: item?.productId,
+          productName: item?.productName,
+          productType: item?.productType,
+          productSku: item?.productSku || null,
+          productImageUrl: item?.productImageUrl || null,
+          shortDesc: item?.shortDesc || null,
+          pricePoint: Number(item?.pricePoint),
+          quantity: Number(item?.quantity),
+          totalPoints: Number(item?.totalPoints),
+          cost: Number(item?.cost),
+          mrp: Number(item?.mrp),
+          status: item?.status,
+          errorMessage: item?.errorMessage || null,
+          shippingDetail: item?.shippingDetail
             ? {
-                id: item.shippingDetail.id.toString(),
-                name: item.shippingDetail?.fullname || null,
-                deliveryStatus: item.shippingDetail.delivery_status,
-                mobile: item.shippingDetail.mobile,
+                id: item?.shippingDetail?.id?.toString(),
+                name: item?.shippingDetail?.fullname || null,
+                deliveryStatus: item?.shippingDetail?.delivery_status,
+                mobile: item?.shippingDetail?.mobile,
 
                 ...(item.productType == ProductType.PHYSICAL && {
-                  shipDate: item.shippingDetail.ship_date || null,
-                  trackingNumber: item.shippingDetail.tracking_number || null,
-                  trackingUrl: item.shippingDetail.tracking_url || null,
-                  podLink: item.shippingDetail.pod_link || null,
-                  deliveryPartner: item.shippingDetail.delivery_partner || null,
-                  addressLine1: item.shippingDetail.addressLine1,
-                  addressLine2: item.shippingDetail.addressLine2 || null,
-                  landmark: item.shippingDetail.landmark || null,
-                  pincode: item.shippingDetail.pincode,
-                  cityName: item.shippingDetail.cityName || null,
-                  stateName: item.shippingDetail.stateName || null,
-                  zoneName: item.shippingDetail.zoneName || null,
+                  shipDate: item?.shippingDetail?.ship_date || null,
+                  trackingNumber: item?.shippingDetail?.tracking_number || null,
+                  trackingUrl: item?.shippingDetail?.tracking_url || null,
+                  podLink: item?.shippingDetail?.pod_link || null,
+                  deliveryPartner: item?.shippingDetail?.delivery_partner || null,
+                  addressLine1: item?.shippingDetail?.addressLine1,
+                  addressLine2: item?.shippingDetail?.addressLine2 || null,
+                  landmark: item?.shippingDetail?.landmark || null,
+                  pincode: item?.shippingDetail?.pincode,
+                  cityName: item?.shippingDetail?.cityName || null,
+                  stateName: item?.shippingDetail?.stateName || null,
+                  zoneName: item?.shippingDetail?.zoneName || null,
                 }),
               }
             : null,
           voucher: item.voucher
             ? {
-                couponCode: item.voucher.coupon_code,
-                vPin: item.voucher.v_pin,
-                expiryDate: item.voucher.expiry_date,
+                couponCode: item?.voucher?.coupon_code,
+                vPin: item?.voucher?.v_pin,
+                expiryDate: item?.voucher?.expiry_date,
+                redeemUrl: this.appConfigService.getVoucherUrl(),
+                stepsToRedeem: this.appConfigService.getStepsToRedeemUrl(),
               }
             : null,
-          statusHistory: (item.statusHistory || []).map((sh) => ({
-            id: sh.id.toString(),
-            status: sh.status,
-            remark: sh.remark || null,
-            created_at: sh.created_at,
+          statusHistory: (item?.statusHistory || []).map((sh) => ({
+            id: sh?.id?.toString(),
+            status: sh?.status,
+            remark: sh?.remark || null,
+            created_at: sh?.created_at,
           })),
         })),
       };
@@ -1422,7 +1424,7 @@ export class RedemptionsService {
 
       const isProd = this.appConfigService.isProduction() || this.appConfigService.isQa();
       otp = isProd ? OtpHelper.generateOtp() : this.appConfigService.getNonProdOtp().toString();
-      otpRefId = await CommonUtils.generateTransactionID();
+      otpRefId = CommonUtils.generateTransactionID();
 
       const expirySeconds = otpValidation.expirySeconds;
       otpExpiryDate = OtpHelper.generateExpiryDate(expirySeconds);
