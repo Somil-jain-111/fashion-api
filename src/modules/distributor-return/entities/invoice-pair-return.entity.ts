@@ -1,53 +1,23 @@
-import {
-  Column,
-  CreateDateColumn,
-  Entity,
-  Index,
-  JoinColumn,
-  ManyToOne,
-  PrimaryGeneratedColumn,
-} from 'typeorm';
+import { Column, Entity, Index, JoinColumn, ManyToOne } from 'typeorm';
 import { InvoiceEntity } from '../../invoices/entities/invoice.entity';
 import { InvoicePairDetailEntity } from '../../invoices/entities/invoice-pair-detail.entity';
 import { User } from '../../auth/entities/users.entity';
+import { BaseEntity } from '../../../default/common/entities';
 
 @Entity({ name: 'invoice_pair_returns' })
-@Index('uq_invoice_pair_return_pair_id', ['pair_id'], { unique: true })
-@Index('idx_invoice_pair_returns_invoice_id', ['invoice_id'])
-@Index('idx_invoice_pair_returns_retailer_id', ['retailer_id'])
-@Index('idx_invoice_pair_returns_distributor_id', ['distributor_id'])
-export class InvoicePairReturnEntity {
-  @PrimaryGeneratedColumn({ type: 'bigint' })
-  id: string;
-
-  @Column({ type: 'bigint', unsigned: true })
-  invoice_id: string;
-
-  /**
-   * FK to the physical pair (invoice_pair_details.id) being returned — the true anti-replay
-   * guard (unique below). pair_uid is kept alongside as a denormalized copy for display/audit
-   * without needing to join back to invoice_pair_details.
-   */
-  @Column({ type: 'bigint', unsigned: true })
-  pair_id: string;
-
+@Index('uq_invoice_pair_return_pair_id', ['pair'], { unique: true })
+@Index('idx_invoice_pair_returns_invoice_id', ['invoice'])
+@Index('idx_invoice_pair_returns_retailer_id', ['retailer'])
+@Index('idx_invoice_pair_returns_distributor_id', ['distributor'])
+export class InvoicePairReturnEntity extends BaseEntity {
   @Column({ name: 'pair_uid', type: 'varchar', length: 100 })
   pair_uid: string;
-
-  @Column({ type: 'bigint' })
-  retailer_id: string;
-
-  @Column({ type: 'bigint' })
-  distributor_id: string;
 
   @Column({ name: 'points_refunded', type: 'int', default: 0 })
   points_refunded: number;
 
   @Column({ type: 'varchar', length: 255, nullable: true })
   remarks?: string | null;
-
-  @CreateDateColumn({ name: 'created_at' })
-  created_at: Date;
 
   @ManyToOne(() => InvoiceEntity, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'invoice_id' })

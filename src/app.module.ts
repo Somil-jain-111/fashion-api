@@ -55,6 +55,7 @@ import { AdminModule } from './modules/admin/admin.module';
 import { RedemptionCartModule } from './modules/redemption-cart/redemption-cart.module';
 import { SmsModule } from './modules/sms/sms.module';
 import { UserModule } from './modules/user/user.module';
+import { RetailerInvoiceModule } from './modules/retailer-invoice/retailer-invoice.module';
 import { DistributorReturnModule } from './modules/distributor-return/distributor-return.module';
 import { DistributorTransferModule } from './modules/distributor-transfer/distributor-transfer.module';
 import { SuperAdminModule } from './modules/super-admin/super-admin.module';
@@ -111,6 +112,7 @@ import { SuperAdminModule } from './modules/super-admin/super-admin.module';
     RedemptionCartModule,
     SmsModule,
     UserModule,
+    RetailerInvoiceModule,
     DistributorReturnModule,
     DistributorTransferModule,
     SuperAdminModule,

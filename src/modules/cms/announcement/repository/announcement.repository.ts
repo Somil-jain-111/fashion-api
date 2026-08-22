@@ -33,13 +33,6 @@ export class AnnouncementRepository extends BaseRepository<AnnouncementEntity> {
       .getMany();
   }
 
-  async findById(id: string) {
-    return this.repository.findOne({
-      where: { id },
-      relations: ['roles'],
-    });
-  }
-
   async findAllWithPagination(offset: number, limit: number) {
     const [rows, count] = await this.repository.findAndCount({
       relations: ['roles'],

@@ -13,19 +13,54 @@ import {
   Min,
 } from 'class-validator';
 import { InvoiceHistoryStatus } from '../enum/invoice-scan-session.enum';
+import { ScanExceptionStatus } from '../enum/exception.enum';
 
 export class ValidateInvoiceDto {
+  @IsOptional()
   @IsString()
   @Length(1, 100)
-  invoiceNumber: string;
+  invoiceId?: string;
+
+  @IsOptional()
+  @IsString()
+  @Length(1, 100)
+  invoiceNumber?: string;
 }
 
-export class StartSessionDto extends ValidateInvoiceDto {}
-
-export class ScanPairDto {
+export class StartSessionDto {
+  @IsOptional()
   @IsString()
   @Length(1, 100)
-  pairUid: string;
+  invoiceId?: string;
+
+  @IsOptional()
+  @IsString()
+  @Length(1, 100)
+  invoiceNumber?: string;
+}
+
+export class ScanPairDto {
+  @IsOptional()
+  @IsString()
+  @Length(1, 255)
+  pairCode?: string;
+
+  @IsOptional()
+  @IsString()
+  @Length(1, 255)
+  pairUid?: string;
+}
+
+export class RemovePairDto {
+  @IsOptional()
+  @IsString()
+  @Length(1, 255)
+  pairCode?: string;
+
+  @IsOptional()
+  @IsString()
+  @Length(1, 255)
+  pairUid?: string;
 }
 
 export class BulkScanDto {
@@ -75,22 +110,78 @@ export class InvoiceHistoryQueryDto {
   limit = 20;
 }
 
+export class ScannedPairItemDto {
+  pairCode: string;
+  pairUid: string;
+  subItemCode?: string;
+  scannedAt: Date;
+}
+
 export class ScanProgressResponseDto {
-  sessionId: string;
-  progress: number;
-  remaining: number;
-  expected: number;
-  valid: number;
-  invalid: number;
-  status: string;
+  sessionId?: string;
+  totalPairs?: number;
+  scannedPairs?: number;
+  remainingPairs?: number;
+  estimatedPoints?: number;
+  totalPoints?: number;
+  status?: string;
+  scannedPairList?: ScannedPairItemDto[];
+  progress?: number;
+  expected?: number;
+  valid?: number;
+  invalid?: number;
 }
 
 export class InvoiceSummaryResponseDto {
   invoiceId: string;
   invoiceNumber: string;
   invoiceType: string;
-  expectedPairs: number;
+  totalPairs: number;
   alreadyScanned: number;
   remainingPairs: number;
   resume: boolean;
+  status?: string;
+  scanStatus?: string;
+  invoiceValue?: string;
+  distributorName?: string;
+}
+
+export class RemovePairParamsDto {
+  @IsString()
+  @Length(1, 100)
+  pairUid: string;
+}
+
+export class UpdateScanAgeDto {
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(90)
+  scanAgeDays: number;
+
+  @IsString()
+  @Length(1, 500)
+  reason: string;
+
+  @IsOptional()
+  @IsString()
+  @Length(1, 100)
+  approvalReference?: string;
+}
+
+export class ReviewExceptionDto {
+  @IsString()
+  status: ScanExceptionStatus;
+
+  @IsOptional()
+  @IsString()
+  @Length(1, 1000)
+  notes?: string;
+}
+
+export class UpdatePointsExpiryDto {
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  expiryDays: number;
 }

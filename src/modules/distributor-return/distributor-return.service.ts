@@ -40,7 +40,12 @@ export class DistributorReturnService {
 
     try {
       const result = await this.transactionService.execute(async (manager) => {
-        const { invoice, pair } = await this.loadReturnable(distributorId, dto.pairCode, manager, true);
+        const { invoice, pair } = await this.loadReturnable(
+          distributorId,
+          dto.pairCode,
+          manager,
+          true
+        );
 
         const refundPoints = this.calculateRefundPoints(invoice);
         const currentBalance = Number(invoice.user.points || 0);
@@ -70,11 +75,11 @@ export class DistributorReturnService {
 
         await this.repository.saveReturn(
           {
-            invoice_id: invoice.id,
-            pair_id: pair.id,
+            invoice: { id: Number(invoice.id) } as any,
+            pair: { id: Number(pair.id) } as any,
             pair_uid: pair.pair_uid,
-            retailer_id: String(invoice.user.id),
-            distributor_id: distributorId,
+            retailer: { id: Number(invoice.user.id) } as any,
+            distributor: { id: Number(distributorId) } as any,
             points_refunded: deduction,
             remarks: dto.remarks,
           },
@@ -138,11 +143,15 @@ export class DistributorReturnService {
     // Every failure from here on has a resolved physical pair — attach product context
     // (name/SKU) to whatever error gets thrown below, matching the scan-failure UI's card.
     const product = await this.repository.findProductForPair(
-      pair.assortment.invoice_id,
+      String(pair.assortment.invoice.id),
       pair.assortment.parent_item_code,
       manager
     );
-    const failureContext = (reasonCode: string, reasonLabel: string, extra?: Record<string, unknown>) => ({
+    const failureContext = (
+      reasonCode: string,
+      reasonLabel: string,
+      extra?: Record<string, unknown>
+    ) => ({
       reasonCode,
       reasonLabel,
       pair: { pairUid: pair.pair_uid, pairQr: pair.pair_qr },
@@ -151,7 +160,7 @@ export class DistributorReturnService {
     });
 
     const invoice = await this.repository.findInvoiceById(
-      pair.assortment.invoice_id,
+      String(pair.assortment.invoice.id),
       manager,
       forUpdate
     );
@@ -195,11 +204,11 @@ export class DistributorReturnService {
       );
     }
 
-    const existingReturn = await this.repository.findExistingReturn(pair.id, manager);
+    const existingReturn = await this.repository.findExistingReturn(String(pair.id), manager);
     if (existingReturn) {
       const minutesAgo = Math.max(
         0,
-        Math.round((Date.now() - new Date(existingReturn.created_at).getTime()) / 60000)
+        Math.round((Date.now() - new Date(existingReturn.createdAt).getTime()) / 60000)
       );
       throw new BusinessException(
         ERROR_CODES.DISTRIBUTOR_RETURN.PAIR_ALREADY_RETURNED,
@@ -207,7 +216,7 @@ export class DistributorReturnService {
         failureContext('ALREADY_RETURNED', 'Already Returned', {
           previousReturn: {
             returnId: String(existingReturn.id),
-            returnedAt: existingReturn.created_at,
+            returnedAt: existingReturn.createdAt,
             minutesAgo,
           },
         })

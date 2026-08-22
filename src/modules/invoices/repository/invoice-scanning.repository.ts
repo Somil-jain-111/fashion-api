@@ -1,9 +1,9 @@
 import { Injectable } from '@nestjs/common';
-import { DataSource, EntityManager, In, QueryRunner } from 'typeorm';
+import { Brackets, DataSource, In, QueryRunner } from 'typeorm';
 import { BaseRepository } from 'src/default/common/repositories/base.repository';
 import { InvoiceEntity } from '../entities/invoice.entity';
 import { InvoiceScanSessionEntity } from '../entities/invoice-scan-session.entity';
-import { PairScanHistoryEntity } from '../entities/pair-scan-history.entity';
+import { InvoicePairScanHistoryEntity } from '../entities/invoice-pair-scan-history.entity';
 import { InvoiceScanAuditEntity } from '../entities/invoice-scan-audit.entity';
 import { InvoicePairDetailEntity } from '../entities/invoice-pair-detail.entity';
 import { PairHistoryStatus, ScanSessionStatus } from '../enum/invoice-scan-session.enum';
@@ -19,12 +19,13 @@ export class InvoiceRepository extends BaseRepository<InvoiceEntity> {
     super(dataSource.getRepository(InvoiceEntity));
   }
 
-  findOwnedByNumber(invoiceNumber: string, userId: string, manager?: EntityManager) {
-    return (manager?.getRepository(InvoiceEntity) ?? this.repository)
+  async findOwnedByNumber(invoiceNumber: string, userId: string, queryRunner?: QueryRunner) {
+    return await this.getRepository(queryRunner)
       .createQueryBuilder('invoice')
       .select([
         'invoice.id',
         'invoice.invoice_no',
+        'invoice.invoice_date',
         'invoice.status',
         'invoice.scan_status',
         'invoice.total_pairs',
@@ -40,17 +41,16 @@ export class InvoiceRepository extends BaseRepository<InvoiceEntity> {
       .getOne();
   }
 
-  findByIdForUpdate(invoiceId: string, manager: EntityManager): Promise<InvoiceEntity> {
-    return manager
-      .getRepository(InvoiceEntity)
+  async findByIdForUpdate(invoiceId: string, queryRunner?: QueryRunner): Promise<InvoiceEntity> {
+    return await this.getRepository(queryRunner)
       .createQueryBuilder('invoice')
       .setLock('pessimistic_write')
       .where('invoice.id = :invoiceId', { invoiceId })
       .getOneOrFail();
   }
 
-  saveInvoice(invoice: InvoiceEntity, manager?: EntityManager): Promise<InvoiceEntity> {
-    return (manager?.getRepository(InvoiceEntity) ?? this.repository).save(invoice);
+  async saveInvoice(invoice: InvoiceEntity, queryRunner?: QueryRunner): Promise<InvoiceEntity> {
+    return await this.save(invoice, queryRunner);
   }
 }
 
@@ -60,75 +60,94 @@ export class InvoiceSessionRepository extends BaseRepository<InvoiceScanSessionE
     super(dataSource.getRepository(InvoiceScanSessionEntity));
   }
 
-  findActive(invoiceId: string, userId: string, manager?: EntityManager) {
-    return (manager?.getRepository(InvoiceScanSessionEntity) ?? this.repository).findOne({
-      where: { invoiceId, userId, status: ScanSessionStatus.ACTIVE },
+  async findActive(invoiceId: string, userId: string, queryRunner?: QueryRunner) {
+    return await this.getRepository(queryRunner).findOne({
+      where: {
+        invoice: { id: Number(invoiceId) },
+        user: { id: Number(userId) },
+        status: ScanSessionStatus.ACTIVE,
+      },
     });
   }
 
-  createSession(
+  async createSession(
     data: Partial<InvoiceScanSessionEntity>,
-    manager?: EntityManager
+    queryRunner?: QueryRunner
   ): Promise<InvoiceScanSessionEntity> {
-    const repository = manager?.getRepository(InvoiceScanSessionEntity) ?? this.repository;
-    return repository.save(repository.create(data));
+    return await this.save(data, queryRunner);
   }
 
-  findOwned(sessionId: string, userId: string, manager?: EntityManager, forUpdate = false) {
-    let query = (manager?.getRepository(InvoiceScanSessionEntity) ?? this.repository)
+  async findOwned(sessionId: string, userId: string, queryRunner?: QueryRunner, forUpdate = false) {
+    let query = this.getRepository(queryRunner)
       .createQueryBuilder('session')
+      .leftJoinAndSelect('session.invoice', 'invoice')
       .where('session.session_id = :sessionId', { sessionId })
       .andWhere('session.user_id = :userId', { userId });
-    if (forUpdate) query = query.setLock('pessimistic_write');
+
+    if (forUpdate) {
+      query = query.setLock('pessimistic_write');
+    }
     return query.getOne();
   }
 
-  saveSession(
+  async saveSession(
     session: InvoiceScanSessionEntity,
-    manager?: EntityManager
+    queryRunner?: QueryRunner
   ): Promise<InvoiceScanSessionEntity> {
-    return (manager?.getRepository(InvoiceScanSessionEntity) ?? this.repository).save(session);
+    return await this.save(session, queryRunner);
   }
 }
 
 @Injectable()
-export class PairHistoryRepository extends BaseRepository<PairScanHistoryEntity> {
+export class PairHistoryRepository extends BaseRepository<InvoicePairScanHistoryEntity> {
   constructor(dataSource: DataSource) {
-    super(dataSource.getRepository(PairScanHistoryEntity));
+    super(dataSource.getRepository(InvoicePairScanHistoryEntity));
   }
 
-  existing(invoiceId: string, pairUids: string[], manager?: EntityManager) {
-    if (!pairUids.length) return Promise.resolve([]);
-    return (manager?.getRepository(PairScanHistoryEntity) ?? this.repository).find({
+  async existing(invoiceId: string, pairUids: string[], queryRunner?: QueryRunner) {
+    if (!pairUids.length) {
+      return Promise.resolve([]);
+    }
+
+    return await this.getRepository(queryRunner).find({
       select: { pairUid: true },
-      where: { invoiceId, pairUid: In(pairUids) },
+      where: { invoice: { id: Number(invoiceId) }, pairUid: In(pairUids) },
     });
   }
 
-  pendingValid(sessionId: string, manager: EntityManager) {
-    return manager.getRepository(PairScanHistoryEntity).find({
+  async pendingValid(sessionId: string, queryRunner?: QueryRunner) {
+    return await this.getRepository(queryRunner).find({
       where: { sessionId, status: PairHistoryStatus.VALID },
       order: { id: 'ASC' },
     });
   }
 
-  async insertIgnore(rows: Partial<PairScanHistoryEntity>[]): Promise<void> {
-    if (!rows.length) return;
-    await this.repository
+  async insertIgnore(
+    rows: Partial<InvoicePairScanHistoryEntity>[],
+    queryRunner?: QueryRunner
+  ): Promise<void> {
+    if (!rows.length) {
+      return;
+    }
+
+    await this.getRepository(queryRunner)
       .createQueryBuilder('history')
       .insert()
-      .into(PairScanHistoryEntity)
+      .into(InvoicePairScanHistoryEntity)
       .values(rows)
       .orIgnore()
       .execute();
   }
 
-  async countBySession(sessionId: string): Promise<{
+  async countBySession(
+    sessionId: string,
+    queryRunner?: QueryRunner
+  ): Promise<{
     scanned: number;
     valid: number;
     invalid: number;
   }> {
-    const counts = await this.repository
+    const counts = await this.getRepository(queryRunner)
       .createQueryBuilder('history')
       .select('COUNT(*)', 'scanned')
       .addSelect('SUM(CASE WHEN history.status IN (:...validStatuses) THEN 1 ELSE 0 END)', 'valid')
@@ -146,21 +165,23 @@ export class PairHistoryRepository extends BaseRepository<PairScanHistoryEntity>
     };
   }
 
-  async markRewarded(ids: string[], manager: EntityManager): Promise<void> {
+  async markRewarded(ids: string[], queryRunner?: QueryRunner): Promise<void> {
     if (!ids.length) return;
-    await manager
-      .getRepository(PairScanHistoryEntity)
-      .update({ id: In(ids) }, { status: PairHistoryStatus.REWARDED });
+    await this.getRepository(queryRunner).update(
+      { id: In(ids) },
+      { status: PairHistoryStatus.REWARDED }
+    );
   }
 
   async findPageBySession(
     sessionId: string,
     userId: string,
     page: number,
-    limit: number
-  ): Promise<{ items: PairScanHistoryEntity[]; total: number }> {
-    const [items, total] = await this.repository.findAndCount({
-      where: { sessionId, userId },
+    limit: number,
+    queryRunner?: QueryRunner
+  ): Promise<{ items: InvoicePairScanHistoryEntity[]; total: number }> {
+    const [items, total] = await this.getRepository(queryRunner).findAndCount({
+      where: { sessionId, user: { id: Number(userId) } },
       select: ['id', 'pairUid', 'status', 'scanSource', 'failureReason', 'createdAt'],
       order: { id: 'DESC' },
       skip: (page - 1) * limit,
@@ -169,21 +190,84 @@ export class PairHistoryRepository extends BaseRepository<PairScanHistoryEntity>
     return { items, total };
   }
 
-  findBySession(sessionId: string, userId: string): Promise<PairScanHistoryEntity[]> {
-    return this.repository.find({
-      where: { sessionId, userId },
+  async findBySession(
+    sessionId: string,
+    userId: string,
+    queryRunner?: QueryRunner
+  ): Promise<InvoicePairScanHistoryEntity[]> {
+    return await this.getRepository(queryRunner).find({
+      where: { sessionId, user: { id: Number(userId) } },
       order: { id: 'ASC' },
     });
   }
 
-  /**
-   * Purges the per-pair scan log for a session. Only call this once the session is
-   * COMPLETED — countBySession()/pendingValid() both read every row for a session to
-   * track cumulative progress across partial submits, so deleting mid-session would
-   * corrupt an in-progress MULTIPLE-type invoice's scanned/valid counts.
-   */
-  async deleteBySession(sessionId: string, manager: EntityManager): Promise<void> {
-    await manager.getRepository(PairScanHistoryEntity).delete({ sessionId });
+  async findByInvoice(invoiceId: string | number, userId: string, queryRunner?: QueryRunner) {
+    const rawItems = await this.getRepository(queryRunner)
+      .createQueryBuilder('history')
+      .leftJoin(InvoicePairDetailEntity, 'pair', 'pair.pair_uid = history.pairUid')
+      .leftJoin('pair.assortment', 'assortment', 'assortment.invoice_id = :invoiceId', {
+        invoiceId: Number(invoiceId),
+      })
+      .leftJoin('assortment.item', 'item')
+      .select([
+        'history.id AS id',
+        'history.sessionId AS sessionId',
+        'history.pairUid AS pairUid',
+        'history.status AS status',
+        'history.scanSource AS scanSource',
+        'history.failureReason AS failureReason',
+        'history.createdAt AS createdAt',
+        'item.item_code AS itemCode',
+        'item.item_name AS itemName',
+        'assortment.parent_item_code AS parentItemCode',
+      ])
+      .where('history.invoice_id = :invoiceId', { invoiceId: Number(invoiceId) })
+      .andWhere('history.user_id = :userId', { userId: Number(userId) })
+      .orderBy('history.id', 'ASC')
+      .getRawMany();
+
+    return rawItems.map((item) => ({
+      id: item.id,
+      sessionId: item.sessionId,
+      pairUid: item.pairUid,
+      status: item.status,
+      scanSource: item.scanSource,
+      failureReason: item.failureReason,
+      createdAt: item.createdAt,
+      itemCode: item.itemCode || item.parentItemCode || null,
+      itemName: item.itemName || null,
+    }));
+  }
+
+  async deleteBySession(sessionId: string, queryRunner?: QueryRunner): Promise<void> {
+    await this.getRepository(queryRunner).delete({ sessionId });
+  }
+
+  async deleteOneActive(
+    sessionId: string,
+    pairUid: string,
+    queryRunner?: QueryRunner
+  ): Promise<boolean> {
+    const result = await this.getRepository(queryRunner).delete({
+      sessionId,
+      pairUid,
+      status: In([PairHistoryStatus.VALID, PairHistoryStatus.INVALID]),
+    });
+    return (result.affected ?? 0) > 0;
+  }
+
+  async deleteAllActiveBySession(sessionId: string, queryRunner?: QueryRunner): Promise<string[]> {
+    const repository = this.getRepository(queryRunner);
+    const rows = await repository.find({
+      where: { sessionId, status: In([PairHistoryStatus.VALID, PairHistoryStatus.INVALID]) },
+      select: ['pairUid'],
+    });
+    if (!rows.length) return [];
+    await repository.delete({
+      sessionId,
+      status: In([PairHistoryStatus.VALID, PairHistoryStatus.INVALID]),
+    });
+    return rows.map((row) => row.pairUid);
   }
 }
 
@@ -193,16 +277,22 @@ export class InvoiceHistoryRepository extends BaseRepository<InvoiceScanAuditEnt
     super(dataSource.getRepository(InvoiceScanAuditEntity));
   }
 
-  saveHistory(
+  async saveHistory(
     data: Partial<InvoiceScanAuditEntity>,
-    manager?: EntityManager
+    queryRunner?: QueryRunner
   ): Promise<InvoiceScanAuditEntity> {
-    const repository = manager?.getRepository(InvoiceScanAuditEntity) ?? this.repository;
-    return repository.save(repository.create(data));
+    return await this.save(data, queryRunner);
   }
 
-  findOwnedById(id: string, userId: string): Promise<InvoiceScanAuditEntity | null> {
-    return this.repository.findOne({ where: { id, userId } });
+  async findOwnedById(
+    id: string,
+    userId: string,
+    queryRunner?: QueryRunner
+  ): Promise<InvoiceScanAuditEntity | null> {
+    return await this.getRepository(queryRunner).findOne({
+      where: { id: Number(id), user: { id: Number(userId) } },
+      relations: ['invoice'],
+    });
   }
 
   async findHistory(
@@ -214,16 +304,20 @@ export class InvoiceHistoryRepository extends BaseRepository<InvoiceScanAuditEnt
       toDate?: string;
       page: number;
       limit: number;
-    }
+    },
+    queryRunner?: QueryRunner
   ): Promise<{ items: InvoiceScanAuditEntity[]; total: number }> {
-    const query = this.repository
+    const query = this.getRepository(queryRunner)
       .createQueryBuilder('history')
+      .leftJoinAndSelect('history.invoice', 'invoice')
       .where('history.user_id = :userId', { userId });
+
     if (filters.invoiceNumber) {
       query.andWhere('history.invoice_number = :invoiceNumber', {
         invoiceNumber: filters.invoiceNumber,
       });
     }
+
     if (filters.status) query.andWhere('history.status = :status', { status: filters.status });
     if (filters.fromDate) {
       query.andWhere('history.created_at >= :fromDate', { fromDate: filters.fromDate });
@@ -239,14 +333,8 @@ export class InvoiceHistoryRepository extends BaseRepository<InvoiceScanAuditEnt
     return { items, total };
   }
 
-  /**
-   * Purges every audit entry (STARTED/PARTIALLY_SUBMITTED/COMPLETED/...) recorded for a
-   * session. Only call once the session is COMPLETED — this removes the invoice from the
-   * retailer's GET /invoices/history and /history/:id views, by design (per product
-   * decision to not retain history for fully-completed invoices).
-   */
-  async deleteBySession(sessionId: string, manager: EntityManager): Promise<void> {
-    await manager.getRepository(InvoiceScanAuditEntity).delete({ sessionId });
+  async deleteBySession(sessionId: string, queryRunner?: QueryRunner): Promise<void> {
+    await this.getRepository(queryRunner).delete({ sessionId });
   }
 }
 
@@ -266,21 +354,15 @@ export class InvoicePairRepository extends BaseRepository<InvoicePairDetailEntit
       .getMany();
   }
 
-  /**
-   * Marks the given physical pairs as consumed on invoice_pair_details itself (the
-   * source-of-truth table with its own scanned_by/scanned_at audit columns), rather than
-   * relying solely on pair_scan_history for anti-replay protection. Scoped by invoiceId so a
-   * pair_uid string can never be marked against the wrong invoice.
-   */
   async markStatusByUids(
     invoiceId: string,
     pairUids: string[],
     status: InvoicePairScanStatus,
     scannedBy: string,
-    manager?: EntityManager
+    queryRunner?: QueryRunner
   ): Promise<void> {
     if (!pairUids.length) return;
-    const repository = manager?.getRepository(InvoicePairDetailEntity) ?? this.repository;
+    const repository = this.getRepository(queryRunner);
     const pairs = await repository
       .createQueryBuilder('pair')
       .select(['pair.id'])
@@ -291,18 +373,124 @@ export class InvoicePairRepository extends BaseRepository<InvoicePairDetailEntit
     if (!pairs.length) return;
     await repository.update(
       { id: In(pairs.map((pair) => pair.id)) },
-      { status, scanned_by: scannedBy, scanned_at: new Date() }
+      { status, scannedByUser: { id: Number(scannedBy) } as any, scanned_at: new Date() }
+    );
+  }
+
+  async revertStatusByUids(
+    invoiceId: string,
+    pairUids: string[],
+    queryRunner?: QueryRunner
+  ): Promise<void> {
+    if (!pairUids.length) return;
+    const repository = this.getRepository(queryRunner);
+    const pairs = await repository
+      .createQueryBuilder('pair')
+      .select(['pair.id'])
+      .innerJoin('pair.assortment', 'assortment')
+      .where('assortment.invoice_id = :invoiceId', { invoiceId })
+      .andWhere('pair.pair_uid IN (:...pairUids)', { pairUids })
+      .getMany();
+    if (!pairs.length) return;
+    await repository.update(
+      { id: In(pairs.map((pair) => pair.id)) },
+      { status: InvoicePairScanStatus.UNSCANNED, scannedByUser: null as any, scanned_at: null }
+    );
+  }
+
+  async getPairScanContext(
+    invoiceId: string,
+    pairUids: string[],
+    queryRunner?: QueryRunner
+  ): Promise<{ itemCodeByPair: Map<string, string>; alreadyScanned: Map<string, number> }> {
+    const scannedStatuses = [InvoicePairScanStatus.SCANNED, InvoicePairScanStatus.REDEEMED];
+
+    const rows = await this.getRepository(queryRunner)
+      .createQueryBuilder('pair')
+      .select('pair.pair_uid', 'pairUid')
+      .addSelect('assortment.parent_item_code', 'itemCode')
+      .addSelect('pair.status', 'status')
+      .innerJoin('pair.assortment', 'assortment')
+      .where('assortment.invoice_id = :invoiceId', { invoiceId })
+      .andWhere(
+        new Brackets((qb) => {
+          qb.where('pair.status IN (:...scannedStatuses)', { scannedStatuses });
+          if (pairUids.length) {
+            qb.orWhere('pair.pair_uid IN (:...pairUids)', { pairUids });
+          }
+        })
+      )
+      .getRawMany();
+
+    const candidateUids = new Set(pairUids);
+    const itemCodeByPair = new Map<string, string>();
+    const alreadyScanned = new Map<string, number>();
+
+    for (const row of rows) {
+      if (candidateUids.has(row.pairUid)) {
+        itemCodeByPair.set(row.pairUid, row.itemCode);
+      }
+      if (scannedStatuses.includes(row.status)) {
+        alreadyScanned.set(row.itemCode, (alreadyScanned.get(row.itemCode) ?? 0) + 1);
+      }
+    }
+
+    return { itemCodeByPair, alreadyScanned };
+  }
+
+  findScannedPairsForInvoice(invoiceId: string, queryRunner?: QueryRunner) {
+    return this.getRepository(queryRunner)
+      .createQueryBuilder('pair')
+      .innerJoin('pair.assortment', 'assortment')
+      .where('assortment.invoice_id = :invoiceId', { invoiceId })
+      .andWhere('pair.status = :status', { status: InvoicePairScanStatus.SCANNED })
+      .getMany();
+  }
+
+  async markScannedAsRedeemed(
+    pairIds: (string | number)[],
+    userId: string,
+    queryRunner?: QueryRunner
+  ): Promise<void> {
+    if (!pairIds.length) return;
+    await this.getRepository(queryRunner).update(
+      { id: In(pairIds) },
+      {
+        status: InvoicePairScanStatus.REDEEMED,
+        scanned_at: new Date(),
+        scannedByUser: { id: Number(userId) } as any,
+      }
     );
   }
 }
 
 @Injectable()
-export class UserRewardRepository {
-  constructor(private readonly dataSource: DataSource) {}
+export class UserRewardRepository extends BaseRepository<User> {
+  constructor(dataSource: DataSource) {
+    super(dataSource.getRepository(User));
+  }
 
-  async addPoints(userId: string, points: number, manager: EntityManager): Promise<number> {
-    const repository = manager.getRepository(User);
+  async addPoints(userId: string, points: number, queryRunner?: QueryRunner): Promise<number> {
+    const repository = this.getRepository(queryRunner);
     await repository.increment({ id: Number(userId) }, 'points', points);
+    const user = await repository.findOne({
+      select: { id: true, points: true },
+      where: { id: Number(userId) },
+    });
+    return Number(user?.points ?? 0);
+  }
+
+  async deductPoints(userId: string, points: number, queryRunner?: QueryRunner): Promise<number> {
+    if (points <= 0) return this.currentBalance(userId, queryRunner);
+    const repository = this.getRepository(queryRunner);
+    const current = await this.currentBalance(userId, queryRunner);
+    const deduction = Math.min(current, points);
+    if (deduction > 0) await repository.decrement({ id: Number(userId) }, 'points', deduction);
+    return this.currentBalance(userId, queryRunner);
+  }
+
+  private async currentBalance(userId: string, queryRunner?: QueryRunner): Promise<number> {
+    const repository = this.getRepository(queryRunner);
     const user = await repository.findOne({
       select: { id: true, points: true },
       where: { id: Number(userId) },
@@ -312,8 +500,10 @@ export class UserRewardRepository {
 }
 
 @Injectable()
-export class InvoicePointHistoryRepository {
-  constructor(private readonly dataSource: DataSource) {}
+export class InvoicePointHistoryRepository extends BaseRepository<PointHistory> {
+  constructor(dataSource: DataSource) {
+    super(dataSource.getRepository(PointHistory));
+  }
 
   async createEarnHistory(
     data: {
@@ -322,10 +512,12 @@ export class InvoicePointHistoryRepository {
       balance: number;
       transactionId: string;
       description: string;
+      expiresAt?: Date;
+      invoiceId?: number;
     },
-    manager: EntityManager
+    queryRunner?: QueryRunner
   ): Promise<PointHistory> {
-    const repository = manager.getRepository(PointHistory);
+    const repository = this.getRepository(queryRunner);
     return repository.save(
       repository.create({
         user: { id: Number(data.userId) } as User,
@@ -338,7 +530,27 @@ export class InvoicePointHistoryRepository {
         year: String(new Date().getFullYear()),
         user_remaining_points: data.balance,
         transaction_id: data.transactionId,
+        expires_at: data.expiresAt,
+        remaining_points: data.points,
+        invoice: data.invoiceId ? ({ id: Number(data.invoiceId) } as any) : null,
       })
+    );
+  }
+
+  async findExpirable(asOf: Date, queryRunner?: QueryRunner): Promise<PointHistory[]> {
+    return this.getRepository(queryRunner)
+      .createQueryBuilder('history')
+      .where('history.status = :status', { status: PointStatusEnum.added })
+      .andWhere('history.expires_at IS NOT NULL')
+      .andWhere('history.expires_at <= :asOf', { asOf })
+      .andWhere('history.remaining_points > 0')
+      .getMany();
+  }
+
+  async markExpired(id: string, queryRunner?: QueryRunner): Promise<void> {
+    await this.getRepository(queryRunner).update(
+      { id } as any,
+      { status: PointStatusEnum.expired, remaining_points: 0 } as any
     );
   }
 }

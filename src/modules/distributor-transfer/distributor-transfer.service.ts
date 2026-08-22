@@ -49,7 +49,7 @@ export class DistributorTransferService {
         const transfer = await this.repository.saveTransferRequest(
           {
             request_no: requestNo,
-            invoice_id: invoice.id,
+            invoice: { id: Number(invoice.id) } as any,
             invoice_no: invoice.invoice_no,
             from_distributor_id: distributorId,
             total_pairs: invoice.total_pairs,
@@ -68,7 +68,7 @@ export class DistributorTransferService {
           skuCount: transfer.sku_count,
           billingEstimate: transfer.billing_estimate,
           remarks: transfer.remarks,
-          createdAt: transfer.created_at,
+          createdAt: transfer.createdAt,
         };
       });
 
@@ -83,7 +83,10 @@ export class DistributorTransferService {
   // Any other distributor claims an open (unallocated) request as the receiver.
   async allocate(distributorId: string, requestNo: string) {
     const tag = 'DistributorTransferService.allocate';
-    ConsoleLogger.log('DISTRIBUTOR_TRANSFER_ALLOCATE_START', { tag, data: { distributorId, requestNo } });
+    ConsoleLogger.log('DISTRIBUTOR_TRANSFER_ALLOCATE_START', {
+      tag,
+      data: { distributorId, requestNo },
+    });
 
     try {
       const result = await this.transactionService.execute(async (manager) => {
@@ -100,7 +103,7 @@ export class DistributorTransferService {
 
         // save() on a partial entity only echoes back what was passed in, not the full row —
         // build the response from the already-loaded `transfer` instead of its return value.
-        await this.repository.allocateDistributor(transfer.id, distributorId, manager);
+        await this.repository.allocateDistributor(String(transfer.id), distributorId, manager);
         return {
           requestNo: transfer.request_no,
           status: transfer.status,
@@ -171,7 +174,10 @@ export class DistributorTransferService {
       throw new BusinessException(ERROR_CODES.DISTRIBUTOR_TRANSFER.INVOICE_NOT_APPROVED);
     }
 
-    const existingPending = await this.repository.findExistingPendingTransfer(invoice.id, manager);
+    const existingPending = await this.repository.findExistingPendingTransfer(
+      String(invoice.id),
+      manager
+    );
     if (existingPending) {
       throw new BusinessException(ERROR_CODES.DISTRIBUTOR_TRANSFER.TRANSFER_ALREADY_REQUESTED);
     }

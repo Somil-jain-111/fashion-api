@@ -31,7 +31,9 @@ export class DistributorTransferRepository extends BaseRepository<InvoiceTransfe
     manager?: EntityManager,
     forUpdate = false
   ) {
-    const query = (manager?.getRepository(InvoiceEntity) ?? this.dataSource.getRepository(InvoiceEntity))
+    const query = (
+      manager?.getRepository(InvoiceEntity) ?? this.dataSource.getRepository(InvoiceEntity)
+    )
       .createQueryBuilder('invoice')
       .leftJoinAndSelect('invoice.items', 'items')
       .where('invoice.invoice_no = :invoiceNumber', { invoiceNumber })
@@ -46,7 +48,7 @@ export class DistributorTransferRepository extends BaseRepository<InvoiceTransfe
 
   findExistingPendingTransfer(invoiceId: string, manager?: EntityManager) {
     return (manager?.getRepository(InvoiceTransferRequestEntity) ?? this.repository).findOne({
-      where: { invoice_id: invoiceId, status: TransferRequestStatus.PENDING_APPROVAL },
+      where: { invoice: { id: Number(invoiceId) }, status: TransferRequestStatus.PENDING_APPROVAL },
     });
   }
 
@@ -59,26 +61,30 @@ export class DistributorTransferRepository extends BaseRepository<InvoiceTransfe
   }
 
   findExistingByRequestNo(requestNo: string, manager: EntityManager) {
-    return manager.getRepository(InvoiceTransferRequestEntity).findOne({ where: { request_no: requestNo } });
+    return manager
+      .getRepository(InvoiceTransferRequestEntity)
+      .findOne({ where: { request_no: requestNo } });
   }
 
   findByRequestNoForDistributor(requestNo: string, distributorId: string) {
-    return this.repository
-      .createQueryBuilder('transfer')
-      .innerJoin('transfer.invoice', 'invoice')
-      .addSelect(['invoice.id', 'invoice.invoice_no', 'invoice.party_name'])
-      .innerJoin('transfer.fromDistributor', 'fromDistributor')
-      .addSelect(['fromDistributor.id', 'fromDistributor.firmName', 'fromDistributor.username'])
-      // left, not inner — to_distributor_id is null until a distributor allocates themselves,
-      // and the sender still needs to see their own unallocated request.
-      .leftJoin('transfer.toDistributor', 'toDistributor')
-      .addSelect(['toDistributor.id', 'toDistributor.firmName', 'toDistributor.username'])
-      .where('transfer.request_no = :requestNo', { requestNo })
-      .andWhere(
-        '(transfer.from_distributor_id = :distributorId OR transfer.to_distributor_id = :distributorId)',
-        { distributorId }
-      )
-      .getOne();
+    return (
+      this.repository
+        .createQueryBuilder('transfer')
+        .innerJoin('transfer.invoice', 'invoice')
+        .addSelect(['invoice.id', 'invoice.invoice_no', 'invoice.party_name'])
+        .innerJoin('transfer.fromDistributor', 'fromDistributor')
+        .addSelect(['fromDistributor.id', 'fromDistributor.firmName', 'fromDistributor.username'])
+        // left, not inner — to_distributor_id is null until a distributor allocates themselves,
+        // and the sender still needs to see their own unallocated request.
+        .leftJoin('transfer.toDistributor', 'toDistributor')
+        .addSelect(['toDistributor.id', 'toDistributor.firmName', 'toDistributor.username'])
+        .where('transfer.request_no = :requestNo', { requestNo })
+        .andWhere(
+          '(transfer.from_distributor_id = :distributorId OR transfer.to_distributor_id = :distributorId)',
+          { distributorId }
+        )
+        .getOne()
+    );
   }
 
   async findHistoryForDistributor(
@@ -144,6 +150,6 @@ export class DistributorTransferRepository extends BaseRepository<InvoiceTransfe
     manager: EntityManager
   ): Promise<InvoiceTransferRequestEntity> {
     const repository = manager.getRepository(InvoiceTransferRequestEntity);
-    return repository.save({ id: transferId, to_distributor_id: distributorId });
+    return repository.save({ id: Number(transferId), to_distributor_id: distributorId });
   }
 }

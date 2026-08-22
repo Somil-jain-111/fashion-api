@@ -1,7 +1,7 @@
 import { Entity, Column, ManyToOne, JoinColumn, Index } from 'typeorm';
 import { BaseEntity } from '../../../default/common/entities';
 import { User } from '../../auth/entities';
-import { MappingType } from '../../../default/common/enums/user-mapping.enum';
+import { MappingStatus, MappingType } from '../../../default/common/enums/user-mapping.enum';
 
 @Entity('user_mappings')
 @Index('idx_user_mappings_parent', ['parent'])
@@ -21,4 +21,12 @@ export class UserMapping extends BaseEntity {
     name: 'mapping_type',
   })
   mappingType!: MappingType;
+
+  @Column({
+    type: 'enum',
+    enum: MappingStatus,
+    default: MappingStatus.ACTIVE,
+  })
+  status!: MappingStatus;
+
 }
