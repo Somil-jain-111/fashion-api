@@ -1,9 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { DataSource, QueryRunner } from 'typeorm';
-
+//
 import { BaseRepository } from 'src/default/common/repositories/base.repository';
 import { OrderPlacement } from '../entities/order-placement.entity';
-import { OrderPlacementSource, OrderPlacementStatus } from '../enum/order-placement.enum';
+import { OrderPlacementStatus } from '../enum/order-placement.enum';
 
 @Injectable()
 export class OrderPlacementRepository extends BaseRepository<OrderPlacement> {
@@ -16,9 +16,7 @@ export class OrderPlacementRepository extends BaseRepository<OrderPlacement> {
     userId: string | number,
     queryRunner?: QueryRunner
   ): Promise<OrderPlacement | null> {
-    const repo = queryRunner ? queryRunner.manager.getRepository(OrderPlacement) : this.repository;
-
-    return repo.findOne({
+    return await this.getRepository(queryRunner).findOne({
       where: {
         id: orderId,
         user_id: String(userId),
@@ -31,9 +29,7 @@ export class OrderPlacementRepository extends BaseRepository<OrderPlacement> {
     orderNumber: string,
     queryRunner?: QueryRunner
   ): Promise<OrderPlacement | null> {
-    const repo = queryRunner ? queryRunner.manager.getRepository(OrderPlacement) : this.repository;
-
-    return repo.findOne({
+    return await this.getRepository(queryRunner).findOne({
       where: { orderNumber } as any,
     });
   }
