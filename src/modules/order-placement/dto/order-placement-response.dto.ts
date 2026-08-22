@@ -55,5 +55,7 @@ export class OrderPlacementResponseDto {
 
   totalPayable: string;
 
+  orderDate: string;
+
   items: OrderPlacementItemResponseDto[];
 }

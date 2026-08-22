@@ -39,33 +39,43 @@ export class OrderPlacementRepository extends BaseRepository<OrderPlacement> {
   }
 
   async findAllByUser(
-  userId: string | number,
-  options: {
-    page: number;
-    limit: number;
-    status?: OrderPlacementStatus;
-    source?: OrderPlacementSource;
-  },
-  queryRunner?: QueryRunner
-): Promise<[OrderPlacement[], number]> {
-  const manager = queryRunner ? queryRunner.manager : this.repository.manager;
+    userId: string | number,
+    options: {
+      page: number;
+      limit: number;
+      status?: OrderPlacementStatus;
+      search?: string;
+      startDate?: string;
+      endDate?: string;
+    },
+    queryRunner?: QueryRunner
+  ): Promise<[OrderPlacement[], number]> {
+    const qb = this.getRepository(queryRunner)
+      .createQueryBuilder('order')
+      .leftJoinAndSelect('order.items', 'items')
+      .where('order.user_id = :userId', { userId: String(userId) })
+      .orderBy('order.createdAt', 'DESC')
+      .skip((options.page - 1) * options.limit)
+      .take(options.limit);
 
-  const qb = manager
-    .createQueryBuilder(OrderPlacement, 'order')
-    .leftJoinAndSelect('order.items', 'items')
-    .where('order.user_id = :userId', { userId: String(userId) })
-    .orderBy('order.createdAt', 'DESC')
-    .skip((options.page - 1) * options.limit)
-    .take(options.limit);
+    if (options.status) {
+      qb.andWhere('order.status = :status', { status: options.status });
+    }
 
-  if (options.status) {
-    qb.andWhere('order.status = :status', { status: options.status });
+    if (options.search) {
+      qb.andWhere('order.orderNumber LIKE :search', {
+        search: `%${options.search.trim()}%`,
+      });
+    }
+
+    if (options.startDate) {
+      qb.andWhere('order.createdAt >= :startDate', { startDate: options.startDate });
+    }
+
+    if (options.endDate) {
+      qb.andWhere('order.createdAt <= :endDate', { endDate: `${options.endDate} 23:59:59` });
+    }
+
+    return qb.getManyAndCount();
   }
-
-  if (options.source) {
-    qb.andWhere('order.source = :source', { source: options.source });
-  }
-
-  return qb.getManyAndCount();
-}
 }

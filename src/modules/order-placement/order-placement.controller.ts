@@ -23,16 +23,16 @@ export class OrderPlacementController {
   }
 
   @NoCache()
-  @Get(':id')
-  async findOne(@Req() req: any, @Param('id') id: string) {
-    const response = await this.orderPlacementService.findOne(req.user.id, id);
+  @Get('history')
+  async getOrderHistory(@Req() req: any, @Query() query: GetOrderHistoryQueryDto) {
+    const response = await this.orderPlacementService.getOrderHistory(req.user.id, query);
     return DataSanitizer.sanitizeData(response);
   }
 
   @NoCache()
-  @Get('history')
-  async getOrderHistory(@Req() req: any, @Query() query: GetOrderHistoryQueryDto) {
-    const response = await this.orderPlacementService.getOrderHistory(req.user.id, query);
+  @Get('history/:id')
+  async findOne(@Req() req: any, @Param('id') id: string) {
+    const response = await this.orderPlacementService.findOne(req.user.id, id);
     return DataSanitizer.sanitizeData(response);
   }
 }
