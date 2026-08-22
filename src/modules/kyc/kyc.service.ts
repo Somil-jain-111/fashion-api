@@ -1764,6 +1764,7 @@ export class KycService {
     return list.map((item) => {
       const extraFields = {
         relationship: item.relationship ? this.decryptKycData(item.relationship) : null,
+        otherRelationship: item.otherRelationship ? item.otherRelationship : null,
         beneficiary_name: item.beneficiary_name ? this.decryptKycData(item.beneficiary_name) : null,
         mobileNumber: item.mobileNumber ? this.decryptKycData(item.mobileNumber) : null,
         panNumber: item.panNumber ? this.decryptKycData(item.panNumber) : null,
