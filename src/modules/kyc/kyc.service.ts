@@ -1245,6 +1245,7 @@ export class KycService {
         address: addressENC,
         status: BeneficiaryStatus.PENDING,
         referenceId: transactionId,
+        otherRelationship: dto.otherRelationship ? dto.otherRelationship?.trim() : null,
         panVerification: { id: panVerification?.id } as any,
         aadhaarVerification: { id: aadhaarVerification?.id } as any,
         metadata: {
@@ -1383,6 +1384,7 @@ export class KycService {
         address: addressENC,
         status: BeneficiaryStatus.PENDING,
         referenceId: transactionId,
+        otherRelationship: dto.otherRelationship ? dto.otherRelationship?.trim() : null,
         panVerification: { id: panVerification?.id } as any,
         aadhaarVerification: { id: aadhaarVerification?.id } as any,
         metadata: {

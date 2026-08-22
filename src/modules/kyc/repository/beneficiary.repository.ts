@@ -32,6 +32,7 @@ export class BeneficiaryRepository extends BaseRepository<UserBeneficiary> {
       otp?: string | null;
       otp_expiry?: Date | null;
       otp_attempt_count?: number;
+      otherRelationship?: string;
       panVerification?: KycVerificationEntity | null;
       aadhaarVerification?: KycVerificationEntity | null;
     },
@@ -58,6 +59,7 @@ export class BeneficiaryRepository extends BaseRepository<UserBeneficiary> {
         otp: data.otp,
         otp_expiry: data.otp_expiry,
         otp_attempt_count: data.otp_attempt_count ?? 0,
+        otherRelationship: data.otherRelationship || null,
         panVerification: data.panVerification ?? null,
         aadhaarVerification: data.aadhaarVerification ?? null,
       },
