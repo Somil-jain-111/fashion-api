@@ -6,6 +6,7 @@ import { InvoiceScanSessionEntity } from '../entities/invoice-scan-session.entit
 import { InvoicePairScanHistoryEntity } from '../entities/invoice-pair-scan-history.entity';
 import { InvoiceScanAuditEntity } from '../entities/invoice-scan-audit.entity';
 import { InvoicePairDetailEntity } from '../entities/invoice-pair-detail.entity';
+import { InvoiceStatus } from '../enum/invoice.enum';
 import { PairHistoryStatus, ScanSessionStatus } from '../enum/invoice-scan-session.enum';
 import { InvoicePairScanStatus } from '../enum/invoice-pair-scan-status.enum';
 import { User } from 'src/modules/auth/entities';
@@ -51,6 +52,44 @@ export class InvoiceRepository extends BaseRepository<InvoiceEntity> {
 
   async saveInvoice(invoice: InvoiceEntity, queryRunner?: QueryRunner): Promise<InvoiceEntity> {
     return await this.save(invoice, queryRunner);
+  }
+
+  async getSummary(
+    userId: string,
+    queryRunner?: QueryRunner
+  ): Promise<{
+    totalInvoices: number;
+    pendingInvoices: number;
+    completedInvoices: number;
+    totalPoints: number;
+  }> {
+    const raw = await this.getRepository(queryRunner)
+      .createQueryBuilder('invoice')
+      .select('COUNT(*)', 'totalInvoices')
+      .addSelect(
+        'SUM(CASE WHEN invoice.status = :completedStatus THEN 1 ELSE 0 END)',
+        'completedInvoices'
+      )
+      .addSelect(
+        'SUM(CASE WHEN invoice.status != :completedStatus THEN 1 ELSE 0 END)',
+        'pendingInvoices'
+      )
+      .addSelect('SUM(invoice.earned_points)', 'totalPoints')
+      .where('invoice.user_id = :userId', { userId: Number(userId) })
+      .setParameter('completedStatus', InvoiceStatus.COMPLETED)
+      .getRawOne();
+
+    const totalInvoices = Number(raw?.totalInvoices ?? 0);
+    const completedInvoices = Number(raw?.completedInvoices ?? 0);
+    const pendingInvoices = Number(raw?.pendingInvoices ?? 0);
+    const totalPoints = Number(raw?.totalPoints ?? 0);
+
+    return {
+      totalInvoices,
+      pendingInvoices,
+      completedInvoices,
+      totalPoints,
+    };
   }
 }
 

@@ -13,6 +13,7 @@ import {
   InvoicePairRepository,
   PairHistoryRepository,
   UserRewardRepository,
+  InvoiceRepository,
 } from '../repository';
 import { InvoiceEntity } from '../entities/invoice.entity';
 import { PointsExpiryConfigService } from 'src/modules/redemptions/services/points-expiry.service';
@@ -153,7 +154,8 @@ export class InvoiceService {
     private readonly pairScanningService: PairScanningService,
     private readonly rewardSettlementService: RewardSettlementService,
     private readonly histories: InvoiceHistoryRepository,
-    private readonly pairHistories: PairHistoryRepository
+    private readonly pairHistories: PairHistoryRepository,
+    private readonly invoiceRepository: InvoiceRepository
   ) {}
 
   validate(invoiceIdOrNumber: string, userId: string) {
@@ -214,5 +216,9 @@ export class InvoiceService {
       points: history.pointsAwarded,
       status: history.status,
     };
+  }
+
+  summary(userId: string) {
+    return this.invoiceRepository.getSummary(userId);
   }
 }

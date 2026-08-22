@@ -154,6 +154,18 @@ export class InvoicesController {
   }
 
   /**
+   * GET /invoices/summary
+   * Returns totalInvoices, pendingInvoices, completedInvoices, and totalPoints
+   */
+  @NoCache()
+  @SkipThrottle()
+  @Get('summary')
+  async summary(@Req() request: any) {
+    const response = await this.invoices.summary(String(request.user.id));
+    return DataSanitizer.sanitizeData(response);
+  }
+
+  /**
    * GET /invoices/session/:sessionId/pairs
    */
   @NoCache()
