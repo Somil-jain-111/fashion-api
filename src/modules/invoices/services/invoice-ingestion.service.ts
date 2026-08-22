@@ -30,8 +30,8 @@ export class InvoiceIngestionService {
   ) {}
 
   async ingest(dto: CreateInvoiceDto): Promise<InvoiceIngestResult> {
-    const user = await this.userRepository.findById(dto.userId);
-    if (!user) throw new BusinessException(ERROR_CODES.USER.USER_NOT_FOUND);
+    // const user = await this.userRepository.findById(dto.userId);
+    // if (!user) throw new BusinessException(ERROR_CODES.USER.USER_NOT_FOUND);
 
     const existing = await this.ingestion.findDuplicate(dto.invoiceno, dto.masterid);
     if (existing) throw new BusinessException(ERROR_CODES.INVOICE_SCAN.INVOICE_ALREADY_EXISTS);
@@ -53,11 +53,20 @@ export class InvoiceIngestionService {
       0
     );
 
+    const distributorDetails = await this.userRepository.findOne({
+      code: dto.partycode,
+      active: true,
+    });
+
+    if (!distributorDetails) {
+      throw new BusinessException(ERROR_CODES.USER.USER_NOT_FOUND);
+    }
+
     return this.transactionService.runInTransaction(async (queryRunner) => {
       const invoice = await this.ingestion.createInvoice(
         {
-          user: { id: dto.userId } as any,
-          distributor: { id: dto.distributorId } as any,
+          // user: { id: Number(dto.userId) } as any,
+          distributor: { id: Number(distributorDetails.id) } as any,
           invoice_no: dto.invoiceno,
           invoice_date: new Date(dto.invoicedate),
           party_code: dto.partycode,
@@ -77,7 +86,7 @@ export class InvoiceIngestionService {
       );
 
       const itemRows: Partial<InvoiceItemEntity>[] = dto.itemlist.map((item) => ({
-        invoice_id: String(invoice.id),
+        invoice,
         item_code: item.itemcode,
         item_name: item.itemname,
         unit: item.unit,
@@ -101,8 +110,8 @@ export class InvoiceIngestionService {
         const itemId = itemCodeToId.get(assortment.itemcode)!;
         for (const packing of assortment.packingInfo) {
           assortmentRows.push({
-            invoice_id: String(invoice.id),
-            item_id: itemId,
+            invoice,
+            item: { id: Number(itemId) } as any,
             parent_item_code: assortment.itemcode,
             uid: assortment.uid,
             packing_item_code: packing.itemcode,
@@ -117,7 +126,7 @@ export class InvoiceIngestionService {
       assortmentIds.forEach((assortmentId, index) => {
         for (const pair of pairsPerAssortment[index]) {
           pairRows.push({
-            assortment_id: assortmentId,
+            assortment: { id: Number(assortmentId) } as any,
             pair_qr: pair.pairqr,
             pair_uid: pair.pairuid,
             status: InvoicePairScanStatus.UNSCANNED,

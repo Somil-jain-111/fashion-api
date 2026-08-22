@@ -107,26 +107,6 @@ export class InvoiceItemInputDto {
 }
 
 export class CreateInvoiceDto {
-  /**
-   * There is no automated distributor->retailer mapping yet, so the caller must state
-   * explicitly which retailer this invoice belongs to.
-   */
-  @IsNotEmpty()
-  @Type(() => Number)
-  @IsInt()
-  @IsPositive()
-  userId!: number;
-
-  /**
-   * The distributor issuing this invoice — checked against the retailer's mapped
-   * distributor by the retailer-invoice validate flow.
-   */
-  @IsNotEmpty()
-  @Type(() => Number)
-  @IsInt()
-  @IsPositive()
-  distributorId!: number;
-
   @IsOptional()
   @IsEnum(InvoiceType)
   invoiceType?: InvoiceType;

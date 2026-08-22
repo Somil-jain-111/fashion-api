@@ -1,24 +1,28 @@
-import { Column, Entity, Index } from 'typeorm';
+import { Column, Entity, Index, JoinColumn, ManyToOne } from 'typeorm';
+import { InvoiceEntity } from './invoice.entity';
+import { User } from '../../auth/entities/users.entity';
 import { InvoiceType, ScanSessionStatus } from '../enum/invoice-scan-session.enum';
 import { BaseEntity } from '../../../default/common/entities';
 
 @Entity('invoice_scan_sessions')
 @Index('uq_invoice_scan_session_id', ['sessionId'], { unique: true })
-@Index('uq_active_invoice_user', ['invoiceId', 'userId', 'status'])
-@Index('idx_session_user_status', ['userId', 'status'])
+@Index('uq_active_invoice_user', ['invoice', 'user', 'status'])
+@Index('idx_session_user_status', ['user', 'status'])
 @Index('idx_session_last_scanned', ['lastScannedAt'])
 export class InvoiceScanSessionEntity extends BaseEntity {
   @Column({ name: 'session_id', type: 'char', length: 36, unique: true })
   sessionId: string;
 
-  @Column({ name: 'invoice_id', type: 'bigint', unsigned: true })
-  invoiceId: string;
+  @ManyToOne(() => InvoiceEntity, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'invoice_id' })
+  invoice: InvoiceEntity;
 
   @Column({ name: 'invoice_number', type: 'varchar', length: 100 })
   invoiceNumber: string;
 
-  @Column({ name: 'user_id', type: 'bigint', unsigned: true })
-  userId: string;
+  @ManyToOne(() => User, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'user_id' })
+  user: User;
 
   @Column({ name: 'invoice_type', type: 'enum', enum: InvoiceType })
   invoiceType: InvoiceType;

@@ -1,7 +1,7 @@
-// src/default/common/entities/invoice.entity.ts
-
 import { Column, Entity, Index, JoinColumn, ManyToOne, OneToMany } from 'typeorm';
-import { User, InvoiceItemEntity, InvoiceAssortmentEntity } from '../../auth/entities';
+import { User } from '../../auth/entities/users.entity';
+import { InvoiceItemEntity } from './invoice-item.entity';
+import { InvoiceAssortmentEntity } from './invoice-assortment.entity';
 import { InvoiceScanStatus, InvoiceStatus } from '../enum/invoice.enum';
 import { InvoiceType } from '../enum/invoice-scan-session.enum';
 import { BaseEntity } from '../../../default/common/entities';

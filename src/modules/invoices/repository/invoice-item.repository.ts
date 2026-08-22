@@ -7,38 +7,22 @@ export class InvoiceItemRepository {
   constructor(private readonly dataSource: DataSource) {}
 
   async findByInvoiceId(invoiceId: string): Promise<InvoiceItemEntity[]> {
-    return this.dataSource
-      .getRepository(InvoiceItemEntity)
-      .find({
-        where: {
-          invoice_id: invoiceId,
-        },
-      });
+    return this.dataSource.getRepository(InvoiceItemEntity).find({
+      where: {
+        invoice: { id: Number(invoiceId) },
+      },
+    });
   }
 
-  async quantityByItemCode(
-    invoiceId: string,
-  ): Promise<Map<string, number>> {
+  async quantityByItemCode(invoiceId: string): Promise<Map<string, number>> {
     const items = await this.findByInvoiceId(invoiceId);
 
-    return new Map(
-      items.map((item) => [
-        item.item_code,
-        Number(item.quantity),
-      ]),
-    );
+    return new Map(items.map((item) => [item.item_code, Number(item.quantity)]));
   }
 
-  async rateByItemCode(
-    invoiceId: string,
-  ): Promise<Map<string, number>> {
+  async rateByItemCode(invoiceId: string): Promise<Map<string, number>> {
     const items = await this.findByInvoiceId(invoiceId);
 
-    return new Map(
-      items.map((item) => [
-        item.item_code,
-        Number(item.rate),
-      ]),
-    );
+    return new Map(items.map((item) => [item.item_code, Number(item.rate)]));
   }
 }

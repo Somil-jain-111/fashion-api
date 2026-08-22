@@ -11,22 +11,17 @@ import {
 import { InvoiceEntity } from '../../invoices/entities/invoice.entity';
 import { User } from '../../auth/entities/users.entity';
 import { TransferRequestStatus } from '../enum/transfer-request-status.enum';
+import { BaseEntity } from '../../../default/common/entities';
 
 @Entity({ name: 'invoice_transfer_requests' })
 @Index('uq_invoice_transfer_request_no', ['request_no'], { unique: true })
-@Index('idx_invoice_transfer_requests_invoice_id', ['invoice_id'])
+@Index('idx_invoice_transfer_requests_invoice_id', ['invoice'])
 @Index('idx_invoice_transfer_requests_from_distributor_id', ['from_distributor_id'])
 @Index('idx_invoice_transfer_requests_to_distributor_id', ['to_distributor_id'])
 @Index('idx_invoice_transfer_requests_status', ['status'])
-export class InvoiceTransferRequestEntity {
-  @PrimaryGeneratedColumn({ type: 'bigint' })
-  id: string;
-
+export class InvoiceTransferRequestEntity extends BaseEntity {
   @Column({ name: 'request_no', type: 'varchar', length: 50 })
   request_no: string;
-
-  @Column({ type: 'bigint', unsigned: true })
-  invoice_id: string;
 
   @Column({ name: 'invoice_no', type: 'varchar', length: 100 })
   invoice_no: string;
@@ -50,17 +45,15 @@ export class InvoiceTransferRequestEntity {
   @Column({ name: 'billing_estimate', type: 'decimal', precision: 15, scale: 2, default: 0 })
   billing_estimate: string;
 
-  @Column({ type: 'enum', enum: TransferRequestStatus, default: TransferRequestStatus.PENDING_APPROVAL })
+  @Column({
+    type: 'enum',
+    enum: TransferRequestStatus,
+    default: TransferRequestStatus.PENDING_APPROVAL,
+  })
   status: TransferRequestStatus;
 
   @Column({ type: 'varchar', length: 255, nullable: true })
   remarks?: string | null;
-
-  @CreateDateColumn({ name: 'created_at' })
-  created_at: Date;
-
-  @UpdateDateColumn({ name: 'updated_at' })
-  updated_at: Date;
 
   @ManyToOne(() => InvoiceEntity, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'invoice_id' })

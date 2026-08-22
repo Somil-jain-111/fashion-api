@@ -1,5 +1,7 @@
 import { Column, Entity, Index, JoinColumn, ManyToOne, OneToMany } from 'typeorm';
-import { InvoiceEntity, InvoicePairScanHistory, User } from '../../auth/entities';
+import { InvoiceEntity } from './invoice.entity';
+import { InvoicePairScanHistory } from './invoice-pair-scan-history.entity';
+import { User } from '../../auth/entities/users.entity';
 import { InvoiceScanStatus } from '../enum/invoice.enum';
 import { BaseEntity } from '../../../default/common/entities';
 

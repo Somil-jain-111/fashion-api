@@ -1,34 +1,16 @@
-// src/default/common/entities/invoice-assortment.entity.ts
-
-import {
-  Column,
-  Entity,
-  Index,
-  JoinColumn,
-  ManyToOne,
-  OneToMany,
-} from 'typeorm';
-import { InvoiceEntity, InvoiceItemEntity, InvoicePairDetailEntity } from '../../auth/entities';
+import { Column, Entity, Index, JoinColumn, ManyToOne, OneToMany } from 'typeorm';
+import { InvoiceEntity } from './invoice.entity';
+import { InvoiceItemEntity } from './invoice-item.entity';
+import { InvoicePairDetailEntity } from './invoice-pair-detail.entity';
 import { BaseEntity } from '../../../default/common/entities';
 
 @Entity({ name: 'invoice_assortments' })
-@Index('idx_invoice_assortments_invoice_id', ['invoice_id'])
-@Index('idx_invoice_assortments_item_id', ['item_id'])
+@Index('idx_invoice_assortments_invoice_id', ['invoice'])
+@Index('idx_invoice_assortments_item_id', ['item'])
 @Index('idx_invoice_assortments_parent_item_code', ['parent_item_code'])
 @Index('idx_invoice_assortments_packing_item_code', ['packing_item_code'])
 @Index('idx_invoice_assortments_uid', ['uid'])
 export class InvoiceAssortmentEntity extends BaseEntity {
-  @Column({ type: 'bigint', unsigned: true })
-  invoice_id: string;
-
-  /**
-   * FK to invoice_items.id — the parent line item this assortment (carton) belongs to.
-   * Resolved at ingestion time by matching parent_item_code to invoice_items.item_code
-   * within the same invoice.
-   */
-  @Column({ type: 'bigint', unsigned: true })
-  item_id: string;
-
   /**
    * assortmentdetail.itemcode
    */

@@ -62,7 +62,11 @@ export class InvoiceSessionRepository extends BaseRepository<InvoiceScanSessionE
 
   async findActive(invoiceId: string, userId: string, queryRunner?: QueryRunner) {
     return await this.getRepository(queryRunner).findOne({
-      where: { invoiceId, userId, status: ScanSessionStatus.ACTIVE },
+      where: {
+        invoice: { id: Number(invoiceId) },
+        user: { id: Number(userId) },
+        status: ScanSessionStatus.ACTIVE,
+      },
     });
   }
 
@@ -76,9 +80,13 @@ export class InvoiceSessionRepository extends BaseRepository<InvoiceScanSessionE
   async findOwned(sessionId: string, userId: string, queryRunner?: QueryRunner, forUpdate = false) {
     let query = this.getRepository(queryRunner)
       .createQueryBuilder('session')
+      .leftJoinAndSelect('session.invoice', 'invoice')
       .where('session.session_id = :sessionId', { sessionId })
       .andWhere('session.user_id = :userId', { userId });
-    if (forUpdate) query = query.setLock('pessimistic_write');
+
+    if (forUpdate) {
+      query = query.setLock('pessimistic_write');
+    }
     return query.getOne();
   }
 
@@ -103,7 +111,7 @@ export class PairHistoryRepository extends BaseRepository<PairScanHistoryEntity>
 
     return await this.getRepository(queryRunner).find({
       select: { pairUid: true },
-      where: { invoiceId, pairUid: In(pairUids) },
+      where: { invoice: { id: Number(invoiceId) }, pairUid: In(pairUids) },
     });
   }
 
@@ -173,7 +181,7 @@ export class PairHistoryRepository extends BaseRepository<PairScanHistoryEntity>
     queryRunner?: QueryRunner
   ): Promise<{ items: PairScanHistoryEntity[]; total: number }> {
     const [items, total] = await this.getRepository(queryRunner).findAndCount({
-      where: { sessionId, userId },
+      where: { sessionId, user: { id: Number(userId) } },
       select: ['id', 'pairUid', 'status', 'scanSource', 'failureReason', 'createdAt'],
       order: { id: 'DESC' },
       skip: (page - 1) * limit,
@@ -188,7 +196,7 @@ export class PairHistoryRepository extends BaseRepository<PairScanHistoryEntity>
     queryRunner?: QueryRunner
   ): Promise<PairScanHistoryEntity[]> {
     return await this.getRepository(queryRunner).find({
-      where: { sessionId, userId },
+      where: { sessionId, user: { id: Number(userId) } },
       order: { id: 'ASC' },
     });
   }
@@ -249,7 +257,9 @@ export class InvoiceHistoryRepository extends BaseRepository<InvoiceScanAuditEnt
     userId: string,
     queryRunner?: QueryRunner
   ): Promise<InvoiceScanAuditEntity | null> {
-    return await this.getRepository(queryRunner).findOne({ where: { id: Number(id), userId } });
+    return await this.getRepository(queryRunner).findOne({
+      where: { id: Number(id), user: { id: Number(userId) } },
+    });
   }
 
   async findHistory(
@@ -341,7 +351,7 @@ export class InvoicePairRepository extends BaseRepository<InvoicePairDetailEntit
     if (!pairs.length) return;
     await repository.update(
       { id: In(pairs.map((pair) => pair.id)) },
-      { status, scanned_by: scannedBy, scanned_at: new Date() }
+      { status, scannedByUser: { id: Number(scannedBy) } as any, scanned_at: new Date() }
     );
   }
 
@@ -362,7 +372,7 @@ export class InvoicePairRepository extends BaseRepository<InvoicePairDetailEntit
     if (!pairs.length) return;
     await repository.update(
       { id: In(pairs.map((pair) => pair.id)) },
-      { status: InvoicePairScanStatus.UNSCANNED, scanned_by: null, scanned_at: null }
+      { status: InvoicePairScanStatus.UNSCANNED, scannedByUser: null as any, scanned_at: null }
     );
   }
 

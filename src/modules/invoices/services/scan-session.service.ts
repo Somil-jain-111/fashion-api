@@ -34,9 +34,9 @@ export class ScanSessionService {
     session: InvoiceScanSessionEntity,
     includePairList = true
   ): Promise<ScanProgressResponseDto> {
-    const invoice = await this.invoiceRepository.findOne({
-      id: Number(session.invoiceId),
-    });
+    const invoice = session.invoice?.id
+      ? await this.invoiceRepository.findOne({ id: Number(session.invoice.id) })
+      : null;
 
     const totalPairs = invoice?.total_pairs ?? session.expectedPairs;
     const scannedPairs = session.scannedPairs;
@@ -58,7 +58,7 @@ export class ScanSessionService {
           'pair.scanned_at',
           'assortment.packing_item_code',
         ])
-        .where('assortment.invoice_id = :invoiceId', { invoiceId: session.invoiceId })
+        .where('assortment.invoice_id = :invoiceId', { invoiceId: session.invoice?.id })
         .andWhere('pair.session_id = :sessionId', { sessionId: session.sessionId })
         .getMany();
 
@@ -110,10 +110,10 @@ export class ScanSessionService {
       // Check if invoice has active in-progress session with another user
       if (invoice.scan_status === InvoiceScanStatus.IN_PROGRESS) {
         const otherSession = await this.sessionRepository.findOne({
-          invoiceId: String(invoice.id),
+          invoice: { id: Number(invoice.id) },
           status: ScanSessionStatus.ACTIVE,
         });
-        if (otherSession && String(otherSession.userId) !== String(userId)) {
+        if (otherSession && String(otherSession.user?.id) !== String(userId)) {
           throw new ConflictException(
             'Invoice is currently in an active scanning session by another user'
           );
@@ -123,9 +123,9 @@ export class ScanSessionService {
       // Create InvoiceScanSession record
       const session = await this.sessionRepository.createSession({
         sessionId: randomUUID(),
-        invoiceId: String(invoice.id),
+        invoice: { id: Number(invoice.id) } as any,
         invoiceNumber: invoice.invoice_no,
-        userId,
+        user: { id: Number(userId) } as any,
         invoiceType: invoice.invoice_type,
         expectedPairs: invoice.total_pairs,
         scannedPairs: 0,
@@ -161,7 +161,9 @@ export class ScanSessionService {
     session.status = ScanSessionStatus.CANCELLED;
     await this.sessionRepository.saveSession(session);
 
-    const invoice = await this.invoiceRepository.findOne({ id: Number(session.invoiceId) });
+    const invoice = session.invoice?.id
+      ? await this.invoiceRepository.findOne({ id: Number(session.invoice.id) })
+      : null;
     if (invoice && invoice.scan_status === InvoiceScanStatus.IN_PROGRESS) {
       invoice.scan_status =
         invoice.scanned_pairs > 0

@@ -1,17 +1,12 @@
-// src/default/common/entities/invoice-item.entity.ts
-
 import { Column, Entity, Index, JoinColumn, ManyToOne, OneToMany } from 'typeorm';
 import { InvoiceEntity } from './invoice.entity';
-import { InvoiceAssortmentEntity } from '../../auth/entities';
+import { InvoiceAssortmentEntity } from './invoice-assortment.entity';
 import { BaseEntity } from '../../../default/common/entities';
 
 @Entity({ name: 'invoice_items' })
-@Index('idx_invoice_items_invoice_id', ['invoice_id'])
+@Index('idx_invoice_items_invoice_id', ['invoice'])
 @Index('idx_invoice_items_item_code', ['item_code'])
 export class InvoiceItemEntity extends BaseEntity {
-  @Column({ type: 'bigint', unsigned: true })
-  invoice_id: string;
-
   @Column({ name: 'item_code', type: 'varchar', length: 150 })
   item_code: string;
 

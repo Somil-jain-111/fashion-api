@@ -27,6 +27,22 @@ export class ScanAuditRepository {
   async insert(data: ScanAuditAttempt): Promise<void> {
     const repo = this.dataSource.getRepository(InvoiceScanAttemptAuditEntity);
 
-    await repo.save(repo.create(data));
+    await repo.save(
+      repo.create({
+        user: { id: Number(data.userId) } as any,
+        appVersion: data.appVersion,
+        endpoint: data.endpoint,
+        httpMethod: data.httpMethod,
+        attemptType: data.attemptType,
+        scanType: data.scanType,
+        invoiceNumber: data.invoiceNumber,
+        sessionId: data.sessionId,
+        pairUids: data.pairUids,
+        outcome: data.outcome,
+        errorCode: data.errorCode,
+        errorMessage: data.errorMessage,
+        metadata: data.metadata,
+      })
+    );
   }
 }

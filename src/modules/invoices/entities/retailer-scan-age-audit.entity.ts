@@ -1,15 +1,13 @@
+import { Column, Entity, Index, JoinColumn, ManyToOne } from 'typeorm';
+import { User } from '../../auth/entities/users.entity';
 import { BaseEntity } from '../../../default/common/entities';
-import { Column, Entity, Index } from 'typeorm';
 
 @Entity('retailer_scan_age_audit_log')
-@Index('idx_scan_age_audit_retailer', ['retailerId', 'createdAt'])
+@Index('idx_scan_age_audit_retailer', ['retailer', 'createdAt'])
 export class RetailerScanAgeAuditEntity extends BaseEntity {
-  @Column({
-    name: 'retailer_id',
-    type: 'bigint',
-    unsigned: true,
-  })
-  retailerId: string;
+  @ManyToOne(() => User, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'retailer_id' })
+  retailer: User;
 
   @Column({
     name: 'old_value',
@@ -25,12 +23,9 @@ export class RetailerScanAgeAuditEntity extends BaseEntity {
   })
   newValue: number;
 
-  @Column({
-    name: 'changed_by',
-    type: 'bigint',
-    unsigned: true,
-  })
-  changedBy: string;
+  @ManyToOne(() => User, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'changed_by' })
+  changedByUser: User;
 
   @Column({
     type: 'varchar',

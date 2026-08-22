@@ -89,7 +89,7 @@ export class InvoiceValidationService {
       remainingPairs: Math.max(0, invoice.total_pairs - scanned),
       resume: Boolean(session),
       status: invoice.status,
-      claimed: true,
+      scanStatus: invoice.scan_status,
     };
   }
 }

@@ -1,31 +1,19 @@
 import { Injectable } from '@nestjs/common';
-import {
-  DataSource,
-  EntityManager,
-} from 'typeorm';
+import { DataSource, EntityManager } from 'typeorm';
 import { RetailerScanAgeConfigEntity } from '../entities/retailer-scan-age-config.entity';
 import { RetailerScanAgeAuditEntity } from '../entities/retailer-scan-age-audit.entity';
 
 @Injectable()
 export class RetailerScanAgeRepository {
-  constructor(
-    private readonly dataSource: DataSource,
-  ) {}
+  constructor(private readonly dataSource: DataSource) {}
 
-  findOverride(
-    retailerId: string,
-    manager?: EntityManager,
-  ) {
+  findOverride(retailerId: string, manager?: EntityManager) {
     return (
-      manager?.getRepository(
-        RetailerScanAgeConfigEntity,
-      ) ??
-      this.dataSource.getRepository(
-        RetailerScanAgeConfigEntity,
-      )
+      manager?.getRepository(RetailerScanAgeConfigEntity) ??
+      this.dataSource.getRepository(RetailerScanAgeConfigEntity)
     ).findOne({
       where: {
-        retailerId,
+        retailer: { id: Number(retailerId) },
       },
     });
   }
@@ -34,30 +22,28 @@ export class RetailerScanAgeRepository {
     retailerId: string,
     scanAgeDays: number,
     updatedBy: string,
-    manager: EntityManager,
+    manager: EntityManager
   ): Promise<void> {
-    const repo = manager.getRepository(
-      RetailerScanAgeConfigEntity,
-    );
+    const repo = manager.getRepository(RetailerScanAgeConfigEntity);
 
     const existing = await repo.findOne({
       where: {
-        retailerId,
+        retailer: { id: Number(retailerId) },
       },
     });
 
     if (existing) {
       existing.scanAgeDays = scanAgeDays;
-      existing.updatedBy = updatedBy;
+      existing.updatedByUser = { id: Number(updatedBy) } as any;
 
       await repo.save(existing);
     } else {
       await repo.save(
         repo.create({
-          retailerId,
+          retailer: { id: Number(retailerId) } as any,
           scanAgeDays,
-          updatedBy,
-        }),
+          updatedByUser: { id: Number(updatedBy) } as any,
+        })
       );
     }
   }
@@ -71,29 +57,30 @@ export class RetailerScanAgeRepository {
       reason: string;
       approvalReference?: string;
     },
-    manager: EntityManager,
+    manager: EntityManager
   ): Promise<void> {
-    const repo = manager.getRepository(
-      RetailerScanAgeAuditEntity,
-    );
+    const repo = manager.getRepository(RetailerScanAgeAuditEntity);
 
     await repo.save(
-      repo.create(data),
+      repo.create({
+        retailer: { id: Number(data.retailerId) } as any,
+        oldValue: data.oldValue,
+        newValue: data.newValue,
+        changedByUser: { id: Number(data.changedBy) } as any,
+        reason: data.reason,
+        approvalReference: data.approvalReference,
+      })
     );
   }
 
   history(retailerId: string) {
-    return this.dataSource
-      .getRepository(
-        RetailerScanAgeAuditEntity,
-      )
-      .find({
-        where: {
-          retailerId,
-        },
-        order: {
-          createdAt: 'DESC',
-        },
-      });
+    return this.dataSource.getRepository(RetailerScanAgeAuditEntity).find({
+      where: {
+        retailer: { id: Number(retailerId) },
+      },
+      order: {
+        createdAt: 'DESC',
+      },
+    });
   }
 }

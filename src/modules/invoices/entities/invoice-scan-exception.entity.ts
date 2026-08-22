@@ -1,18 +1,17 @@
-import { Column, Entity, Index } from 'typeorm';
+import { Column, Entity, Index, JoinColumn, ManyToOne } from 'typeorm';
+import { InvoiceEntity } from './invoice.entity';
+import { User } from '../../auth/entities/users.entity';
 import { ScanExceptionStatus, ScanExceptionType } from '../enum/exception.enum';
 import { BaseEntity } from '../../../default/common/entities';
 
 @Entity('invoice_scan_exceptions')
-@Index('idx_scan_exceptions_invoice', ['invoiceId'])
+@Index('idx_scan_exceptions_invoice', ['invoice'])
 @Index('idx_scan_exceptions_status', ['status'])
 @Index('idx_scan_exceptions_session', ['sessionId'])
 export class InvoiceScanExceptionEntity extends BaseEntity {
-  @Column({
-    name: 'invoice_id',
-    type: 'bigint',
-    unsigned: true,
-  })
-  invoiceId: string;
+  @ManyToOne(() => InvoiceEntity, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'invoice_id' })
+  invoice: InvoiceEntity;
 
   @Column({
     name: 'session_id',
@@ -59,13 +58,9 @@ export class InvoiceScanExceptionEntity extends BaseEntity {
   })
   status: ScanExceptionStatus;
 
-  @Column({
-    name: 'reviewed_by',
-    type: 'bigint',
-    unsigned: true,
-    nullable: true,
-  })
-  reviewedBy?: string;
+  @ManyToOne(() => User, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'reviewed_by' })
+  reviewer?: User;
 
   @Column({
     name: 'reviewed_at',

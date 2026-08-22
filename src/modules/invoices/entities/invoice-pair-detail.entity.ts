@@ -1,29 +1,15 @@
-// src/default/common/entities/invoice-pair-detail.entity.ts
-
-import {
-  BaseEntity,
-  Column,
-  Entity,
-  Index,
-  JoinColumn,
-  ManyToOne,
-  PrimaryGeneratedColumn,
-} from 'typeorm';
+import { Column, Entity, Index, JoinColumn, ManyToOne } from 'typeorm';
 import { InvoiceAssortmentEntity } from './invoice-assortment.entity';
+import { User } from '../../auth/entities/users.entity';
 import { InvoicePairScanStatus } from '../enum/invoice-pair-scan-status.enum';
+import { BaseEntity } from '../../../default/common/entities';
 
 @Entity({ name: 'invoice_pair_details' })
-@Index('idx_invoice_pair_details_assortment_id', ['assortment_id'])
+@Index('idx_invoice_pair_details_assortment_id', ['assortment'])
 @Index('idx_invoice_pair_details_pair_uid', ['pair_uid'])
 @Index('idx_invoice_pair_details_pair_qr', ['pair_qr'])
 @Index('idx_invoice_pair_details_status', ['status'])
 export class InvoicePairDetailEntity extends BaseEntity {
-  @PrimaryGeneratedColumn({ type: 'bigint', unsigned: true })
-  id: string;
-
-  @Column({ type: 'bigint', unsigned: true })
-  assortment_id: string;
-
   /**
    * pairdetail.pairqr
    */
@@ -61,16 +47,9 @@ export class InvoicePairDetailEntity extends BaseEntity {
   /**
    * Which user scanned this QR
    */
-  @Column({ type: 'bigint', unsigned: true, nullable: true })
-  scanned_by: string;
-
-  get scanned_by_user_id(): string {
-    return this.scanned_by;
-  }
-
-  set scanned_by_user_id(val: string) {
-    this.scanned_by = val;
-  }
+  @ManyToOne(() => User, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'scanned_by' })
+  scannedByUser?: User;
 
   get is_scanned(): boolean {
     return (
@@ -89,12 +68,6 @@ export class InvoicePairDetailEntity extends BaseEntity {
 
   @Column({ type: 'varchar', length: 255, nullable: true })
   scan_remarks: string;
-
-  @Column({
-    type: 'timestamp',
-    default: () => 'CURRENT_TIMESTAMP',
-  })
-  created_at: Date;
 
   @ManyToOne(() => InvoiceAssortmentEntity, (assortment) => assortment.pair_details, {
     onDelete: 'CASCADE',

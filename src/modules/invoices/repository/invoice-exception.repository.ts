@@ -22,18 +22,27 @@ export class InvoiceExceptionRepository extends BaseRepository<InvoiceScanExcept
     queryRunner?: QueryRunner
   ): Promise<InvoiceScanExceptionEntity> {
     const repo = this.getRepository(queryRunner);
-    return await repo.save(repo.create(data));
+    return await repo.save(
+      repo.create({
+        invoice: { id: Number(data.invoiceId) } as any,
+        sessionId: data.sessionId,
+        pairUid: data.pairUid,
+        itemCode: data.itemCode,
+        exceptionType: data.exceptionType,
+        rawPayload: data.rawPayload,
+      })
+    );
   }
 
   findByInvoice(invoiceId: string, status?: ScanExceptionStatus) {
     return this.findMany({
       where: status
         ? {
-            invoiceId,
+            invoice: { id: Number(invoiceId) },
             status,
           }
         : {
-            invoiceId,
+            invoice: { id: Number(invoiceId) },
           },
       order: {
         createdAt: 'DESC',
@@ -60,7 +69,7 @@ export class InvoiceExceptionRepository extends BaseRepository<InvoiceScanExcept
     }
 
     row.status = status;
-    row.reviewedBy = reviewerId;
+    row.reviewer = { id: Number(reviewerId) } as any;
     row.reviewedAt = new Date();
 
     if (notes) {

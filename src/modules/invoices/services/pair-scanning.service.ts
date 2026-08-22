@@ -1,13 +1,7 @@
-import {
-  BadRequestException,
-  ConflictException,
-  forwardRef,
-  Inject,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
-import { DataSource } from 'typeorm';
+import { Injectable } from '@nestjs/common';
 import { RedisService } from 'src/default/databases/redis/redis.service';
+import { BusinessException } from 'src/default/error/business.exception';
+import { ERROR_CODES } from 'src/default/error/error.code';
 import {
   InvoicePairRepository,
   InvoiceRepository,
@@ -28,7 +22,6 @@ import { ScanSessionService } from './scan-session.service';
 @Injectable()
 export class PairScanningService {
   constructor(
-    private readonly dataSource: DataSource,
     private readonly invoiceRepository: InvoiceRepository,
     private readonly sessionRepository: InvoiceSessionRepository,
     private readonly pairRepository: InvoicePairRepository,
@@ -44,7 +37,7 @@ export class PairScanningService {
     userId: string
   ): Promise<ScanProgressResponseDto> {
     if (!pairCodeOrUid) {
-      throw new BadRequestException('pairCode or pairUid must be provided');
+      throw new BusinessException(ERROR_CODES.INVOICE_SCAN.PAIR_NOT_FOUND);
     }
 
     return this.lock.withLock(`lock:session:${sessionId}`, async () => {
@@ -52,52 +45,49 @@ export class PairScanningService {
       const session = await this.sessionRepository.findOwned(sessionId, userId);
 
       if (!session) {
-        throw new NotFoundException(`Session ${sessionId} not found`);
+        throw new BusinessException(ERROR_CODES.INVOICE_SCAN.SESSION_NOT_FOUND);
       }
 
       if (session.status !== ScanSessionStatus.ACTIVE) {
-        throw new BadRequestException(`Session is not active (status: ${session.status})`);
+        throw new BusinessException(ERROR_CODES.INVOICE_SCAN.SESSION_NOT_ACTIVE);
       }
 
       // 2. Validate pairCode / pairUid against InvoicePairDetail records belonging to this invoice
-      const pairRepo = this.dataSource.getRepository(InvoicePairDetailEntity);
-      const pair = await pairRepo
+      const pair = await this.pairRepository
         .createQueryBuilder('pair')
         .innerJoinAndSelect('pair.assortment', 'assortment')
-        .where('assortment.invoice_id = :invoiceId', { invoiceId: session.invoiceId })
+        .where('assortment.invoice_id = :invoiceId', { invoiceId: session.invoice?.id })
         .andWhere('(pair.pair_uid = :val OR pair.pair_qr = :val)', { val: pairCodeOrUid.trim() })
         .getOne();
 
       if (!pair) {
-        throw new NotFoundException(`Pair ${pairCodeOrUid} does not belong to this invoice`);
+        throw new BusinessException(ERROR_CODES.INVOICE_SCAN.PAIR_NOT_IN_INVOICE);
       }
 
       // 3. Check if pair is already scanned in DB
-      if (
-        pair.status === InvoicePairScanStatus.SCANNED ||
-        pair.status === InvoicePairScanStatus.REDEEMED ||
-        pair.status === InvoicePairScanStatus.USED
-      ) {
-        throw new ConflictException(`Pair ${pairCodeOrUid} has already been scanned`);
+      if (pair.is_scanned) {
+        throw new BusinessException(ERROR_CODES.INVOICE_SCAN.DUPLICATE_PAIR);
       }
 
       // 4. Update pair scan status
       pair.status = InvoicePairScanStatus.SCANNED;
       pair.session_id = sessionId;
-      pair.scanned_by = userId;
+      pair.scannedByUser = { id: Number(userId) } as any;
       pair.scanned_at = new Date();
+
       if (pair.assortment?.packing_item_code) {
         pair.sub_item_code = pair.assortment.packing_item_code;
       }
-      await pairRepo.save(pair);
+
+      await this.pairRepository.updateById(pair.id, pair);
 
       // Record in pair history log
       await this.pairHistoryRepository.insertIgnore([
         {
           sessionId,
-          invoiceId: session.invoiceId,
+          invoice: { id: Number(session.invoice?.id) } as any,
           pairUid: pair.pair_uid,
-          userId,
+          user: { id: Number(userId) } as any,
           status: PairHistoryStatus.VALID,
           scanSource: ScanSource.SINGLE,
         },
@@ -109,9 +99,12 @@ export class PairScanningService {
       session.validPairs = counts.valid;
       session.invalidPairs = counts.invalid;
       session.lastScannedAt = new Date();
+
       await this.sessionRepository.saveSession(session);
 
-      const invoice = await this.invoiceRepository.findOne({ id: Number(session.invoiceId) });
+      const invoice = session.invoice?.id
+        ? await this.invoiceRepository.findOne({ id: Number(session.invoice.id) })
+        : null;
       if (invoice) {
         invoice.scanned_pairs = session.scannedPairs;
         await this.invoiceRepository.saveInvoice(invoice);
@@ -128,7 +121,7 @@ export class PairScanningService {
     userId: string
   ): Promise<ScanProgressResponseDto> {
     if (!pairCodeOrUid) {
-      throw new BadRequestException('pairCode or pairUid must be provided');
+      throw new BusinessException(ERROR_CODES.INVOICE_SCAN.PAIR_NOT_FOUND);
     }
 
     return this.lock.withLock(`lock:session:${sessionId}`, async () => {
@@ -136,29 +129,29 @@ export class PairScanningService {
       const session = await this.sessionRepository.findOwned(sessionId, userId);
 
       if (!session) {
-        throw new NotFoundException(`Session ${sessionId} not found`);
+        throw new BusinessException(ERROR_CODES.INVOICE_SCAN.SESSION_NOT_FOUND);
       }
 
       // 2. Find InvoicePairDetail associated with sessionId and pairCode (or pairUid)
-      const pairRepo = this.dataSource.getRepository(InvoicePairDetailEntity);
-      const pair = await pairRepo
+      const pair = await this.pairRepository
         .createQueryBuilder('pair')
         .innerJoinAndSelect('pair.assortment', 'assortment')
-        .where('assortment.invoice_id = :invoiceId', { invoiceId: session.invoiceId })
+        .where('assortment.invoice_id = :invoiceId', { invoiceId: session.invoice?.id })
         .andWhere('pair.session_id = :sessionId', { sessionId })
         .andWhere('(pair.pair_uid = :val OR pair.pair_qr = :val)', { val: pairCodeOrUid.trim() })
         .getOne();
 
       if (!pair) {
-        throw new NotFoundException(`Pair ${pairCodeOrUid} not found in current scanning session`);
+        throw new BusinessException(ERROR_CODES.INVOICE_SCAN.PAIR_NOT_IN_SESSION);
       }
 
-      // 3. Revert pair status (is_scanned = false, clear session_id and scanned_by_user_id)
+      // 3. Revert pair status
       pair.status = InvoicePairScanStatus.UNSCANNED;
       pair.session_id = null as any;
-      pair.scanned_by = null as any;
+      pair.scannedByUser = null as any;
       pair.scanned_at = null as any;
-      await pairRepo.save(pair);
+
+      await this.pairRepository.updateById(pair.id, pair);
 
       await this.pairHistoryRepository.deleteOneActive(sessionId, pair.pair_uid);
 
@@ -169,7 +162,9 @@ export class PairScanningService {
       session.invalidPairs = counts.invalid;
       await this.sessionRepository.saveSession(session);
 
-      const invoice = await this.invoiceRepository.findOne({ id: Number(session.invoiceId) });
+      const invoice = session.invoice?.id
+        ? await this.invoiceRepository.findOne({ id: Number(session.invoice.id) })
+        : null;
 
       if (invoice) {
         invoice.scanned_pairs = session.scannedPairs;

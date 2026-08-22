@@ -1,21 +1,10 @@
-export class Announcement {}
-import {
-  Entity,
-  PrimaryGeneratedColumn,
-  Column,
-  CreateDateColumn,
-  UpdateDateColumn,
-  ManyToMany,
-  JoinTable,
-} from 'typeorm';
+import { Column, Entity, JoinTable, ManyToMany } from 'typeorm';
 import { Roles } from '../../../auth/entities/index';
 import { AnnouncementType } from '../enum/announcement-type.enum';
+import { BaseEntity } from '../../../../default/common/entities';
 
 @Entity('announcements')
-export class AnnouncementEntity {
-  @PrimaryGeneratedColumn('increment', { type: 'bigint' })
-  id!: string;
-
+export class AnnouncementEntity extends BaseEntity {
   @Column()
   title!: string;
 
@@ -85,14 +74,4 @@ export class AnnouncementEntity {
     nullable: true,
   })
   endDate?: Date;
-
-  @CreateDateColumn({
-    name: 'created_at',
-  })
-  createdAt!: Date;
-
-  @UpdateDateColumn({
-    name: 'updated_at',
-  })
-  updatedAt!: Date;
 }

@@ -64,7 +64,7 @@ export class RewardSettlementService {
 
         invoiceNo = session.invoiceNumber;
         const invoice = await this.invoiceRepository.findByIdForUpdate(
-          session.invoiceId,
+          String(session.invoice.id),
           queryRunner
         );
 
@@ -73,7 +73,7 @@ export class RewardSettlementService {
         const scannedPairDetails = await pairRepo
           .createQueryBuilder('pair')
           .innerJoin('pair.assortment', 'assortment')
-          .where('assortment.invoice_id = :invoiceId', { invoiceId: session.invoiceId })
+          .where('assortment.invoice_id = :invoiceId', { invoiceId: session.invoice?.id })
           .andWhere('pair.session_id = :sessionId', { sessionId })
           .getMany();
 
@@ -117,7 +117,7 @@ export class RewardSettlementService {
             {
               status: InvoicePairScanStatus.REDEEMED,
               scanned_at: new Date(),
-              scanned_by: userId,
+              scannedByUser: { id: Number(userId) } as any,
             }
           );
         }
@@ -140,10 +140,10 @@ export class RewardSettlementService {
         // Record history audit log
         await this.historyRepository.saveHistory(
           {
-            invoiceId: session.invoiceId,
+            invoice: { id: Number(session.invoice.id) } as any,
             invoiceNumber: session.invoiceNumber,
             sessionId,
-            userId,
+            user: { id: Number(userId) } as any,
             status: InvoiceHistoryStatus.COMPLETED,
             pointsAwarded: points,
             metadata: { submittedPairs: scannedCount },

@@ -1,20 +1,18 @@
-import { Column, Entity, Index } from 'typeorm';
+import { Column, Entity, Index, JoinColumn, ManyToOne } from 'typeorm';
+import { User } from '../../auth/entities/users.entity';
 import { ScanAttemptType, ValidationOutcome } from '../enum/scan-attempt.enum';
 import { ScanSource } from '../enum/invoice-scan-session.enum';
 import { BaseEntity } from '../../../default/common/entities';
 
 @Entity('invoice_scan_attempt_audit')
-@Index('idx_attempt_audit_user_created', ['userId', 'createdAt'])
+@Index('idx_attempt_audit_user_created', ['user', 'createdAt'])
 @Index('idx_attempt_audit_invoice', ['invoiceNumber'])
 @Index('idx_attempt_audit_session', ['sessionId'])
 @Index('idx_attempt_audit_outcome', ['outcome'])
 export class InvoiceScanAttemptAuditEntity extends BaseEntity {
-  @Column({
-    name: 'user_id',
-    type: 'bigint',
-    unsigned: true,
-  })
-  userId: string;
+  @ManyToOne(() => User, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'user_id' })
+  user: User;
 
   @Column({
     name: 'app_version',

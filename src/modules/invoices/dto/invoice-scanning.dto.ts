@@ -141,7 +141,7 @@ export class InvoiceSummaryResponseDto {
   remainingPairs: number;
   resume: boolean;
   status?: string;
-  claimed?: boolean;
+  scanStatus?: string;
 }
 
 export class RemovePairParamsDto {
