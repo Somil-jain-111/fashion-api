@@ -201,6 +201,44 @@ export class PairHistoryRepository extends BaseRepository<InvoicePairScanHistory
     });
   }
 
+  async findByInvoice(invoiceId: string | number, userId: string, queryRunner?: QueryRunner) {
+    const rawItems = await this.getRepository(queryRunner)
+      .createQueryBuilder('history')
+      .leftJoin(InvoicePairDetailEntity, 'pair', 'pair.pair_uid = history.pairUid')
+      .leftJoin('pair.assortment', 'assortment', 'assortment.invoice_id = :invoiceId', {
+        invoiceId: Number(invoiceId),
+      })
+      .leftJoin('assortment.item', 'item')
+      .select([
+        'history.id AS id',
+        'history.sessionId AS sessionId',
+        'history.pairUid AS pairUid',
+        'history.status AS status',
+        'history.scanSource AS scanSource',
+        'history.failureReason AS failureReason',
+        'history.createdAt AS createdAt',
+        'item.item_code AS itemCode',
+        'item.item_name AS itemName',
+        'assortment.parent_item_code AS parentItemCode',
+      ])
+      .where('history.invoice_id = :invoiceId', { invoiceId: Number(invoiceId) })
+      .andWhere('history.user_id = :userId', { userId: Number(userId) })
+      .orderBy('history.id', 'ASC')
+      .getRawMany();
+
+    return rawItems.map((item) => ({
+      id: item.id,
+      sessionId: item.sessionId,
+      pairUid: item.pairUid,
+      status: item.status,
+      scanSource: item.scanSource,
+      failureReason: item.failureReason,
+      createdAt: item.createdAt,
+      itemCode: item.itemCode || item.parentItemCode || null,
+      itemName: item.itemName || null,
+    }));
+  }
+
   async deleteBySession(sessionId: string, queryRunner?: QueryRunner): Promise<void> {
     await this.getRepository(queryRunner).delete({ sessionId });
   }
@@ -253,6 +291,7 @@ export class InvoiceHistoryRepository extends BaseRepository<InvoiceScanAuditEnt
   ): Promise<InvoiceScanAuditEntity | null> {
     return await this.getRepository(queryRunner).findOne({
       where: { id: Number(id), user: { id: Number(userId) } },
+      relations: ['invoice'],
     });
   }
 
@@ -270,6 +309,7 @@ export class InvoiceHistoryRepository extends BaseRepository<InvoiceScanAuditEnt
   ): Promise<{ items: InvoiceScanAuditEntity[]; total: number }> {
     const query = this.getRepository(queryRunner)
       .createQueryBuilder('history')
+      .leftJoinAndSelect('history.invoice', 'invoice')
       .where('history.user_id = :userId', { userId });
 
     if (filters.invoiceNumber) {

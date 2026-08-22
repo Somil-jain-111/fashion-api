@@ -21,6 +21,7 @@ import { InvoiceValidationService } from './invoice-validation.service';
 import { ScanSessionService } from './scan-session.service';
 import { PairScanningService } from './pair-scanning.service';
 import { RewardSettlementService } from './reward-settlement.service';
+import { CommonUtils } from 'src/default/common/utils/common.utils';
 
 type PairValidationResult = {
   valid: string[];
@@ -189,13 +190,24 @@ export class InvoiceService {
 
   async history(userId: string, query: InvoiceHistoryQueryDto) {
     const { items, total } = await this.histories.findHistory(userId, query);
-    return { items, total, page: query.page, limit: query.limit };
+
+    return {
+      items,
+      pagination: CommonUtils.generatePaginationResponse(total, query.page, query.limit),
+    };
   }
 
   async historyDetail(id: string, userId: string) {
     const history = await this.histories.findOwnedById(id, userId);
-    if (!history) throw new BusinessException(ERROR_CODES.COMMON.NOT_FOUND);
-    const pairs = await this.pairHistories.findBySession(history.sessionId, userId);
+
+    if (!history) {
+      throw new BusinessException(ERROR_CODES.COMMON.NOT_FOUND);
+    }
+
+    const pairs = history.invoice?.id
+      ? await this.pairHistories.findByInvoice(history.invoice.id, userId)
+      : [];
+
     return {
       invoice: history,
       scannedPairs: pairs,
