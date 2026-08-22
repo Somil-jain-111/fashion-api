@@ -91,9 +91,9 @@ export class KycService {
 
     return (
       statusMap[statusCode] ||
-      responseData?.data?.message ||
-      responseData?.message ||
-      'PAN verification failed'
+      // responseData?.data?.message ||
+      // responseData?.message ||
+      'PAN verification failed, Please contact support.'
     );
   }
 

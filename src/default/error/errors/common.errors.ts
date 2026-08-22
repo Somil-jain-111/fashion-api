@@ -16,7 +16,7 @@ export const COMMON_ERRORS = {
   },
   CONFLICT: {
     code: 'COM_004',
-    message: 'Conflict occurred',
+    message: 'Duplicate Request',
     statusCode: 409,
   },
   SERVICE_UNAVAILABLE: {

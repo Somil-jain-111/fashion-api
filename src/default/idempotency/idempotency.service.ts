@@ -5,7 +5,7 @@ import * as crypto from 'crypto';
 @Injectable()
 export class IdempotencyService {
   private lockTTL = 5; // Lock expiration in seconds
-  private hashTTL = 15; // Time to keep request hash in Redis
+  private hashTTL = 5; // Time to keep request hash in Redis
 
   constructor(private readonly redisService: RedisService) {}
 
