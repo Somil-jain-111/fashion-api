@@ -15,15 +15,7 @@ export interface PointHistoryItemDto {
   orderId?: string | null;
   payoutId?: string | null;
 }
-
-export interface PointHistoryMetaDto {
-  page: number;
-  limit: number;
-  totalItems: number;
-  totalPages: number;
-}
-
 export interface PointHistoryResponseDto {
   items: PointHistoryItemDto[];
-  meta: PointHistoryMetaDto;
+  pagination: Record<string, any>;
 }

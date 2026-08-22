@@ -12,6 +12,7 @@ import { PointHistoryRepository } from '../redemptions/repository';
 import { GetPointHistoryQueryDto } from './dto/get-point-history-query.dto';
 import { PointHistoryItemDto, PointHistoryResponseDto } from './dto/point-history-response.dto';
 import { PointHistory } from '../auth/entities';
+import { CommonUtils } from 'src/default/common/utils/common.utils';
 
 @Injectable()
 export class UserService {
@@ -268,7 +269,7 @@ export class UserService {
     });
   }
 
-   async getPointHistory(
+  async getPointHistory(
     userId: string | number,
     query: GetPointHistoryQueryDto
   ): Promise<PointHistoryResponseDto> {
@@ -280,18 +281,13 @@ export class UserService {
       limit,
       type: query.type,
       status: query.status,
-      month: query.month,
-      year: query.year,
+      startDate: query.startDate,
+      endDate: query.endDate,
     });
 
     return {
       items: records.map((record) => this.toResponse(record)),
-      meta: {
-        page,
-        limit,
-        totalItems,
-        totalPages: Math.ceil(totalItems / limit) || 1,
-      },
+      pagination: CommonUtils.generatePaginationResponse(totalItems, page, limit),
     };
   }
 
@@ -305,9 +301,18 @@ export class UserService {
     return this.toResponse(record);
   }
 
-  async getRemainingPoints(userId: string | number): Promise<{ remainingPoints: number }> {
-    const remainingPoints = await this.pointHistoryRepository.getRemainingPointsForUser(userId);
-    return { remainingPoints };
+  async getRemainingPoints(userId: string | number): Promise<{
+    userRemainingPoints: number;
+    expiredPoints: number;
+    redeemedPoints: number;
+  }> {
+    const result = await this.pointHistoryRepository.getRemainingPointsForUser(userId);
+
+    return {
+      userRemainingPoints: result.userRemainingPoints,
+      expiredPoints: result.expiredPoints,
+      redeemedPoints: result.redeemedPoints,
+    };
   }
 
   private toResponse(record: PointHistory): PointHistoryItemDto {
@@ -329,5 +334,4 @@ export class UserService {
       payoutId: record.payout?.id?.toString() ?? null,
     };
   }
-
 }

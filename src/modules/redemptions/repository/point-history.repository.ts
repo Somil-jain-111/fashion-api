@@ -58,7 +58,7 @@ export class PointHistoryRepository extends BaseRepository<PointHistory> {
     return Number(result?.totalPoints || 0);
   }
 
-   async findByIdAndUser(
+  async findByIdAndUser(
     id: number,
     userId: string | number,
     queryRunner?: QueryRunner
@@ -81,15 +81,13 @@ export class PointHistoryRepository extends BaseRepository<PointHistory> {
       limit: number;
       type?: RedemptionType;
       status?: PointStatusEnum;
-      month?: string;
-      year?: string;
+      startDate?: string;
+      endDate?: string;
     },
     queryRunner?: QueryRunner
   ): Promise<[PointHistory[], number]> {
-    const manager = queryRunner ? queryRunner.manager : this.repository.manager;
-
-    const qb = manager
-      .createQueryBuilder(PointHistory, 'point')
+    const qb = this.getRepository(queryRunner)
+      .createQueryBuilder('point')
       .leftJoinAndSelect('point.order', 'order')
       .leftJoinAndSelect('point.payout', 'payout')
       .where('point.user_id = :userId', { userId: String(userId) })
@@ -105,12 +103,12 @@ export class PointHistoryRepository extends BaseRepository<PointHistory> {
       qb.andWhere('point.status = :status', { status: options.status });
     }
 
-    if (options.month) {
-      qb.andWhere('point.month = :month', { month: options.month });
+    if (options.startDate) {
+      qb.andWhere('point.date >= :startDate', { startDate: options.startDate });
     }
 
-    if (options.year) {
-      qb.andWhere('point.year = :year', { year: options.year });
+    if (options.endDate) {
+      qb.andWhere('point.date <= :endDate', { endDate: `${options.endDate} 23:59:59` });
     }
 
     return qb.getManyAndCount();
@@ -119,18 +117,35 @@ export class PointHistoryRepository extends BaseRepository<PointHistory> {
   async getRemainingPointsForUser(
     userId: string | number,
     queryRunner?: QueryRunner
-  ): Promise<number> {
-    const manager = queryRunner ? queryRunner.manager : this.repository.manager;
+  ): Promise<{ userRemainingPoints: number; expiredPoints: number; redeemedPoints: number }> {
+    const repo = this.getRepository(queryRunner);
 
-    const latest = await manager
-      .createQueryBuilder(PointHistory, 'point')
+    const latest = await repo
+      .createQueryBuilder('point')
       .where('point.user_id = :userId', { userId: String(userId) })
       .orderBy('point.date', 'DESC')
       .addOrderBy('point.id', 'DESC')
       .limit(1)
       .getOne();
 
-    return latest?.user_remaining_points ?? 0;
-  }
+    const expiredPoints = await repo
+      .createQueryBuilder('expiredPoints')
+      .select('SUM(expiredPoints.points)', 'expiredPoints')
+      .where('expiredPoints.user_id = :userId', { userId: String(userId) })
+      .andWhere('expiredPoints.status = :status', { status: PointStatusEnum.expired })
+      .getRawOne();
 
+    const redeemedPoints = await repo
+      .createQueryBuilder('redeemedPoints')
+      .select('SUM(redeemedPoints.points)', 'redeemedPoints')
+      .where('redeemedPoints.user_id = :userId', { userId: String(userId) })
+      .andWhere('redeemedPoints.status = :status', { status: PointStatusEnum.redeem })
+      .getRawOne();
+
+    return {
+      userRemainingPoints: latest?.user_remaining_points ?? 0,
+      expiredPoints: Number(expiredPoints?.expiredPoints ?? 0),
+      redeemedPoints: Number(redeemedPoints?.redeemedPoints ?? 0),
+    };
+  }
 }
