@@ -16,6 +16,7 @@ import { OrderPlacementHelper } from './helper/order-placement.helper';
 import { OrderPlacementItemRepository, OrderPlacementRepository } from './repository';
 import { GetOrderHistoryQueryDto } from './dto/get-order-history-query.dto';
 import { OrderHistoryResponseDto } from './dto/order-history-response.dto';
+import { CommonUtils } from 'src/default/common/utils/common.utils';
 
 @Injectable()
 export class OrderPlacementService {
@@ -241,12 +242,11 @@ export class OrderPlacementService {
 
     return {
       items: orders.map((order) => this.toResponse(order)),
-      meta: {
-        page,
-        limit,
-        totalItems,
-        totalPages: Math.ceil(totalItems / limit) || 1,
-      },
+      pagination: CommonUtils.generatePaginationResponse(totalItems, page, limit),
     };
+  }
+
+  async getSummary(userId: string | number) {
+    return this.orderPlacementRepository.getSummary(userId);
   }
 }

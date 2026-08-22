@@ -74,4 +74,48 @@ export class OrderPlacementRepository extends BaseRepository<OrderPlacement> {
 
     return qb.getManyAndCount();
   }
+
+  async getSummary(
+    userId: string | number,
+    queryRunner?: QueryRunner
+  ): Promise<{
+    pendingOrders: number;
+    approvedOrders: number;
+    rejectedOrders: number;
+    cancelledOrders: number;
+    totalOrders: number;
+  }> {
+    const raw = await this.getRepository(queryRunner)
+      .createQueryBuilder('order')
+      .select('COUNT(*)', 'totalOrders')
+      .addSelect('SUM(CASE WHEN order.status = :placedStatus THEN 1 ELSE 0 END)', 'pendingOrders')
+      .addSelect(
+        'SUM(CASE WHEN order.status = :approvedStatus THEN 1 ELSE 0 END)',
+        'approvedOrders'
+      )
+      .addSelect(
+        'SUM(CASE WHEN order.status = :rejectedStatus THEN 1 ELSE 0 END)',
+        'rejectedOrders'
+      )
+      .addSelect(
+        'SUM(CASE WHEN order.status = :cancelledStatus THEN 1 ELSE 0 END)',
+        'cancelledOrders'
+      )
+      .where('order.user_id = :userId', { userId: String(userId) })
+      .setParameters({
+        placedStatus: OrderPlacementStatus.PLACED,
+        approvedStatus: OrderPlacementStatus.APPROVED,
+        rejectedStatus: OrderPlacementStatus.REJECTED,
+        cancelledStatus: OrderPlacementStatus.CANCELLED,
+      })
+      .getRawOne();
+
+    return {
+      pendingOrders: Number(raw?.pendingOrders ?? 0),
+      approvedOrders: Number(raw?.approvedOrders ?? 0),
+      rejectedOrders: Number(raw?.rejectedOrders ?? 0),
+      cancelledOrders: Number(raw?.cancelledOrders ?? 0),
+      totalOrders: Number(raw?.totalOrders ?? 0),
+    };
+  }
 }
