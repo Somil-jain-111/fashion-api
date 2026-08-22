@@ -3,6 +3,7 @@
 import { Injectable } from '@nestjs/common';
 import axios, { AxiosRequestConfig } from 'axios';
 import { KycHmacHelper } from 'src/default/common/helper/kyc-hmac.helper';
+import { CommonUtils } from 'src/default/common/utils/common.utils';
 import { AppConfigService } from 'src/default/config/config.service';
 import { BusinessException } from 'src/default/error/business.exception';
 import { ERROR_CODES } from 'src/default/error/error.code';
@@ -39,6 +40,32 @@ export class PanProvider {
     }
 
     return 'XXXXXX' + cleanedPan.slice(6);
+  }
+
+  isSameDob(userDob: Date | string, panDob: string): boolean {
+    if (!userDob || !panDob) {
+      return false;
+    }
+
+    const userParsed = CommonUtils.parseDob(userDob);
+    const panParsed = CommonUtils.parseDob(panDob);
+
+    if (!userParsed || !panParsed) {
+      ConsoleLogger.warn('Failed to parse DOBs for comparison', {
+        tag: 'PanProvider.isSameDob',
+        data: {
+          userDob,
+          panDob,
+        },
+      });
+      return false;
+    }
+
+    return (
+      userParsed.year === panParsed.year &&
+      userParsed.month === panParsed.month &&
+      userParsed.day === panParsed.day
+    );
   }
 
   async verifyPan(data: PanVerifyInput): Promise<PanVerifyResult> {

@@ -198,4 +198,10 @@ export const KYC_ERRORS = {
     message: 'Beneficiary is already verified',
     statusCode: 400,
   },
+
+  DOB_REQUIRED: {
+    code: 'KYC_035',
+    message: 'Date of birth is required to perform PAN KYC',
+    statusCode: 400,
+  },
 } as const;

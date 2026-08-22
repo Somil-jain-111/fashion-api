@@ -527,6 +527,10 @@ export class KycService {
       throw new BusinessException(ERROR_CODES.KYC.USER_PROFILE_NAME_REQUIRED);
     }
 
+    if (!user.date_of_birth) {
+      throw new BusinessException(ERROR_CODES.KYC.DOB_REQUIRED);
+    }
+
     const encryptedPan = await this.encryptKycData(pan);
 
     const existingUserPan = await this.kycVerificationRepository.findByUserIdAndType(
@@ -581,6 +585,14 @@ export class KycService {
 
     if (panApiData?.aadhaar_linked?.toLowerCase() !== 'successful') {
       throw new BusinessException(ERROR_CODES.KYC.PAN_NOT_LINKED_WITH_AADHAAR);
+    }
+
+    const isDobMatched = this.panProvider.isSameDob(user.date_of_birth, panApiData.dob);
+
+    if (!isDobMatched) {
+      throw new BusinessException(ERROR_CODES.KYC.PAN_VERIFICATION_FAILED, {
+        reason: 'Date of birth does not match with profile DOB',
+      });
     }
 
     const nameMatchResult = await this.nameMatchProvider.matchName({

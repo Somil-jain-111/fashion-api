@@ -3,6 +3,7 @@ import { InvoiceAssortmentEntity } from './invoice-assortment.entity';
 import { User } from '../../auth/entities/users.entity';
 import { InvoicePairScanStatus } from '../enum/invoice-pair-scan-status.enum';
 import { BaseEntity } from '../../../default/common/entities';
+import { InvoiceEntity } from './invoice.entity';
 
 @Entity({ name: 'invoice_pair_details' })
 @Index('idx_invoice_pair_details_assortment_id', ['assortment'])
@@ -74,4 +75,10 @@ export class InvoicePairDetailEntity extends BaseEntity {
   })
   @JoinColumn({ name: 'assortment_id' })
   assortment: InvoiceAssortmentEntity;
+
+  @ManyToOne(() => InvoiceEntity, (invoice) => invoice.assortments, {
+    onDelete: 'CASCADE',
+  })
+  @JoinColumn({ name: 'invoice_id' })
+  invoice: InvoiceEntity;
 }
