@@ -24,7 +24,12 @@ export class SuperAdminDistributorTransferService {
 
     return {
       items: items.map((item) => this.toResponse(item)),
-      pagination: new AddressPaginationDTO(total, Math.ceil(total / query.limit), query.page, query.limit),
+      pagination: new AddressPaginationDTO(
+        total,
+        Math.ceil(total / query.limit),
+        query.page,
+        query.limit
+      ),
     };
   }
 
@@ -45,8 +50,8 @@ export class SuperAdminDistributorTransferService {
       skuCount: item.sku_count,
       billingEstimate: item.billing_estimate,
       remarks: item.remarks,
-      createdAt: item.created_at,
-      updatedAt: item.updated_at,
+      createdAt: item.createdAt,
+      updatedAt: item.updatedAt,
       invoice: {
         id: item.invoice?.id,
         invoiceNumber: item.invoice?.invoice_no,
