@@ -1,36 +1,34 @@
-import { Column, CreateDateColumn, Entity, Index, JoinColumn, ManyToOne } from 'typeorm';
-import { InvoiceScanHistory } from './invoice-scan-history.entity';
-import { InvoicePairDetailEntity } from './invoice-pair-detail.entity';
-import { InvoicePairScanStatus } from '../enum/invoice-pair-scan-status.enum';
+import { Column, Entity, Index, JoinColumn, ManyToOne } from 'typeorm';
+import { InvoiceEntity } from './invoice.entity';
+import { User } from '../../auth/entities/users.entity';
+import { PairHistoryStatus, ScanSource } from '../enum/invoice-scan-session.enum';
 import { BaseEntity } from '../../../default/common/entities';
 
-@Entity('invoice_pair_scan_histories')
-@Index('idx_pair_uid', ['pair_uid'])
-@Index('idx_scan_history', ['invoiceScanHistory'])
-export class InvoicePairScanHistory extends BaseEntity {
-  @ManyToOne(() => InvoiceScanHistory, (scan) => scan.pairScans)
-  @JoinColumn({ name: 'invoice_scan_history_id' })
-  invoiceScanHistory!: InvoiceScanHistory;
+@Entity('invoice_pair_scan_history')
+@Index('uq_pair_invoice', ['invoice', 'pairUid'], { unique: true })
+@Index('uq_pair_session', ['sessionId', 'pairUid'], { unique: true })
+@Index('idx_pair_history_user_created', ['user', 'createdAt'])
+export class InvoicePairScanHistoryEntity extends BaseEntity {
+  @Column({ name: 'session_id', type: 'char', length: 36 })
+  sessionId: string;
 
-  @ManyToOne(() => InvoicePairDetailEntity)
-  @JoinColumn({ name: 'invoice_pair_detail_id' })
-  invoicePairDetail!: InvoicePairDetailEntity;
+  @ManyToOne(() => InvoiceEntity, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'invoice_id' })
+  invoice: InvoiceEntity;
 
-  @Column({ type: 'varchar', length: 100 })
-  pair_uid!: string;
+  @Column({ name: 'pair_uid', type: 'varchar', length: 100 })
+  pairUid: string;
 
-  @Column({ type: 'varchar', length: 255, nullable: true })
-  pair_qr?: string;
+  @ManyToOne(() => User, { onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'user_id' })
+  user: User;
 
-  @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
-  points!: number;
+  @Column({ type: 'enum', enum: PairHistoryStatus })
+  status: PairHistoryStatus;
 
-  @Column({
-    type: 'enum',
-    enum: InvoicePairScanStatus,
-  })
-  status!: InvoicePairScanStatus;
+  @Column({ name: 'scan_source', type: 'enum', enum: ScanSource })
+  scanSource: ScanSource;
 
-  @CreateDateColumn()
-  scanned_at!: Date;
+  @Column({ name: 'failure_reason', type: 'varchar', length: 255, nullable: true })
+  failureReason?: string;
 }

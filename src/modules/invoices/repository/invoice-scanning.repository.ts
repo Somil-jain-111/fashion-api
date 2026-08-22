@@ -3,7 +3,7 @@ import { Brackets, DataSource, In, QueryRunner } from 'typeorm';
 import { BaseRepository } from 'src/default/common/repositories/base.repository';
 import { InvoiceEntity } from '../entities/invoice.entity';
 import { InvoiceScanSessionEntity } from '../entities/invoice-scan-session.entity';
-import { PairScanHistoryEntity } from '../entities/pair-scan-history.entity';
+import { InvoicePairScanHistoryEntity } from '../entities/invoice-pair-scan-history.entity';
 import { InvoiceScanAuditEntity } from '../entities/invoice-scan-audit.entity';
 import { InvoicePairDetailEntity } from '../entities/invoice-pair-detail.entity';
 import { PairHistoryStatus, ScanSessionStatus } from '../enum/invoice-scan-session.enum';
@@ -99,9 +99,9 @@ export class InvoiceSessionRepository extends BaseRepository<InvoiceScanSessionE
 }
 
 @Injectable()
-export class PairHistoryRepository extends BaseRepository<PairScanHistoryEntity> {
+export class PairHistoryRepository extends BaseRepository<InvoicePairScanHistoryEntity> {
   constructor(dataSource: DataSource) {
-    super(dataSource.getRepository(PairScanHistoryEntity));
+    super(dataSource.getRepository(InvoicePairScanHistoryEntity));
   }
 
   async existing(invoiceId: string, pairUids: string[], queryRunner?: QueryRunner) {
@@ -123,7 +123,7 @@ export class PairHistoryRepository extends BaseRepository<PairScanHistoryEntity>
   }
 
   async insertIgnore(
-    rows: Partial<PairScanHistoryEntity>[],
+    rows: Partial<InvoicePairScanHistoryEntity>[],
     queryRunner?: QueryRunner
   ): Promise<void> {
     if (!rows.length) {
@@ -133,7 +133,7 @@ export class PairHistoryRepository extends BaseRepository<PairScanHistoryEntity>
     await this.getRepository(queryRunner)
       .createQueryBuilder('history')
       .insert()
-      .into(PairScanHistoryEntity)
+      .into(InvoicePairScanHistoryEntity)
       .values(rows)
       .orIgnore()
       .execute();
@@ -179,7 +179,7 @@ export class PairHistoryRepository extends BaseRepository<PairScanHistoryEntity>
     page: number,
     limit: number,
     queryRunner?: QueryRunner
-  ): Promise<{ items: PairScanHistoryEntity[]; total: number }> {
+  ): Promise<{ items: InvoicePairScanHistoryEntity[]; total: number }> {
     const [items, total] = await this.getRepository(queryRunner).findAndCount({
       where: { sessionId, user: { id: Number(userId) } },
       select: ['id', 'pairUid', 'status', 'scanSource', 'failureReason', 'createdAt'],
@@ -194,7 +194,7 @@ export class PairHistoryRepository extends BaseRepository<PairScanHistoryEntity>
     sessionId: string,
     userId: string,
     queryRunner?: QueryRunner
-  ): Promise<PairScanHistoryEntity[]> {
+  ): Promise<InvoicePairScanHistoryEntity[]> {
     return await this.getRepository(queryRunner).find({
       where: { sessionId, user: { id: Number(userId) } },
       order: { id: 'ASC' },
