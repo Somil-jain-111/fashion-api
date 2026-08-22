@@ -1,22 +1,9 @@
-import { Type } from 'class-transformer';
-import { IsEnum, IsInt, IsOptional, Max, Min } from 'class-validator';
+import { IsEnum, IsInt, IsOptional } from 'class-validator';
 
 import { OrderPlacementSource, OrderPlacementStatus } from '../enum/order-placement.enum';
+import { PaginationQueryDto } from 'src/default/common/dto/pagination-query.dto';
 
-export class GetOrderHistoryQueryDto {
-  @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  page?: number = 1;
-
-  @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  @Max(100)
-  limit?: number = 10;
-
+export class GetOrderHistoryQueryDto extends PaginationQueryDto {
   @IsOptional()
   @IsEnum(OrderPlacementStatus)
   status?: OrderPlacementStatus;
