@@ -1,6 +1,9 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { TransactionService } from 'src/default/databases/transaction/transaction.service';
 import { RedisService } from 'src/default/databases/redis/redis.service';
+import { BusinessException } from 'src/default/error/business.exception';
+import { ERROR_CODES } from 'src/default/error/error.code';
+import { CommonUtils } from 'src/default/common/utils/common.utils';
 import {
   InvoiceHistoryRepository,
   InvoicePairRepository,
@@ -10,19 +13,28 @@ import {
   PairHistoryRepository,
   UserRewardRepository,
 } from '../repository';
-import { InvoicePairDetailEntity } from '../entities/invoice-pair-detail.entity';
-import { InvoicePairScanStatus } from '../enum/invoice-pair-scan-status.enum';
 import { InvoiceScanStatus, InvoiceStatus } from '../enum/invoice.enum';
 import { InvoiceHistoryStatus, ScanSessionStatus } from '../enum/invoice-scan-session.enum';
 import { PointsExpiryConfigService } from 'src/modules/redemptions/services/points-expiry.service';
 import { RedisLockService } from './redis-lock.service';
 
+const POINTS_PER_PAIR = 5;
+
 export interface SubmissionResultDto {
+  submissionId: string;
   sessionId: string;
+  totalPairs: number;
   scannedPairs: number;
-  pointsAwarded: number;
-  status: string;
   remainingPairs: number;
+  pointsAwarded: number;
+  pointsPerPair: number;
+  status: string;
+  distributor: {
+    name: string;
+    address: string;
+    state: string;
+    city: string;
+  };
 }
 
 @Injectable()
@@ -53,31 +65,34 @@ export class RewardSettlementService {
           queryRunner,
           true
         );
+
         if (!session) {
-          throw new NotFoundException(`Session ${sessionId} not found`);
+          throw new BusinessException(ERROR_CODES.INVOICE_SCAN.SESSION_NOT_FOUND);
         }
+
         if (session.status !== ScanSessionStatus.ACTIVE) {
-          throw new BadRequestException(
-            `Session is not active (current status: ${session.status})`
-          );
+          throw new BusinessException(ERROR_CODES.INVOICE_SCAN.SESSION_NOT_ACTIVE);
         }
 
         invoiceNo = session.invoiceNumber;
-        const invoice = await this.invoiceRepository.findByIdForUpdate(
+
+        const invoice = await this.invoiceRepository
+          .createQueryBuilder('invoice', queryRunner)
+          .leftJoinAndSelect('invoice.distributor', 'distributor')
+          .leftJoinAndSelect('distributor.storeInformation', 'storeInfo')
+          .setLock('pessimistic_write')
+          .where('invoice.id = :invoiceId', { invoiceId: session.invoice.id })
+          .getOneOrFail();
+
+        const submissionId = CommonUtils.generateSubmissionId();
+
+        // Fetch all scanned pairs across all sessions for this invoice via repository
+        const scannedPairDetails = await this.pairRepository.findScannedPairsForInvoice(
           String(session.invoice.id),
           queryRunner
         );
 
-        // Fetch scanned pairs for this session
-        const pairRepo = queryRunner.manager.getRepository(InvoicePairDetailEntity);
-        const scannedPairDetails = await pairRepo
-          .createQueryBuilder('pair')
-          .innerJoin('pair.assortment', 'assortment')
-          .where('assortment.invoice_id = :invoiceId', { invoiceId: session.invoice?.id })
-          .andWhere('pair.session_id = :sessionId', { sessionId })
-          .getMany();
-
-        const scannedCount = Math.max(session.scannedPairs, scannedPairDetails.length);
+        const scannedCount = Math.max(invoice.scanned_pairs, scannedPairDetails.length);
 
         // 2. Allow submission even if scannedPairs < totalPairs (partial scan allowed)
         // 3. Calculate final earned reward points based on scanned items
@@ -105,20 +120,18 @@ export class RewardSettlementService {
               transactionId: `invoice:${sessionId}:${scannedCount}`,
               description: `Invoice scan reward for ${invoice.invoice_no}`,
               expiresAt,
+              invoiceId: Number(invoice.id),
             },
             queryRunner
           );
         }
 
-        // Mark all scanned InvoicePairDetail items permanently as scanned with timestamp
+        // Mark all scanned InvoicePairDetail items permanently as REDEEMED with timestamp via repository
         if (scannedPairDetails.length > 0) {
-          await pairRepo.update(
+          await this.pairRepository.markScannedAsRedeemed(
             scannedPairDetails.map((p) => p.id),
-            {
-              status: InvoicePairScanStatus.REDEEMED,
-              scanned_at: new Date(),
-              scannedByUser: { id: Number(userId) } as any,
-            }
+            userId,
+            queryRunner
           );
         }
 
@@ -127,7 +140,7 @@ export class RewardSettlementService {
         session.completedAt = new Date();
         await this.sessionRepository.saveSession(session, queryRunner);
 
-        // Update invoice scan_status = SCANNED and status = COMPLETED
+        // Update invoice scan_status = SCANNED and status = COMPLETED, store submission_id
         invoice.scanned_pairs = scannedCount;
         invoice.earned_points += points;
         invoice.scan_status =
@@ -135,6 +148,7 @@ export class RewardSettlementService {
             ? InvoiceScanStatus.FULLY_SCANNED
             : InvoiceScanStatus.SCANNED;
         invoice.status = InvoiceStatus.COMPLETED;
+        invoice.submission_id = submissionId;
         await this.invoiceRepository.saveInvoice(invoice, queryRunner);
 
         // Record history audit log
@@ -146,17 +160,35 @@ export class RewardSettlementService {
             user: { id: Number(userId) } as any,
             status: InvoiceHistoryStatus.COMPLETED,
             pointsAwarded: points,
-            metadata: { submittedPairs: scannedCount },
+            metadata: { submittedPairs: scannedCount, submissionId },
           },
           queryRunner
         );
 
+        const addressInfo = invoice.distributor?.addresses?.[0];
+        const distributorAddressParts = addressInfo
+          ? [addressInfo.address_line_1, addressInfo.address_line_2].filter(Boolean)
+          : [];
+
         return {
+          submissionId,
           sessionId,
+          totalPairs: invoice.total_pairs,
           scannedPairs: scannedCount,
-          pointsAwarded: points,
-          status: session.status,
           remainingPairs: Math.max(0, invoice.total_pairs - scannedCount),
+          pointsAwarded: points,
+          pointsPerPair: POINTS_PER_PAIR,
+          status: session.status,
+          distributor: {
+            name:
+              invoice.distributor?.firmName ||
+              invoice.distributor?.username ||
+              invoice.party_name ||
+              '',
+            address: distributorAddressParts.join(', '),
+            state: addressInfo?.state_name || '',
+            city: addressInfo?.city_name || '',
+          },
         };
       });
 

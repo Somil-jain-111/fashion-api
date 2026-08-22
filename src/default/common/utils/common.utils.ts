@@ -41,6 +41,15 @@ export class CommonUtils {
     return `${prefix}_${year}_${month}_${rand5}`;
   }
 
+  static generateSubmissionId(prefix: string = 'SUB'): string {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const rand5 = Math.floor(10000 + Math.random() * 90000);
+    return `${prefix}_${year}${month}${day}_${rand5}`;
+  }
+
   static async hashPassword(password: string): Promise<string> {
     const salt = await bcrypt.genSalt(CommonUtils.SALT_ROUNDS);
     return bcrypt.hash(password, salt);

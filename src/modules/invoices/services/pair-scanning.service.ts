@@ -8,7 +8,6 @@ import {
   InvoiceSessionRepository,
   PairHistoryRepository,
 } from '../repository';
-import { InvoicePairDetailEntity } from '../entities/invoice-pair-detail.entity';
 import { InvoicePairScanStatus } from '../enum/invoice-pair-scan-status.enum';
 import {
   ScanSessionStatus,
@@ -106,7 +105,20 @@ export class PairScanningService {
         ? await this.invoiceRepository.findOne({ id: Number(session.invoice.id) })
         : null;
       if (invoice) {
-        invoice.scanned_pairs = session.scannedPairs;
+        const totalScannedForInvoice = await this.pairRepository
+          .createQueryBuilder('pair')
+          .innerJoin('pair.assortment', 'assortment')
+          .where('assortment.invoice_id = :invoiceId', { invoiceId: session.invoice?.id })
+          .andWhere('pair.status IN (:...statuses)', {
+            statuses: [
+              InvoicePairScanStatus.SCANNED,
+              InvoicePairScanStatus.REDEEMED,
+              InvoicePairScanStatus.USED,
+            ],
+          })
+          .getCount();
+
+        invoice.scanned_pairs = totalScannedForInvoice;
         await this.invoiceRepository.saveInvoice(invoice);
       }
 
@@ -137,7 +149,6 @@ export class PairScanningService {
         .createQueryBuilder('pair')
         .innerJoinAndSelect('pair.assortment', 'assortment')
         .where('assortment.invoice_id = :invoiceId', { invoiceId: session.invoice?.id })
-        .andWhere('pair.session_id = :sessionId', { sessionId })
         .andWhere('(pair.pair_uid = :val OR pair.pair_qr = :val)', { val: pairCodeOrUid.trim() })
         .getOne();
 
@@ -167,7 +178,20 @@ export class PairScanningService {
         : null;
 
       if (invoice) {
-        invoice.scanned_pairs = session.scannedPairs;
+        const totalScannedForInvoice = await this.pairRepository
+          .createQueryBuilder('pair')
+          .innerJoin('pair.assortment', 'assortment')
+          .where('assortment.invoice_id = :invoiceId', { invoiceId: session.invoice?.id })
+          .andWhere('pair.status IN (:...statuses)', {
+            statuses: [
+              InvoicePairScanStatus.SCANNED,
+              InvoicePairScanStatus.REDEEMED,
+              InvoicePairScanStatus.USED,
+            ],
+          })
+          .getCount();
+
+        invoice.scanned_pairs = totalScannedForInvoice;
         await this.invoiceRepository.saveInvoice(invoice);
       }
 

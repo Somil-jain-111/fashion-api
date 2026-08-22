@@ -5,6 +5,7 @@ import { InvoiceAssortmentEntity } from './invoice-assortment.entity';
 import { InvoiceScanStatus, InvoiceStatus } from '../enum/invoice.enum';
 import { InvoiceType } from '../enum/invoice-scan-session.enum';
 import { BaseEntity } from '../../../default/common/entities';
+import { PointHistory } from '../../../modules/auth/entities';
 
 @Entity({ name: 'invoices' })
 @Index('uq_invoice_no_master_id', ['invoice_no', 'master_id'], { unique: true })
@@ -103,9 +104,15 @@ export class InvoiceEntity extends BaseEntity {
   @Column({ type: 'varchar', length: 255, nullable: true })
   remarks: string;
 
+  @Column({ name: 'submission_id', type: 'varchar', length: 100, nullable: true })
+  submission_id?: string;
+
   @OneToMany(() => InvoiceItemEntity, (item) => item.invoice)
   items: InvoiceItemEntity[];
 
   @OneToMany(() => InvoiceAssortmentEntity, (assortment) => assortment.invoice)
   assortments: InvoiceAssortmentEntity[];
+
+  @OneToMany(() => PointHistory, (pointHistory) => pointHistory.invoice)
+  pointHistories: PointHistory[];
 }

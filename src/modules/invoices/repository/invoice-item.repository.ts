@@ -1,27 +1,36 @@
 import { Injectable } from '@nestjs/common';
-import { DataSource } from 'typeorm';
+import { DataSource, QueryRunner } from 'typeorm';
+import { BaseRepository } from 'src/default/common/repositories/base.repository';
 import { InvoiceItemEntity } from '../entities/invoice-item.entity';
 
 @Injectable()
-export class InvoiceItemRepository {
-  constructor(private readonly dataSource: DataSource) {}
+export class InvoiceItemRepository extends BaseRepository<InvoiceItemEntity> {
+  constructor(dataSource: DataSource) {
+    super(dataSource.getRepository(InvoiceItemEntity));
+  }
 
-  async findByInvoiceId(invoiceId: string): Promise<InvoiceItemEntity[]> {
-    return this.dataSource.getRepository(InvoiceItemEntity).find({
+  async findByInvoiceId(
+    invoiceId: string,
+    queryRunner?: QueryRunner
+  ): Promise<InvoiceItemEntity[]> {
+    return this.getRepository(queryRunner).find({
       where: {
         invoice: { id: Number(invoiceId) },
       },
     });
   }
 
-  async quantityByItemCode(invoiceId: string): Promise<Map<string, number>> {
-    const items = await this.findByInvoiceId(invoiceId);
+  async quantityByItemCode(
+    invoiceId: string,
+    queryRunner?: QueryRunner
+  ): Promise<Map<string, number>> {
+    const items = await this.findByInvoiceId(invoiceId, queryRunner);
 
     return new Map(items.map((item) => [item.item_code, Number(item.quantity)]));
   }
 
-  async rateByItemCode(invoiceId: string): Promise<Map<string, number>> {
-    const items = await this.findByInvoiceId(invoiceId);
+  async rateByItemCode(invoiceId: string, queryRunner?: QueryRunner): Promise<Map<string, number>> {
+    const items = await this.findByInvoiceId(invoiceId, queryRunner);
 
     return new Map(items.map((item) => [item.item_code, Number(item.rate)]));
   }

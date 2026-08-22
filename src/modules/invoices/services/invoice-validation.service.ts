@@ -78,13 +78,16 @@ export class InvoiceValidationService {
     }
 
     const session = await this.sessionRepository.findActive(String(invoice.id), userId);
-    const scanned = session?.scannedPairs ?? invoice.scanned_pairs ?? 0;
+    const scanned = invoice.scanned_pairs ?? 0;
 
     return {
       invoiceId: String(invoice.id),
       invoiceNumber: invoice.invoice_no,
       invoiceType: invoice.invoice_type,
       totalPairs: invoice.total_pairs,
+      invoiceValue: String(Math.ceil(Number(invoice.gross_amount))),
+      distributorName:
+        invoice.distributor?.firmName || invoice.distributor?.username || invoice.party_name || '',
       alreadyScanned: scanned,
       remainingPairs: Math.max(0, invoice.total_pairs - scanned),
       resume: Boolean(session),

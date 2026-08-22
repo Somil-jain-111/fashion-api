@@ -201,12 +201,6 @@ export class PairHistoryRepository extends BaseRepository<InvoicePairScanHistory
     });
   }
 
-  /**
-   * Purges the per-pair scan log for a session. Only call this once the session is
-   * COMPLETED — countBySession()/pendingValid() both read every row for a session to
-   * track cumulative progress across partial submits, so deleting mid-session would
-   * corrupt an in-progress MULTIPLE-type invoice's scanned/valid counts.
-   */
   async deleteBySession(sessionId: string, queryRunner?: QueryRunner): Promise<void> {
     await this.getRepository(queryRunner).delete({ sessionId });
   }
@@ -299,12 +293,6 @@ export class InvoiceHistoryRepository extends BaseRepository<InvoiceScanAuditEnt
     return { items, total };
   }
 
-  /**
-   * Purges every audit entry (STARTED/PARTIALLY_SUBMITTED/COMPLETED/...) recorded for a
-   * session. Only call once the session is COMPLETED — this removes the invoice from the
-   * retailer's GET /invoices/history and /history/:id views, by design (per product
-   * decision to not retain history for fully-completed invoices).
-   */
   async deleteBySession(sessionId: string, queryRunner?: QueryRunner): Promise<void> {
     await this.getRepository(queryRunner).delete({ sessionId });
   }
@@ -326,12 +314,6 @@ export class InvoicePairRepository extends BaseRepository<InvoicePairDetailEntit
       .getMany();
   }
 
-  /**
-   * Marks the given physical pairs as consumed on invoice_pair_details itself (the
-   * source-of-truth table with its own scanned_by/scanned_at audit columns), rather than
-   * relying solely on pair_scan_history for anti-replay protection. Scoped by invoiceId so a
-   * pair_uid string can never be marked against the wrong invoice.
-   */
   async markStatusByUids(
     invoiceId: string,
     pairUids: string[],
@@ -376,13 +358,6 @@ export class InvoicePairRepository extends BaseRepository<InvoicePairDetailEntit
     );
   }
 
-  /**
-   * Single query replacing the old findItemCodesForPairs + countScannedByItemCode pair —
-   * both hit the same pair-joined-to-assortment scan for the invoice, so they're merged
-   * into one round trip: fetch only the candidate pairs plus whatever is already scanned
-   * (not the whole invoice), then derive the item-code map and per-item scanned counts
-   * in memory instead of running two separate DB scans for large invoices.
-   */
   async getPairScanContext(
     invoiceId: string,
     pairUids: string[],
@@ -422,20 +397,41 @@ export class InvoicePairRepository extends BaseRepository<InvoicePairDetailEntit
 
     return { itemCodeByPair, alreadyScanned };
   }
+
+  findScannedPairsForInvoice(invoiceId: string, queryRunner?: QueryRunner) {
+    return this.getRepository(queryRunner)
+      .createQueryBuilder('pair')
+      .innerJoin('pair.assortment', 'assortment')
+      .where('assortment.invoice_id = :invoiceId', { invoiceId })
+      .andWhere('pair.status = :status', { status: InvoicePairScanStatus.SCANNED })
+      .getMany();
+  }
+
+  async markScannedAsRedeemed(
+    pairIds: (string | number)[],
+    userId: string,
+    queryRunner?: QueryRunner
+  ): Promise<void> {
+    if (!pairIds.length) return;
+    await this.getRepository(queryRunner).update(
+      { id: In(pairIds) },
+      {
+        status: InvoicePairScanStatus.REDEEMED,
+        scanned_at: new Date(),
+        scannedByUser: { id: Number(userId) } as any,
+      }
+    );
+  }
 }
 
 @Injectable()
-export class UserRewardRepository {
-  constructor(private readonly dataSource: DataSource) {}
-
-  private getRepo(queryRunner?: QueryRunner) {
-    return queryRunner
-      ? queryRunner.manager.getRepository(User)
-      : this.dataSource.getRepository(User);
+export class UserRewardRepository extends BaseRepository<User> {
+  constructor(dataSource: DataSource) {
+    super(dataSource.getRepository(User));
   }
 
   async addPoints(userId: string, points: number, queryRunner?: QueryRunner): Promise<number> {
-    const repository = this.getRepo(queryRunner);
+    const repository = this.getRepository(queryRunner);
     await repository.increment({ id: Number(userId) }, 'points', points);
     const user = await repository.findOne({
       select: { id: true, points: true },
@@ -446,7 +442,7 @@ export class UserRewardRepository {
 
   async deductPoints(userId: string, points: number, queryRunner?: QueryRunner): Promise<number> {
     if (points <= 0) return this.currentBalance(userId, queryRunner);
-    const repository = this.getRepo(queryRunner);
+    const repository = this.getRepository(queryRunner);
     const current = await this.currentBalance(userId, queryRunner);
     const deduction = Math.min(current, points);
     if (deduction > 0) await repository.decrement({ id: Number(userId) }, 'points', deduction);
@@ -454,7 +450,7 @@ export class UserRewardRepository {
   }
 
   private async currentBalance(userId: string, queryRunner?: QueryRunner): Promise<number> {
-    const repository = this.getRepo(queryRunner);
+    const repository = this.getRepository(queryRunner);
     const user = await repository.findOne({
       select: { id: true, points: true },
       where: { id: Number(userId) },
@@ -464,13 +460,9 @@ export class UserRewardRepository {
 }
 
 @Injectable()
-export class InvoicePointHistoryRepository {
-  constructor(private readonly dataSource: DataSource) {}
-
-  private getRepo(queryRunner?: QueryRunner) {
-    return queryRunner
-      ? queryRunner.manager.getRepository(PointHistory)
-      : this.dataSource.getRepository(PointHistory);
+export class InvoicePointHistoryRepository extends BaseRepository<PointHistory> {
+  constructor(dataSource: DataSource) {
+    super(dataSource.getRepository(PointHistory));
   }
 
   async createEarnHistory(
@@ -481,10 +473,11 @@ export class InvoicePointHistoryRepository {
       transactionId: string;
       description: string;
       expiresAt?: Date;
+      invoiceId?: number;
     },
     queryRunner?: QueryRunner
   ): Promise<PointHistory> {
-    const repository = this.getRepo(queryRunner);
+    const repository = this.getRepository(queryRunner);
     return repository.save(
       repository.create({
         user: { id: Number(data.userId) } as User,
@@ -499,12 +492,13 @@ export class InvoicePointHistoryRepository {
         transaction_id: data.transactionId,
         expires_at: data.expiresAt,
         remaining_points: data.points,
+        invoice: data.invoiceId ? ({ id: Number(data.invoiceId) } as any) : null,
       })
     );
   }
 
   async findExpirable(asOf: Date, queryRunner?: QueryRunner): Promise<PointHistory[]> {
-    return this.getRepo(queryRunner)
+    return this.getRepository(queryRunner)
       .createQueryBuilder('history')
       .where('history.status = :status', { status: PointStatusEnum.added })
       .andWhere('history.expires_at IS NOT NULL')
@@ -514,7 +508,7 @@ export class InvoicePointHistoryRepository {
   }
 
   async markExpired(id: string, queryRunner?: QueryRunner): Promise<void> {
-    await this.getRepo(queryRunner).update(
+    await this.getRepository(queryRunner).update(
       { id } as any,
       { status: PointStatusEnum.expired, remaining_points: 0 } as any
     );

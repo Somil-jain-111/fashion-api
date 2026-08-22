@@ -12,11 +12,14 @@ import { InvoiceItemEntity } from '../entities/invoice-item.entity';
 import { InvoiceAssortmentEntity } from '../entities/invoice-assortment.entity';
 import { InvoicePairDetailEntity } from '../entities/invoice-pair-detail.entity';
 
+const POINTS_PER_PAIR = 5;
+
 export interface InvoiceIngestResult {
   invoiceId: string;
   invoiceNumber: string;
   invoiceType: InvoiceType;
   totalPairs: number;
+  allocatedPoints: number;
   itemCount: number;
   assortmentCount: number;
 }
@@ -30,9 +33,6 @@ export class InvoiceIngestionService {
   ) {}
 
   async ingest(dto: CreateInvoiceDto): Promise<InvoiceIngestResult> {
-    // const user = await this.userRepository.findById(dto.userId);
-    // if (!user) throw new BusinessException(ERROR_CODES.USER.USER_NOT_FOUND);
-
     const existing = await this.ingestion.findDuplicate(dto.invoiceno, dto.masterid);
     if (existing) throw new BusinessException(ERROR_CODES.INVOICE_SCAN.INVOICE_ALREADY_EXISTS);
 
@@ -53,6 +53,8 @@ export class InvoiceIngestionService {
       0
     );
 
+    const allocatedPoints = totalPairs * POINTS_PER_PAIR;
+
     const distributorDetails = await this.userRepository.findOne({
       code: dto.partycode,
       active: true,
@@ -65,7 +67,6 @@ export class InvoiceIngestionService {
     return this.transactionService.runInTransaction(async (queryRunner) => {
       const invoice = await this.ingestion.createInvoice(
         {
-          // user: { id: Number(dto.userId) } as any,
           distributor: { id: Number(distributorDetails.id) } as any,
           invoice_no: dto.invoiceno,
           invoice_date: new Date(dto.invoicedate),
@@ -73,12 +74,9 @@ export class InvoiceIngestionService {
           party_name: dto.partyname,
           master_id: dto.masterid,
           gross_amount: String(dto.grossamount),
-          allocated_points: dto.allocatedPoints ?? 0,
+          allocated_points: allocatedPoints,
           total_pairs: totalPairs,
           invoice_type: dto.invoiceType ?? InvoiceType.MULTIPLE,
-          // No invoice approval workflow exists yet, so ingested invoices are immediately
-          // scannable — matches how invoice status is set today (only ever set directly,
-          // never transitioned by any approval step in this codebase).
           status: InvoiceStatus.APPROVED,
           scan_status: InvoiceScanStatus.NOT_SCANNED,
         },
@@ -140,6 +138,7 @@ export class InvoiceIngestionService {
         invoiceNumber: invoice.invoice_no,
         invoiceType: invoice.invoice_type,
         totalPairs,
+        allocatedPoints,
         itemCount: itemRows.length,
         assortmentCount: assortmentRows.length,
       };

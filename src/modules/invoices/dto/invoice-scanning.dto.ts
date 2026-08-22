@@ -142,6 +142,8 @@ export class InvoiceSummaryResponseDto {
   resume: boolean;
   status?: string;
   scanStatus?: string;
+  invoiceValue?: string;
+  distributorName?: string;
 }
 
 export class RemovePairParamsDto {

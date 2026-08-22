@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { DataSource } from 'typeorm';
+import { TransactionService } from 'src/default/databases/transaction/transaction.service';
 import { BusinessException } from 'src/default/error/business.exception';
 import { ERROR_CODES } from 'src/default/error/error.code';
 import { SystemConfigKey } from 'src/default/common/entities/system-config.entity';
@@ -13,7 +13,7 @@ export const MAX_SCAN_AGE_DAYS = 90;
 @Injectable()
 export class RetailerScanAgeService {
   constructor(
-    private readonly dataSource: DataSource,
+    private readonly transactionService: TransactionService,
     private readonly systemConfig: SystemConfigRepository,
     private readonly scanAgeRepo: RetailerScanAgeRepository
   ) {}
@@ -57,7 +57,7 @@ export class RetailerScanAgeService {
       throw new BusinessException(ERROR_CODES.INVOICE_SCAN.SCAN_AGE_REASON_REQUIRED);
     }
 
-    await this.dataSource.transaction(async (manager) => {
+    await this.transactionService.execute(async (manager) => {
       const existing = await this.scanAgeRepo.findOverride(retailerId, manager);
 
       const oldValue =

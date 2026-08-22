@@ -1,30 +1,25 @@
-import {
-  BadRequestException,
-  ConflictException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { RedisService } from 'src/default/databases/redis/redis.service';
-import { InvoiceRepository, InvoiceSessionRepository, PairHistoryRepository } from '../repository';
+import { BusinessException } from 'src/default/error/business.exception';
+import { ERROR_CODES } from 'src/default/error/error.code';
+import { InvoicePairRepository, InvoiceRepository, InvoiceSessionRepository } from '../repository';
 import { InvoiceScanSessionEntity } from '../entities/invoice-scan-session.entity';
 import { InvoiceScanStatus } from '../enum/invoice.enum';
 import { ScanSessionStatus } from '../enum/invoice-scan-session.enum';
+import { InvoicePairScanStatus } from '../enum/invoice-pair-scan-status.enum';
 import { ScanProgressResponseDto, ScannedPairItemDto } from '../dto';
 import { RedisLockService } from './redis-lock.service';
 import { InvoiceValidationService } from './invoice-validation.service';
-import { DataSource } from 'typeorm';
-import { InvoicePairDetailEntity } from '../entities/invoice-pair-detail.entity';
 
 const CACHE_TTL_SECONDS = 30 * 60;
 
 @Injectable()
 export class ScanSessionService {
   constructor(
-    private readonly dataSource: DataSource,
     private readonly invoiceRepository: InvoiceRepository,
     private readonly sessionRepository: InvoiceSessionRepository,
-    private readonly pairHistoryRepository: PairHistoryRepository,
+    private readonly invoicePairRepository: InvoicePairRepository,
     private readonly validationService: InvoiceValidationService,
     private readonly lock: RedisLockService,
     private readonly redis: RedisService
@@ -39,16 +34,11 @@ export class ScanSessionService {
       : null;
 
     const totalPairs = invoice?.total_pairs ?? session.expectedPairs;
-    const scannedPairs = session.scannedPairs;
-    const remainingPairs = Math.max(0, totalPairs - scannedPairs);
-    const totalPoints = invoice?.allocated_points ?? 0;
-    const estimatedPoints =
-      totalPairs > 0 ? Math.floor((totalPoints * scannedPairs) / totalPairs) : 0;
-
+    let scannedPairs = invoice?.scanned_pairs ?? session.scannedPairs;
     let scannedPairList: ScannedPairItemDto[] = [];
-    if (includePairList) {
-      const scannedRows = await this.dataSource
-        .getRepository(InvoicePairDetailEntity)
+
+    if (session.invoice?.id) {
+      const scannedRows = await this.invoicePairRepository
         .createQueryBuilder('pair')
         .innerJoin('pair.assortment', 'assortment')
         .select([
@@ -58,17 +48,32 @@ export class ScanSessionService {
           'pair.scanned_at',
           'assortment.packing_item_code',
         ])
-        .where('assortment.invoice_id = :invoiceId', { invoiceId: session.invoice?.id })
-        .andWhere('pair.session_id = :sessionId', { sessionId: session.sessionId })
+        .where('assortment.invoice_id = :invoiceId', { invoiceId: session.invoice.id })
+        .andWhere('pair.status IN (:...statuses)', {
+          statuses: [
+            InvoicePairScanStatus.SCANNED,
+            InvoicePairScanStatus.REDEEMED,
+            InvoicePairScanStatus.USED,
+          ],
+        })
         .getMany();
 
-      scannedPairList = scannedRows.map((p) => ({
-        pairCode: p.pair_qr,
-        pairUid: p.pair_uid,
-        subItemCode: p.sub_item_code || p.assortment?.packing_item_code,
-        scannedAt: p.scanned_at || new Date(),
-      }));
+      scannedPairs = Math.max(scannedPairs, scannedRows.length);
+
+      if (includePairList) {
+        scannedPairList = scannedRows.map((p) => ({
+          pairCode: p.pair_qr,
+          pairUid: p.pair_uid,
+          subItemCode: p.sub_item_code || p.assortment?.packing_item_code,
+          scannedAt: p.scanned_at || new Date(),
+        }));
+      }
     }
+
+    const remainingPairs = Math.max(0, totalPairs - scannedPairs);
+    const totalPoints = invoice?.allocated_points ?? 0;
+    const estimatedPoints =
+      totalPairs > 0 ? Math.floor((totalPoints * scannedPairs) / totalPairs) : 0;
 
     return {
       sessionId: session.sessionId,
@@ -78,31 +83,29 @@ export class ScanSessionService {
       estimatedPoints,
       totalPoints,
       status: session.status,
-      scannedPairList,
-      progress: scannedPairs,
-      expected: totalPairs,
-      valid: session.validPairs,
       invalid: session.invalidPairs,
+      scannedPairList,
     };
   }
 
   async startSession(invoiceIdOrNumber: string, userId: string): Promise<ScanProgressResponseDto> {
     if (!invoiceIdOrNumber) {
-      throw new BadRequestException('invoiceId or invoiceNumber is required');
+      throw new BusinessException(ERROR_CODES.INVOICE_SCAN.INVOICE_NOT_FOUND);
     }
 
     const invoice = await this.validationService.findInvoice(invoiceIdOrNumber);
     if (!invoice) {
-      throw new NotFoundException(`Invoice ${invoiceIdOrNumber} not found`);
+      throw new BusinessException(ERROR_CODES.INVOICE_SCAN.INVOICE_NOT_FOUND);
     }
 
     // Verify invoice belongs to req.user.id
     if (!invoice.user || String(invoice.user.id) !== String(userId)) {
-      throw new BadRequestException('Invoice must be validated and claimed by the retailer first');
+      throw new BusinessException(ERROR_CODES.INVOICE_SCAN.INVOICE_NOT_FOUND);
     }
 
     return this.lock.withLock(`lock:invoice:${invoice.id}:${userId}`, async () => {
       const existing = await this.sessionRepository.findActive(String(invoice.id), userId);
+
       if (existing) {
         return this.buildProgressSummary(existing);
       }
@@ -113,10 +116,9 @@ export class ScanSessionService {
           invoice: { id: Number(invoice.id) },
           status: ScanSessionStatus.ACTIVE,
         });
+
         if (otherSession && String(otherSession.user?.id) !== String(userId)) {
-          throw new ConflictException(
-            'Invoice is currently in an active scanning session by another user'
-          );
+          throw new BusinessException(ERROR_CODES.INVOICE_SCAN.INVOICE_IN_PROGRESS_OTHER_USER);
         }
       }
 
@@ -147,23 +149,28 @@ export class ScanSessionService {
 
   async getSessionProgress(sessionId: string, userId: string): Promise<ScanProgressResponseDto> {
     const session = await this.sessionRepository.findOwned(sessionId, userId);
+
     if (!session) {
-      throw new NotFoundException(`Session ${sessionId} not found`);
+      throw new BusinessException(ERROR_CODES.INVOICE_SCAN.SESSION_NOT_FOUND);
     }
+
     return this.buildProgressSummary(session);
   }
 
   async cancelSession(sessionId: string, userId: string) {
     const session = await this.sessionRepository.findOwned(sessionId, userId);
+
     if (!session) {
-      throw new NotFoundException(`Session ${sessionId} not found`);
+      throw new BusinessException(ERROR_CODES.INVOICE_SCAN.SESSION_NOT_FOUND);
     }
+
     session.status = ScanSessionStatus.CANCELLED;
     await this.sessionRepository.saveSession(session);
 
     const invoice = session.invoice?.id
       ? await this.invoiceRepository.findOne({ id: Number(session.invoice.id) })
       : null;
+
     if (invoice && invoice.scan_status === InvoiceScanStatus.IN_PROGRESS) {
       invoice.scan_status =
         invoice.scanned_pairs > 0
@@ -171,7 +178,9 @@ export class ScanSessionService {
           : InvoiceScanStatus.NOT_SCANNED;
       await this.invoiceRepository.saveInvoice(invoice);
     }
+
     await this.redis.delete(`session:${sessionId}:${userId}`);
+
     return { sessionId, status: session.status };
   }
 
