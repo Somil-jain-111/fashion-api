@@ -201,6 +201,7 @@ export class OrderPlacementService {
       discountAmount: CartCalculationHelper.toMoney(order.discountAmount),
       gstAmount: CartCalculationHelper.toMoney(order.gstAmount),
       totalPayable: CartCalculationHelper.toMoney(order.totalPayable),
+      orderDate: order.createdAt.toISOString(),
       items: (order.items || []).map((item) => ({
         id: item.id?.toString(),
         productId: item.productId?.toString(),
@@ -221,29 +222,31 @@ export class OrderPlacementService {
     };
   }
 
-
   async getOrderHistory(
-  userId: string | number,
-  query: GetOrderHistoryQueryDto
-): Promise<OrderHistoryResponseDto> {
-  const page = query.page ?? 1;
-  const limit = query.limit ?? 10;
+    userId: string | number,
+    query: GetOrderHistoryQueryDto
+  ): Promise<OrderHistoryResponseDto> {
+    const page = query.page ?? 1;
+    const limit = query.limit ?? 10;
+    const search = query.search;
 
-  const [orders, totalItems] = await this.orderPlacementRepository.findAllByUser(userId, {
-    page,
-    limit,
-    status: query.status,
-    source: query.source,
-  });
-
-  return {
-    items: orders.map((order) => this.toResponse(order)),
-    meta: {
+    const [orders, totalItems] = await this.orderPlacementRepository.findAllByUser(userId, {
       page,
       limit,
-      totalItems,
-      totalPages: Math.ceil(totalItems / limit) || 1,
-    },
-  };
-}
+      status: query.status,
+      search,
+      startDate: query.startDate,
+      endDate: query.endDate,
+    });
+
+    return {
+      items: orders.map((order) => this.toResponse(order)),
+      meta: {
+        page,
+        limit,
+        totalItems,
+        totalPages: Math.ceil(totalItems / limit) || 1,
+      },
+    };
+  }
 }

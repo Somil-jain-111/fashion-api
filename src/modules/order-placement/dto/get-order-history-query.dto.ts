@@ -1,6 +1,6 @@
-import { IsEnum, IsInt, IsOptional } from 'class-validator';
+import { IsEnum, IsOptional, IsString } from 'class-validator';
 
-import { OrderPlacementSource, OrderPlacementStatus } from '../enum/order-placement.enum';
+import { OrderPlacementStatus } from '../enum/order-placement.enum';
 import { PaginationQueryDto } from 'src/default/common/dto/pagination-query.dto';
 
 export class GetOrderHistoryQueryDto extends PaginationQueryDto {
@@ -9,6 +9,14 @@ export class GetOrderHistoryQueryDto extends PaginationQueryDto {
   status?: OrderPlacementStatus;
 
   @IsOptional()
-  @IsEnum(OrderPlacementSource)
-  source?: OrderPlacementSource;
+  @IsString()
+  search?: string;
+
+  @IsOptional()
+  @IsString()
+  startDate?: string;
+
+  @IsOptional()
+  @IsString()
+  endDate?: string;
 }
