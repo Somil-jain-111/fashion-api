@@ -150,7 +150,7 @@ export class CartService {
       return this.emptyCartResponse(userId, distributorId);
     }
 
-    return await this.toResponse(cart);
+    return this.toResponse(cart);
   }
 
   async updateItem(
@@ -228,7 +228,7 @@ export class CartService {
       totalPayable: 0,
     } as Partial<Cart>);
 
-    return await this.emptyCartResponse(userId, distributorId);
+    return this.emptyCartResponse(userId, distributorId);
   }
 
   private async refreshCartSummary(cart: Cart, queryRunner?: QueryRunner): Promise<void> {

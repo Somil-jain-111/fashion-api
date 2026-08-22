@@ -105,26 +105,42 @@ export class DataSanitizer {
       const result: Record<string, any> = { ...data };
 
       for (const key of Object.keys(result)) {
-        const val = result[key];
-
-        if (val instanceof Date) {
-          result[key] = val.toISOString();
-        } else if (fieldsToFormat.includes(key) && val !== null && val !== undefined) {
-          if (typeof val === 'string' || typeof val === 'number') {
-            const parsedDate = new Date(val);
-
-            if (!isNaN(parsedDate.getTime())) {
-              result[key] = parsedDate.toISOString();
-            }
-          }
-        } else if (typeof val === 'object' && val !== null && !(val instanceof Date)) {
-          result[key] = this.formatDateFieldsForResponse(val, customFields);
-        }
+        result[key] = this.formatDateFieldValue(result[key], key, fieldsToFormat, customFields);
       }
 
       return result;
     }
 
     return data;
+  }
+
+  private static formatDateFieldValue(
+    val: any,
+    key: string,
+    fieldsToFormat: string[],
+    customFields: string[]
+  ): any {
+    if (val instanceof Date) {
+      return val.toISOString();
+    }
+
+    if (fieldsToFormat.includes(key) && val !== null && val !== undefined) {
+      return this.parseDateStringOrNumber(val);
+    }
+
+    if (typeof val === 'object' && val !== null) {
+      return this.formatDateFieldsForResponse(val, customFields);
+    }
+
+    return val;
+  }
+
+  private static parseDateStringOrNumber(val: any): any {
+    if (typeof val !== 'string' && typeof val !== 'number') {
+      return val;
+    }
+
+    const parsedDate = new Date(val);
+    return isNaN(parsedDate.getTime()) ? val : parsedDate.toISOString();
   }
 }

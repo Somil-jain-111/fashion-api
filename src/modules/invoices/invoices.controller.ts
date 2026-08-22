@@ -1,69 +1,114 @@
 import {
-  Body,
-  Controller,
-  DefaultValuePipe,
   Get,
-  Param,
-  ParseIntPipe,
-  Post,
-  Query,
   Req,
+  Post,
+  Body,
+  Query,
+  Param,
   UseGuards,
+  Controller,
+  UseInterceptors,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
-import { JwtAuthGuard } from 'src/default/common/guards/jwt-auth.guard';
-import { DataSanitizer } from 'src/default/common/utils/sanitize.utils';
+import { SkipThrottle } from '@nestjs/throttler';
+//
 import {
-  BulkScanDto,
+  GetSessionsPairsQuery,
   InvoiceHistoryQueryDto,
+  RemovePairDto,
   ScanPairDto,
   StartSessionDto,
   SubmitSessionDto,
   ValidateInvoiceDto,
 } from './dto';
 import { InvoiceService } from './services';
+import { NoCache } from 'src/default/cache/cache.decorator';
+import { JwtAuthGuard } from 'src/default/common/guards/jwt-auth.guard';
+import { DataSanitizer } from 'src/default/common/utils/sanitize.utils';
+import { IdempotencyInterceptor } from 'src/default/common/interceptors/idempotency-check.interceptor';
+import { RolesGuard } from 'src/default/common/guards/roles.guard';
 
-@ApiTags('Invoice Scanning')
-@ApiBearerAuth()
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('invoices')
 export class InvoicesController {
   constructor(private readonly invoices: InvoiceService) {}
 
+  /**
+   * Step 1: Retailer Invoice Validation API
+   * POST /invoices/validate
+   */
+  @NoCache()
+  @SkipThrottle()
   @Post('validate')
   async validate(@Req() request: any, @Body() dto: ValidateInvoiceDto) {
-    const response = await this.invoices.validate(dto.invoiceNumber, String(request.user.id));
+    const invoiceIdOrNumber = dto.invoiceId || dto.invoiceNumber || '';
+    const response = await this.invoices.validate(invoiceIdOrNumber, String(request.user.id));
     return DataSanitizer.sanitizeData(response);
   }
 
+  /**
+   * Step 2a: Start Session API
+   * POST /invoices/session/start
+   */
+  @NoCache()
+  @UseInterceptors(IdempotencyInterceptor)
   @Post('session/start')
   async start(@Req() request: any, @Body() dto: StartSessionDto) {
-    const response = await this.invoices.start(dto.invoiceNumber, String(request.user.id));
+    const invoiceIdOrNumber = dto.invoiceId || dto.invoiceNumber || '';
+    const response = await this.invoices.start(invoiceIdOrNumber, String(request.user.id));
     return DataSanitizer.sanitizeData(response);
   }
 
+  /**
+   * Step 2b: Scan Pair API
+   * POST /invoices/session/:sessionId/scan
+   */
+  @NoCache()
+  @SkipThrottle()
   @Post('session/:sessionId/scan')
   async scan(@Req() request: any, @Param('sessionId') sessionId: string, @Body() dto: ScanPairDto) {
-    const response = await this.invoices.scan(sessionId, String(request.user.id), dto.pairUid);
+    const pairCodeOrUid = dto.pairCode || dto.pairUid || '';
+    const response = await this.invoices.scan(sessionId, String(request.user.id), pairCodeOrUid);
     return DataSanitizer.sanitizeData(response);
   }
 
-  @Post('session/:sessionId/bulk-scan')
-  async bulkScan(
-    @Req() request: any,
-    @Param('sessionId') sessionId: string,
-    @Body() dto: BulkScanDto
-  ) {
-    const response = await this.invoices.bulkScan(sessionId, String(request.user.id), dto.pairUids);
-    return DataSanitizer.sanitizeData(response);
-  }
-
+  /**
+   * Step 2c: Session Progress & Summary API
+   * GET /invoices/session/:sessionId
+   */
+  @NoCache()
   @Get('session/:sessionId')
   async progress(@Req() request: any, @Param('sessionId') sessionId: string) {
     const response = await this.invoices.progress(sessionId, String(request.user.id));
     return DataSanitizer.sanitizeData(response);
   }
 
+  /**
+   * Step 3: Remove Pair API (POST Endpoint)
+   * POST /invoices/session/:sessionId/remove-pair
+   */
+  @NoCache()
+  @SkipThrottle()
+  @Post('session/:sessionId/remove-pair')
+  async removePair(
+    @Req() request: any,
+    @Param('sessionId') sessionId: string,
+    @Body() dto: RemovePairDto
+  ) {
+    const pairCodeOrUid = dto.pairCode || dto.pairUid || '';
+    const response = await this.invoices.removePair(
+      sessionId,
+      String(request.user.id),
+      pairCodeOrUid
+    );
+    return DataSanitizer.sanitizeData(response);
+  }
+
+  /**
+   * Step 4: Session Submission & Reward Settlement API
+   * POST /invoices/session/:sessionId/submit
+   */
+  @NoCache()
+  @SkipThrottle()
   @Post('session/:sessionId/submit')
   async submit(
     @Req() request: any,
@@ -74,37 +119,70 @@ export class InvoicesController {
     return DataSanitizer.sanitizeData(response);
   }
 
+  /**
+   * Cancel Session API
+   * POST /invoices/session/:sessionId/cancel
+   */
+  @NoCache()
+  @SkipThrottle()
   @Post('session/:sessionId/cancel')
   async cancel(@Req() request: any, @Param('sessionId') sessionId: string) {
     const response = await this.invoices.cancel(sessionId, String(request.user.id));
     return DataSanitizer.sanitizeData(response);
   }
 
+  /**
+   * GET /invoices/history
+   */
+  @NoCache()
+  @SkipThrottle()
   @Get('history')
   async history(@Req() request: any, @Query() query: InvoiceHistoryQueryDto) {
     const response = await this.invoices.history(String(request.user.id), query);
     return DataSanitizer.sanitizeData(response);
   }
 
+  /**
+   * GET /invoices/history/:id
+   */
+  @NoCache()
+  @SkipThrottle()
   @Get('history/:id')
   async historyDetail(@Req() request: any, @Param('id') id: string) {
     const response = await this.invoices.historyDetail(id, String(request.user.id));
     return DataSanitizer.sanitizeData(response);
   }
 
+  /**
+   * GET /invoices/summary
+   * Returns totalInvoices, pendingInvoices, completedInvoices, and totalPoints
+   */
+  @NoCache()
+  @SkipThrottle()
+  @Get('summary')
+  async summary(@Req() request: any) {
+    const response = await this.invoices.summary(String(request.user.id));
+    return DataSanitizer.sanitizeData(response);
+  }
+
+  /**
+   * GET /invoices/session/:sessionId/pairs
+   */
+  @NoCache()
+  @SkipThrottle()
   @Get('session/:sessionId/pairs')
   async pairs(
     @Req() request: any,
     @Param('sessionId') sessionId: string,
-    @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
-    @Query('limit', new DefaultValuePipe(100), ParseIntPipe) limit: number
+    @Query() query: GetSessionsPairsQuery
   ) {
     const response = await this.invoices.pairs(
       sessionId,
       String(request.user.id),
-      page,
-      Math.min(limit, 100)
+      query.page,
+      query.limit
     );
+
     return DataSanitizer.sanitizeData(response);
   }
 }

@@ -100,4 +100,10 @@ export const USER_ERRORS = {
     message: 'User is not permanently blocked',
     statusCode: 400,
   },
+
+  PENDING_SO_VERIFICATION: {
+    code: 'USR_017',
+    message: 'Profile is pending SO verification.',
+    statusCode: 400,
+  },
 } as const;

@@ -4,3 +4,4 @@ export * from './place-order-response.dto';
 export * from './place-order.dto';
 export * from './resend-otp.dto';
 export * from './verify-order.dto';
+export * from './verify-cart-order.dto';

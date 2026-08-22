@@ -97,4 +97,12 @@ export class AppConfigService {
       this.isProduction() ? 'Rewards_API_Upi_Payout_Sku_Live' : 'Rewards_API_Upi_Payout_Sku_Dev'
     );
   }
+
+  getVoucherUrl() {
+    return this.get(this.isProduction() ? 'VOUCHER_URL_PROD' : 'VOUCHER_URL_DEV');
+  }
+
+  getStepsToRedeemUrl() {
+    return 'https://bit.ly/3pPBA28';
+  }
 }

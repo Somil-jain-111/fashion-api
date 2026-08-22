@@ -85,71 +85,72 @@ export class MailerHelper {
     }
 
     switch (templateType) {
-      case EmailTemplateType.OTP_VERIFICATION: {
-        const otpData = data as OtpVerificationTemplateData;
-
-        if (!otpData.email || !otpData.email.trim()) {
-          throw new BusinessException(ERROR_CODES.VALIDATION.REQUIRED_FIELD_MISSING, {
-            field: 'email',
-          });
-        }
-        if (!otpData.otp || !otpData.otp.trim()) {
-          throw new BusinessException(ERROR_CODES.VALIDATION.REQUIRED_FIELD_MISSING, {
-            field: 'otp',
-          });
-        }
+      case EmailTemplateType.OTP_VERIFICATION:
+        MailerHelper.validateOtpVerificationData(data as OtpVerificationTemplateData);
         break;
-      }
 
-      case EmailTemplateType.OTP_RATE_LIMIT_TRIGGERED: {
-        const rateLimitData = data as OtpRateLimitTemplateData;
-
-        if (!rateLimitData.user) {
-          throw new BusinessException(ERROR_CODES.VALIDATION.REQUIRED_FIELD_MISSING, {
-            field: 'user',
-          });
-        }
-
-        if (
-          rateLimitData.user.id === null ||
-          rateLimitData.user.id === undefined ||
-          String(rateLimitData.user.id).trim() === ''
-        ) {
-          throw new BusinessException(ERROR_CODES.VALIDATION.REQUIRED_FIELD_MISSING, {
-            field: 'user.id',
-          });
-        }
-        if (!rateLimitData.user.mobile || !String(rateLimitData.user.mobile).trim()) {
-          throw new BusinessException(ERROR_CODES.VALIDATION.REQUIRED_FIELD_MISSING, {
-            field: 'user.mobile',
-          });
-        }
-        if (
-          rateLimitData.user.attempts === null ||
-          rateLimitData.user.attempts === undefined ||
-          typeof rateLimitData.user.attempts !== 'number'
-        ) {
-          throw new BusinessException(ERROR_CODES.VALIDATION.REQUIRED_FIELD_MISSING, {
-            field: 'user.attempts',
-          });
-        }
-        if (
-          rateLimitData.user.timeframeSeconds === null ||
-          rateLimitData.user.timeframeSeconds === undefined ||
-          typeof rateLimitData.user.timeframeSeconds !== 'number'
-        ) {
-          throw new BusinessException(ERROR_CODES.VALIDATION.REQUIRED_FIELD_MISSING, {
-            field: 'user.timeframeSeconds',
-          });
-        }
+      case EmailTemplateType.OTP_RATE_LIMIT_TRIGGERED:
+        MailerHelper.validateOtpRateLimitData(data as OtpRateLimitTemplateData);
         break;
-      }
 
-      default: {
+      default:
         throw new BusinessException(ERROR_CODES.COMMON.BAD_REQUEST_RESON, {
           reason: `Unsupported email template type: ${templateType}`,
         });
-      }
+    }
+  }
+
+  private static validateOtpVerificationData(otpData: OtpVerificationTemplateData): void {
+    if (!otpData.email || !otpData.email.trim()) {
+      throw new BusinessException(ERROR_CODES.VALIDATION.REQUIRED_FIELD_MISSING, {
+        field: 'email',
+      });
+    }
+    if (!otpData.otp || !otpData.otp.trim()) {
+      throw new BusinessException(ERROR_CODES.VALIDATION.REQUIRED_FIELD_MISSING, {
+        field: 'otp',
+      });
+    }
+  }
+
+  private static validateOtpRateLimitData(rateLimitData: OtpRateLimitTemplateData): void {
+    if (!rateLimitData.user) {
+      throw new BusinessException(ERROR_CODES.VALIDATION.REQUIRED_FIELD_MISSING, {
+        field: 'user',
+      });
+    }
+
+    if (
+      rateLimitData.user.id === null ||
+      rateLimitData.user.id === undefined ||
+      String(rateLimitData.user.id).trim() === ''
+    ) {
+      throw new BusinessException(ERROR_CODES.VALIDATION.REQUIRED_FIELD_MISSING, {
+        field: 'user.id',
+      });
+    }
+    if (!rateLimitData.user.mobile || !String(rateLimitData.user.mobile).trim()) {
+      throw new BusinessException(ERROR_CODES.VALIDATION.REQUIRED_FIELD_MISSING, {
+        field: 'user.mobile',
+      });
+    }
+    if (
+      rateLimitData.user.attempts === null ||
+      rateLimitData.user.attempts === undefined ||
+      typeof rateLimitData.user.attempts !== 'number'
+    ) {
+      throw new BusinessException(ERROR_CODES.VALIDATION.REQUIRED_FIELD_MISSING, {
+        field: 'user.attempts',
+      });
+    }
+    if (
+      rateLimitData.user.timeframeSeconds === null ||
+      rateLimitData.user.timeframeSeconds === undefined ||
+      typeof rateLimitData.user.timeframeSeconds !== 'number'
+    ) {
+      throw new BusinessException(ERROR_CODES.VALIDATION.REQUIRED_FIELD_MISSING, {
+        field: 'user.timeframeSeconds',
+      });
     }
   }
 

@@ -41,6 +41,15 @@ export class CommonUtils {
     return `${prefix}_${year}_${month}_${rand5}`;
   }
 
+  static generateSubmissionId(prefix: string = 'SUB'): string {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const rand5 = Math.floor(10000 + Math.random() * 90000);
+    return `${prefix}_${year}${month}${day}_${rand5}`;
+  }
+
   static async hashPassword(password: string): Promise<string> {
     const salt = await bcrypt.genSalt(CommonUtils.SALT_ROUNDS);
     return bcrypt.hash(password, salt);
@@ -107,8 +116,9 @@ export class CommonUtils {
     const regex = /^[6-9]\d{9}$/;
     return regex.test(mobile);
   }
+
   static HmacKey(body: any): string {
-    const key = 'almondRewards';
+    const key = this.appConfigService.getKycSecretKey();
     const requestBody = JSON.stringify(body);
 
     const hmac = crypto.createHmac('sha256', key);
@@ -183,10 +193,8 @@ export class CommonUtils {
       transaction_id: data.transaction_id,
       sku: data.sku,
     };
-    const key =
-      process.env.NODE_ENV === 'production'
-        ? process.env.KYC_SECRET_KEY
-        : process.env.KYC_SECRET_KEY;
+
+    const key = this.appConfigService.getKycSecretKey();
 
     if (data?.pancard !== undefined) {
       body.pan_card = data.pancard;
@@ -220,10 +228,7 @@ export class CommonUtils {
     };
 
     // ✅ Secret key (from .env)
-    const key =
-      process.env.NODE_ENV === 'production'
-        ? process.env.KYC_SECRET_KEY
-        : process.env.KYC_SECRET_KEY;
+    const key = this.appConfigService.getKycSecretKey();
 
     if (!key) {
       throw new Error('Missing HMAC secret key in environment variables');

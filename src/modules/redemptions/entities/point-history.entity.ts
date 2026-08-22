@@ -1,6 +1,6 @@
 import { Entity, Column, ManyToOne, JoinColumn, Index, OneToOne } from 'typeorm';
 //
-import { Order, User } from '../../auth/entities';
+import { InvoiceEntity, Order, User } from '../../auth/entities';
 import { Payout } from '../../payment/entities/payout.entity';
 import { RedemptionType } from '../enum/redemption-type.enum';
 import { PointStatusEnum } from '../enum/point-history-status.enum.';
@@ -57,6 +57,12 @@ export class PointHistory extends BaseEntity {
   @Column({ type: 'varchar', length: 100, nullable: true, unique: true })
   transaction_id?: string | null;
 
+  @Column({ name: 'expires_at', type: 'timestamp', nullable: true })
+  expires_at?: Date;
+
+  @Column({ name: 'remaining_points', type: 'int', default: 0 })
+  remaining_points: number;
+
   @ManyToOne(() => User, (user) => user.pointHistories, {
     nullable: false,
   })
@@ -72,4 +78,8 @@ export class PointHistory extends BaseEntity {
   @OneToOne(() => Payout, (payout) => payout.pointHistory, { nullable: true })
   @JoinColumn({ name: 'payout_id' })
   payout?: Payout | null;
+
+  @ManyToOne(() => InvoiceEntity, (invoice) => invoice.pointHistories, { nullable: true })
+  @JoinColumn({ name: 'invoice_id' })
+  invoice?: InvoiceEntity | null;
 }

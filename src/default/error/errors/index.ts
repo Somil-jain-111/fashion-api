@@ -23,3 +23,6 @@ export * from './otp.errors';
 export * from './approval.errors';
 export * from './onboarding.error';
 export * from './redemptions.errors';
+export * from './distributor-return.errors';
+export * from './distributor-transfer.errors';
+export * from './support.errors';

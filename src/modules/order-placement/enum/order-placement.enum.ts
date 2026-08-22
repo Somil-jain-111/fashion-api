@@ -5,5 +5,7 @@ export enum OrderPlacementSource {
 
 export enum OrderPlacementStatus {
   PLACED = 'PLACED',
+  APPROVED = 'APPROVED',
+  REJECTED = 'REJECTED',
   CANCELLED = 'CANCELLED',
 }

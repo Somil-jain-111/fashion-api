@@ -10,13 +10,13 @@ import { KycVerificationRepository } from 'src/modules/kyc/repository';
 import { UserAuthValidator } from 'src/modules/auth/validators/user-auth.validator';
 import { RewardsService } from '../rewards/rewards.service';
 import { RedemptionsService } from '../redemptions/redemptions.service';
-import { VerifyOrderDto } from '../redemptions/dto';
+import { VerifyCartOrderDto } from '../redemptions/dto';
 import {
   RedemptionCartRepository,
   RedemptionCartItemRepository,
 } from './repository/redemption-cart.repository';
 import { RedemptionCart } from 'src/modules/auth/entities';
-import { ManageCartItemDto, CartItemResponseDto, CartResponseDto, PlaceCartOrderDto } from './dto';
+import { ManageCartItemDto, CartItemResponseDto, CartResponseDto } from './dto';
 
 @Injectable()
 export class RedemptionCartService {
@@ -341,8 +341,8 @@ export class RedemptionCartService {
    * @param dto
    * @returns
    */
-  async placeCartOrder(userId: number, dto: PlaceCartOrderDto) {
-    return this.redemptionsService.placeCartOrder(userId, dto);
+  async placeCartOrder(userId: number) {
+    return this.redemptionsService.placeCartOrder(userId);
   }
 
   /**
@@ -352,7 +352,7 @@ export class RedemptionCartService {
    * @param dto
    * @returns
    */
-  async verifyCartOrder(userId: number, dto: VerifyOrderDto) {
+  async verifyCartOrder(userId: number, dto: VerifyCartOrderDto) {
     return this.redemptionsService.verifyCartOrder(userId, dto);
   }
 }

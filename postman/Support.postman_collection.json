@@ -1,0 +1,173 @@
+{
+  "info": {
+    "_postman_id": "a1f3c9e2-6b4d-4a1c-9e7f-2d8b5c1a3f60",
+    "name": "Campus Shoes - Support",
+    "description": "Retailer support-ticket system: raise a ticket with optional image attachments (uploaded separately via /s3/upload/base64 or /s3/upload/file, then referenced by URL here), track status, and see resolution remarks. Admin (SUPERADMIN) can list every ticket, view detail, and update status + add remarks. Every endpoint is @NoCache().",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{accessToken}}", "type": "string" }]
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:4050/api/v1", "type": "string" },
+    { "key": "accessToken", "value": "", "type": "string", "description": "JWT for the retailer requests" },
+    { "key": "adminAccessToken", "value": "", "type": "string", "description": "JWT for a SUPERADMIN user, used on the Admin folder" },
+    { "key": "ticketId", "value": "1", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "Retailer",
+      "description": "RETAILER role only.",
+      "item": [
+        {
+          "name": "Get issue types (dropdown)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/support/issue-types",
+              "host": ["{{baseUrl}}"],
+              "path": ["support", "issue-types"]
+            },
+            "description": "DB-backed options for the 'Issue Type' dropdown on the raise-ticket screen (support_issue_types table, seeded to match the SupportIssueType enum). Response: [{ code, label }, ...], active rows only, ordered by display_order. Call this before 'Create ticket' to populate the Select Type field."
+          },
+          "response": []
+        },
+        {
+          "name": "Create ticket",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"issueType\": \"QR_ISSUE\",\n  \"description\": \"I scanned yesterday but the Q STARS haven't been credited to my account yet. Usually it's instant. Could you please look into this and verify the scan?\",\n  \"images\": [\n    \"https://cdn.example.com/support/img1.jpg\",\n    \"https://cdn.example.com/support/img2.jpg\"\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/support",
+              "host": ["{{baseUrl}}"],
+              "path": ["support"]
+            },
+            "description": "issueType: QR_ISSUE | REWARD_ISSUE | PAYMENT_ISSUE | KYC_ISSUE | ORDER_ISSUE | OTHER. images is optional, up to 5 URLs — upload each file first via POST /s3/upload/base64 (or /s3/upload/file) and pass the returned URL here; this endpoint does not accept raw file uploads."
+          },
+          "response": []
+        },
+        {
+          "name": "List my tickets",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/support?status=&issueType=&fromDate=&toDate=&page=1&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["support"],
+              "query": [
+                { "key": "status", "value": "", "description": "OPEN | IN_PROGRESS | RESOLVED" },
+                { "key": "issueType", "value": "", "description": "QR_ISSUE | REWARD_ISSUE | PAYMENT_ISSUE | KYC_ISSUE | ORDER_ISSUE | OTHER" },
+                { "key": "fromDate", "value": "", "description": "ISO date" },
+                { "key": "toDate", "value": "", "description": "ISO date" },
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" }
+              ]
+            },
+            "description": "Response: { items, pagination: { totalItems, totalPages, currentPage, pageSize } }. Matches the 'My Tickets' list/tabs screen."
+          },
+          "response": []
+        },
+        {
+          "name": "My tickets summary",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/support/summary",
+              "host": ["{{baseUrl}}"],
+              "path": ["support", "summary"]
+            },
+            "description": "Response: { open, inProgress, resolved, total }. Matches the 'In Progress 8 / Resolved 98' counters on the Support home screen."
+          },
+          "response": []
+        },
+        {
+          "name": "Ticket detail",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/support/{{ticketId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["support", "{{ticketId}}"]
+            },
+            "description": "Scoped to the caller's own tickets — SUP_001 if it belongs to someone else or doesn't exist. Includes attachments and, once touched by an admin, updatedByAdmin (name shown next to 'Last Updated') and resolution_remarks."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Admin",
+      "description": "SUPERADMIN role only. Auth override: uses {{adminAccessToken}} instead of the collection-level {{accessToken}}.",
+      "auth": {
+        "type": "bearer",
+        "bearer": [{ "key": "token", "value": "{{adminAccessToken}}", "type": "string" }]
+      },
+      "item": [
+        {
+          "name": "List all tickets",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/support?userId=&status=&issueType=&fromDate=&toDate=&page=1&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "support"],
+              "query": [
+                { "key": "userId", "value": "", "description": "Filter to one retailer" },
+                { "key": "status", "value": "", "description": "OPEN | IN_PROGRESS | RESOLVED" },
+                { "key": "issueType", "value": "", "description": "QR_ISSUE | REWARD_ISSUE | PAYMENT_ISSUE | KYC_ISSUE | ORDER_ISSUE | OTHER" },
+                { "key": "fromDate", "value": "", "description": "ISO date" },
+                { "key": "toDate", "value": "", "description": "ISO date" },
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "20" }
+              ]
+            },
+            "description": "Every retailer's tickets, unscoped. Response: { items, pagination: { totalItems, totalPages, currentPage, pageSize } }."
+          },
+          "response": []
+        },
+        {
+          "name": "Ticket detail (any)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/admin/support/{{ticketId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "support", "{{ticketId}}"]
+            },
+            "description": "Unscoped — any ticket by id. SUP_001 if not found."
+          },
+          "response": []
+        },
+        {
+          "name": "Update status + remarks",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"RESOLVED\",\n  \"remarks\": \"Your QR is Fixed\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/support/{{ticketId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "support", "{{ticketId}}"]
+            },
+            "description": "status: OPEN | IN_PROGRESS | RESOLVED (required). remarks optional except when status is RESOLVED, where it's required — SUP_002 if omitted. Records the acting admin as updatedByAdmin. Errors: SUP_001 ticket not found, SUP_002 resolution remarks required."
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}

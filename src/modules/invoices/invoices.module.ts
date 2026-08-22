@@ -12,18 +12,40 @@ import {
   InvoiceSessionRepository,
   PairHistoryRepository,
   UserRewardRepository,
+  RetailerScanAgeRepository,
+  MasterCatalogueRepository,
+  InvoiceExceptionRepository,
+  ScanAuditRepository,
+  InvoiceItemRepository,
 } from './repository';
 import {
   AuditService,
   InvoiceAuditProcessor,
   InvoiceService,
-  InvoiceValidationService,
   PairValidationService,
   PointCalculationService,
   RedisLockService,
   RewardService,
-  ScanSessionService,
 } from './services';
+import { InvoiceValidationService } from './services/invoice-validation.service';
+import { ScanSessionService } from './services/scan-session.service';
+import { PairScanningService } from './services/pair-scanning.service';
+import { RewardSettlementService } from './services/reward-settlement.service';
+import { InvoiceAuditService } from './services/invoice-audit.service';
+import { RetailerScanAgeService } from './services/retailer-scan-age.service';
+import { RateValidationService } from './services/rate-validation.service';
+import { SkuQuantityValidationService } from './services/sku-quantity-validation.service';
+import { InvoiceExceptionService } from './services/invoice-exception.service';
+import { SystemConfigRepository } from 'src/default/common/repositories/system-config.repository';
+import { PointsExpiryConfigService } from '../redemptions/services/points-expiry.service';
+import { InvoiceExceptionsController } from './invoice-exceptions.controller';
+import { RetailerScanAgeController } from './retailer-scan-age.controller';
+import { InvoiceIngestionController } from './invoice-ingestion.controller';
+import { InvoiceIngestionRepository } from './repository/invoice-ingestion.repository';
+import { InvoiceIngestionService } from './services/invoice-ingestion.service';
+import { UserModule } from '../user/user.module';
+import { UserMappingRepository } from '../auth/repository/user-mapping.repository';
+import { IdempotencyModule } from 'src/default/idempotency/idempotency.module';
 
 @Module({
   imports: [
@@ -42,8 +64,15 @@ import {
       }),
     }),
     BullModule.registerQueue({ name: 'invoice-audit' }),
+    UserModule,
+    IdempotencyModule,
   ],
-  controllers: [InvoicesController],
+  controllers: [
+    InvoicesController,
+    InvoiceExceptionsController,
+    RetailerScanAgeController,
+    InvoiceIngestionController,
+  ],
   providers: [
     InvoiceRepository,
     InvoiceSessionRepository,
@@ -52,16 +81,43 @@ import {
     InvoiceHistoryRepository,
     UserRewardRepository,
     InvoicePointHistoryRepository,
+    UserMappingRepository,
     RedisLockService,
     InvoiceValidationService,
+    ScanSessionService,
+    PairScanningService,
+    RewardSettlementService,
     PairValidationService,
     PointCalculationService,
     RewardService,
     AuditService,
     InvoiceAuditProcessor,
-    ScanSessionService,
     InvoiceService,
+
+    RetailerScanAgeRepository,
+    MasterCatalogueRepository,
+    InvoiceExceptionRepository,
+    ScanAuditRepository,
+    InvoiceItemRepository,
+
+    InvoiceAuditService,
+    RetailerScanAgeService,
+    RateValidationService,
+    SkuQuantityValidationService,
+    InvoiceExceptionService,
+    SystemConfigRepository,
+    PointsExpiryConfigService,
+
+    InvoiceIngestionRepository,
+    InvoiceIngestionService,
   ],
-  exports: [InvoiceService],
+  exports: [
+    RedisLockService,
+    InvoiceService,
+    InvoiceValidationService,
+    ScanSessionService,
+    PairScanningService,
+    RewardSettlementService,
+  ],
 })
 export class InvoicesModule {}
