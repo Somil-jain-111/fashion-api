@@ -117,7 +117,12 @@ export class PointHistoryRepository extends BaseRepository<PointHistory> {
   async getRemainingPointsForUser(
     userId: string | number,
     queryRunner?: QueryRunner
-  ): Promise<{ userRemainingPoints: number; expiredPoints: number; redeemedPoints: number }> {
+  ): Promise<{
+    userRemainingPoints: number;
+    expiredPoints: number;
+    redeemedPoints: number;
+    lifetimeEarnedPoints: number;
+  }> {
     const repo = this.getRepository(queryRunner);
 
     const latest = await repo
@@ -142,10 +147,21 @@ export class PointHistoryRepository extends BaseRepository<PointHistory> {
       .andWhere('redeemedPoints.status = :status', { status: PointStatusEnum.redeem })
       .getRawOne();
 
+    const earnedPoints = await repo
+      .createQueryBuilder('earnedPoints')
+      .select('SUM(earnedPoints.points)', 'earnedPoints')
+      .where('earnedPoints.user_id = :userId', { userId: String(userId) })
+      .andWhere('(earnedPoints.type = :earnType OR earnedPoints.status = :earnStatus)', {
+        earnType: RedemptionType.EARN,
+        earnStatus: PointStatusEnum.added,
+      })
+      .getRawOne();
+
     return {
       userRemainingPoints: latest?.user_remaining_points ?? 0,
       expiredPoints: Number(expiredPoints?.expiredPoints ?? 0),
       redeemedPoints: Number(redeemedPoints?.redeemedPoints ?? 0),
+      lifetimeEarnedPoints: Number(earnedPoints?.earnedPoints ?? 0),
     };
   }
 }

@@ -305,6 +305,7 @@ export class UserService {
     userRemainingPoints: number;
     expiredPoints: number;
     redeemedPoints: number;
+    lifetimeEarnedPoints: number;
   }> {
     const result = await this.pointHistoryRepository.getRemainingPointsForUser(userId);
 
@@ -312,6 +313,7 @@ export class UserService {
       userRemainingPoints: result.userRemainingPoints,
       expiredPoints: result.expiredPoints,
       redeemedPoints: result.redeemedPoints,
+      lifetimeEarnedPoints: result.lifetimeEarnedPoints,
     };
   }
 
