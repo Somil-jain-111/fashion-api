@@ -26,3 +26,4 @@ export * from './redemptions.errors';
 export * from './distributor-return.errors';
 export * from './distributor-transfer.errors';
 export * from './support.errors';
+export * from './customer-return.errors';

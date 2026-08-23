@@ -36,6 +36,7 @@ import { DISTRIBUTOR_TRANSFER_ERRORS } from './errors/distributor-transfer.error
 import { SUPPORT_ERRORS } from './errors/support.errors';
 import { SUPER_ADMIN_ERRORS } from './errors/super-admin.errors';
 import { VIDEO_ERRORS } from './errors/video.errors';
+import { CUSTOMER_RETURN_ERRORS } from './errors/customer-return.errors';
 
 export type ErrorCodeValue = {
   code: string;
@@ -80,6 +81,7 @@ export const ERROR_CODES = {
   SUPPORT: SUPPORT_ERRORS,
   SUPER_ADMIN: SUPER_ADMIN_ERRORS,
   VIDEO: VIDEO_ERRORS,
+  CUSTOMER_RETURN: CUSTOMER_RETURN_ERRORS,
 } as const;
 
 export type ErrorCodeGroups = typeof ERROR_CODES;
