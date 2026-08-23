@@ -33,6 +33,8 @@ export class CustomerReturnService {
       createdAt: item?.createdAt,
       updatedAt: item?.updatedAt,
       invoiceNumber: item?.invoice?.invoice_no,
+      itemCode: item?.invoiceItem?.item_code || null,
+      itemName: item?.invoiceItem?.item_name || null,
     };
   }
 

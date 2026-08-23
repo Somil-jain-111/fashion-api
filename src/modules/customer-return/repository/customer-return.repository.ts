@@ -40,6 +40,7 @@ export class CustomerReturnRepository extends BaseRepository<CustomerReturnEntit
     const qb = this.getRepository(queryRunner)
       .createQueryBuilder('cr')
       .leftJoinAndSelect('cr.invoice', 'invoice')
+      .leftJoinAndSelect('cr.invoiceItem', 'invoiceItem')
       .leftJoinAndSelect('cr.pair', 'pair')
       .where('cr.retailer_id = :retailerId', { retailerId: String(retailerId) })
       .orderBy('cr.createdAt', 'DESC')
@@ -47,9 +48,12 @@ export class CustomerReturnRepository extends BaseRepository<CustomerReturnEntit
       .take(options.limit);
 
     if (options.search) {
-      qb.andWhere('(cr.pair_uid LIKE :search OR invoice.invoice_no LIKE :search)', {
-        search: `%${options.search.trim()}%`,
-      });
+      qb.andWhere(
+        '(cr.pair_uid LIKE :search OR invoice.invoice_no LIKE :search OR invoiceItem.item_code LIKE :search)',
+        {
+          search: `%${options.search.trim()}%`,
+        }
+      );
     }
 
     if (options.startDate) {
@@ -71,6 +75,7 @@ export class CustomerReturnRepository extends BaseRepository<CustomerReturnEntit
     return await this.getRepository(queryRunner)
       .createQueryBuilder('cr')
       .leftJoinAndSelect('cr.invoice', 'invoice')
+      .leftJoinAndSelect('cr.invoiceItem', 'invoiceItem')
       .leftJoinAndSelect('cr.pair', 'pair')
       .where('cr.id = :id', { id: Number(id) })
       .andWhere('cr.retailer_id = :retailerId', { retailerId: String(retailerId) })
