@@ -278,7 +278,9 @@ export class DistributorReturnRepository extends BaseRepository<DistributorRetur
   private retailerHistoryFilterQuery(
     qb: SelectQueryBuilder<DistributorReturnEntity>,
     retailerId: string,
-    search?: string
+    search?: string,
+    startDate?: string,
+    endDate?: string
   ) {
     qb.where('return.retailer_id = :retailerId', { retailerId });
     if (search) {
@@ -287,6 +289,15 @@ export class DistributorReturnRepository extends BaseRepository<DistributorRetur
         { search: `%${search}%` }
       );
     }
+    if (startDate) {
+      qb.andWhere('return.created_at >= :startDate', { startDate });
+    }
+    if (endDate) {
+      // Inclusive of the whole end day — endDate arrives as a bare date (YYYY-MM-DD).
+      qb.andWhere('return.created_at < :endDateExclusive', {
+        endDateExclusive: new Date(new Date(endDate).getTime() + 24 * 60 * 60 * 1000),
+      });
+    }
     return qb;
   }
 
@@ -294,9 +305,17 @@ export class DistributorReturnRepository extends BaseRepository<DistributorRetur
     retailerId: string,
     page: number,
     limit: number,
-    search?: string
+    search?: string,
+    startDate?: string,
+    endDate?: string
   ): Promise<{ items: DistributorReturnEntity[]; total: number; totalArticles: number }> {
-    const idQb = this.retailerHistoryFilterQuery(this.repository.createQueryBuilder('return'), retailerId, search)
+    const idQb = this.retailerHistoryFilterQuery(
+      this.repository.createQueryBuilder('return'),
+      retailerId,
+      search,
+      startDate,
+      endDate
+    )
       .orderBy('return.id', 'DESC')
       .skip((page - 1) * limit)
       .take(limit);
@@ -306,7 +325,9 @@ export class DistributorReturnRepository extends BaseRepository<DistributorRetur
     const totalsRow = await this.retailerHistoryFilterQuery(
       this.repository.createQueryBuilder('return').select('COALESCE(SUM(return.total_pairs), 0)', 'totalArticles'),
       retailerId,
-      search
+      search,
+      startDate,
+      endDate
     ).getRawOne();
     const totalArticles = Number(totalsRow?.totalArticles ?? 0);
 

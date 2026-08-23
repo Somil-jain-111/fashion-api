@@ -1,5 +1,5 @@
 import { Type } from 'class-transformer';
-import { IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
+import { IsDateString, IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
 
 export class ReturnHistoryQueryDto {
   @Type(() => Number)
@@ -21,4 +21,15 @@ export class ReturnHistoryQueryDto {
   @IsOptional()
   @IsString()
   search?: string;
+
+  /**
+   * Inclusive date-range filter on when the return was processed (return.created_at).
+   */
+  @IsOptional()
+  @IsDateString()
+  startDate?: string;
+
+  @IsOptional()
+  @IsDateString()
+  endDate?: string;
 }

@@ -410,12 +410,21 @@ export class DistributorReturnService {
   /**
    * Retailer's own return history across ALL distributors — the "Return History" screen.
    */
-  async retailerHistory(retailerId: string, page: number, limit: number, search?: string) {
+  async retailerHistory(
+    retailerId: string,
+    page: number,
+    limit: number,
+    search?: string,
+    startDate?: string,
+    endDate?: string
+  ) {
     const { items, total, totalArticles } = await this.repository.findReturnsForRetailer(
       retailerId,
       page,
       limit,
-      search
+      search,
+      startDate,
+      endDate
     );
     return {
       items: items.map((item) => this.toHistoryResponse(item)),

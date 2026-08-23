@@ -154,10 +154,12 @@
               "query": [
                 { "key": "page", "value": "1" },
                 { "key": "limit", "value": "20" },
-                { "key": "search", "value": "", "disabled": true, "description": "Matches the return number or the source invoice number" }
+                { "key": "search", "value": "", "disabled": true, "description": "Matches the return number or the source invoice number" },
+                { "key": "startDate", "value": "", "disabled": true, "description": "Inclusive, YYYY-MM-DD — filters on when the return was processed" },
+                { "key": "endDate", "value": "", "disabled": true, "description": "Inclusive, YYYY-MM-DD — filters on when the return was processed" }
               ]
             },
-            "description": "This retailer's own past returns across all distributors, newest first. Response: { items, totalArticles, pagination }. Each item carries `estimatedValue`, `invoice` (incl. `invoiceDate`), `distributor: {id, name, mobile}`, and the returned `pairs`."
+            "description": "This retailer's own past returns across all distributors, newest first. Response: { items, totalArticles, pagination }. Each item carries `estimatedValue`, `invoice` (incl. `invoiceDate`), `distributor: {id, name, mobile}`, and the returned `pairs`. `startDate`/`endDate` filter on return.created_at, both inclusive."
           },
           "response": []
         },

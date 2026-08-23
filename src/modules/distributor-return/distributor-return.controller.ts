@@ -83,7 +83,9 @@ export class DistributorReturnController {
       String(request.user.id),
       query.page,
       query.limit,
-      query.search
+      query.search,
+      query.startDate,
+      query.endDate
     );
     return DataSanitizer.sanitizeData(response);
   }
