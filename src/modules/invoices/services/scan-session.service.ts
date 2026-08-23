@@ -5,7 +5,7 @@ import { BusinessException } from 'src/default/error/business.exception';
 import { ERROR_CODES } from 'src/default/error/error.code';
 import { InvoicePairRepository, InvoiceRepository, InvoiceSessionRepository } from '../repository';
 import { InvoiceScanSessionEntity } from '../entities/invoice-scan-session.entity';
-import { InvoiceScanStatus } from '../enum/invoice.enum';
+import { InvoiceScanStatus, InvoiceStatus } from '../enum/invoice.enum';
 import { ScanSessionStatus } from '../enum/invoice-scan-session.enum';
 import { InvoicePairScanStatus } from '../enum/invoice-pair-scan-status.enum';
 import { ScanProgressResponseDto, ScannedPairItemDto } from '../dto';
@@ -90,6 +90,7 @@ export class ScanSessionService {
     }
 
     const invoice = await this.validationService.findInvoice(invoiceIdOrNumber);
+
     if (!invoice) {
       throw new BusinessException(ERROR_CODES.INVOICE_SCAN.INVOICE_NOT_FOUND);
     }
@@ -97,6 +98,16 @@ export class ScanSessionService {
     // Verify invoice belongs to req.user.id
     if (!invoice.user || String(invoice.user.id) !== String(userId)) {
       throw new BusinessException(ERROR_CODES.INVOICE_SCAN.INVOICE_NOT_FOUND);
+    }
+
+    // If invoice is submitted / completed / fully scanned, no new session can be generated
+    if (
+      invoice.status === InvoiceStatus.COMPLETED ||
+      invoice.status === InvoiceStatus.SCANNED ||
+      invoice.scan_status === InvoiceScanStatus.FULLY_SCANNED ||
+      invoice.scan_status === InvoiceScanStatus.SCANNED
+    ) {
+      throw new BusinessException(ERROR_CODES.INVOICE_SCAN.INVOICE_ALREADY_SCANNED);
     }
 
     return this.lock.withLock(`lock:invoice:${invoice.id}:${userId}`, async () => {
@@ -164,16 +175,26 @@ export class ScanSessionService {
       throw new BusinessException(ERROR_CODES.INVOICE_SCAN.SESSION_NOT_ACTIVE);
     }
 
-    if (session.invoice.scan_status != InvoiceScanStatus.IN_PROGRESS) {
+    const invoice = session.invoice?.id
+      ? await this.invoiceRepository.findOne({ id: Number(session.invoice.id) })
+      : null;
+
+    if (
+      invoice &&
+      (invoice.status === InvoiceStatus.COMPLETED ||
+        invoice.status === InvoiceStatus.SCANNED ||
+        invoice.scan_status === InvoiceScanStatus.FULLY_SCANNED ||
+        invoice.scan_status === InvoiceScanStatus.SCANNED)
+    ) {
+      throw new BusinessException(ERROR_CODES.INVOICE_SCAN.INVOICE_ALREADY_SCANNED);
+    }
+
+    if (session.invoice?.scan_status != InvoiceScanStatus.IN_PROGRESS) {
       throw new BusinessException(ERROR_CODES.INVOICE_SCAN.SESSION_NOT_ACTIVE);
     }
 
     session.status = ScanSessionStatus.CANCELLED;
     await this.sessionRepository.saveSession(session);
-
-    const invoice = session.invoice?.id
-      ? await this.invoiceRepository.findOne({ id: Number(session.invoice.id) })
-      : null;
 
     if (invoice && invoice.scan_status === InvoiceScanStatus.IN_PROGRESS) {
       invoice.scan_status =
