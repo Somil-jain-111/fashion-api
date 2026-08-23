@@ -191,7 +191,11 @@ export class InvoiceService {
   }
 
   async history(userId: string, query: InvoiceHistoryQueryDto) {
-    const { items, total } = await this.histories.findHistory(userId, query);
+    const { items, total } = await this.invoiceRepository.findHistory(userId, {
+      ...query,
+      page: query.page || 1,
+      limit: query.limit || 10,
+    });
 
     return {
       items,
@@ -200,21 +204,102 @@ export class InvoiceService {
   }
 
   async historyDetail(id: string, userId: string) {
-    const history = await this.histories.findOwnedById(id, userId);
+    const invoice = await this.invoiceRepository.findOwnedById(id, userId);
 
-    if (!history) {
+    if (!invoice) {
       throw new BusinessException(ERROR_CODES.COMMON.NOT_FOUND);
     }
 
-    const pairs = history.invoice?.id
-      ? await this.pairHistories.findByInvoice(history.invoice.id, userId)
-      : [];
+    const pairs = await this.pairHistories.findByInvoice(invoice.id, userId);
+
+    const itemsMap = new Map<
+      string,
+      {
+        itemCode: string;
+        itemName: string;
+        rate: number;
+        quantity: number;
+        scannedQuantity: number;
+        amount: number;
+        pairs: typeof pairs;
+      }
+    >();
+
+    if (invoice.items?.length) {
+      for (const item of invoice.items) {
+        const rate = Number(item.rate || 0);
+
+        itemsMap.set(item.item_code, {
+          itemCode: item.item_code,
+          itemName: item.item_name,
+          rate,
+          quantity: Number(item?.quantity),
+          scannedQuantity: 0,
+          amount: 0,
+          pairs: [],
+        });
+      }
+    }
+
+    for (const pair of pairs) {
+      const code = pair.itemCode;
+
+      if (code && itemsMap.has(code)) {
+        const group = itemsMap.get(code)!;
+
+        group.pairs.push(pair);
+        group.scannedQuantity += 1;
+        group.amount = Number((group.quantity * group.rate).toFixed(2));
+      } else if (code) {
+        const existing = itemsMap.get(code);
+
+        if (existing) {
+          existing.pairs.push(pair);
+          existing.scannedQuantity += 1;
+          existing.amount = Number((existing.quantity * existing.rate).toFixed(2));
+        } else {
+          itemsMap.set(code, {
+            itemCode: code,
+            itemName: pair.itemName || code,
+            rate: 0,
+            quantity: 1,
+            scannedQuantity: 1,
+            amount: 0,
+            pairs: [pair],
+          });
+        }
+      } else {
+        const unknownCode = 'UNKNOWN';
+
+        const existing = itemsMap.get(unknownCode);
+
+        if (existing) {
+          existing.pairs.push(pair);
+          existing.scannedQuantity += 1;
+        } else {
+          itemsMap.set(unknownCode, {
+            itemCode: unknownCode,
+            itemName: 'Unknown Item',
+            rate: 0,
+            quantity: 1,
+            scannedQuantity: 1,
+            amount: 0,
+            pairs: [pair],
+          });
+        }
+      }
+    }
+
+    const groupedItems = Array.from(itemsMap.values()).filter((item) => item.scannedQuantity > 0);
+
+    delete invoice.items;
 
     return {
-      invoice: history,
+      invoice,
+      groupedItems,
       scannedPairs: pairs,
-      points: history.pointsAwarded,
-      status: history.status,
+      points: invoice.earned_points,
+      status: invoice.status,
     };
   }
 

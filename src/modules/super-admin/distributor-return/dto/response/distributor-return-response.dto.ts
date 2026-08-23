@@ -12,20 +12,6 @@ class DistributorReturnInvoiceRefDto {
   partyName: string;
 }
 
-class DistributorReturnPairRefDto {
-  @ApiProperty()
-  id: string;
-
-  @ApiProperty()
-  pairUid: string;
-
-  @ApiProperty()
-  pairQr: string;
-
-  @ApiProperty()
-  status: string;
-}
-
 class DistributorReturnUserRefDto {
   @ApiProperty()
   id: string;
@@ -37,15 +23,26 @@ class DistributorReturnUserRefDto {
   mobile: string | null;
 }
 
-export class SuperAdminDistributorReturnResponseDto {
-  @ApiProperty()
-  id: string;
-
+class DistributorReturnPairDto {
   @ApiProperty()
   pairUid: string;
 
   @ApiProperty()
   pointsRefunded: number;
+}
+
+export class SuperAdminDistributorReturnResponseDto {
+  @ApiProperty()
+  id: string;
+
+  @ApiProperty()
+  returnNo: string;
+
+  @ApiProperty()
+  totalPairs: number;
+
+  @ApiProperty()
+  totalPointsRefunded: number;
 
   @ApiProperty({ required: false, nullable: true })
   remarks?: string | null;
@@ -56,14 +53,14 @@ export class SuperAdminDistributorReturnResponseDto {
   @ApiProperty({ type: DistributorReturnInvoiceRefDto })
   invoice: DistributorReturnInvoiceRefDto;
 
-  @ApiProperty({ type: DistributorReturnPairRefDto })
-  pair: DistributorReturnPairRefDto;
-
   @ApiProperty({ type: DistributorReturnUserRefDto })
   retailer: DistributorReturnUserRefDto;
 
   @ApiProperty({ type: DistributorReturnUserRefDto })
   distributor: DistributorReturnUserRefDto;
+
+  @ApiProperty({ type: [DistributorReturnPairDto] })
+  pairs: DistributorReturnPairDto[];
 
   constructor(item: any) {
     Object.assign(this, item);

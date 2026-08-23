@@ -34,4 +34,9 @@ export const DISTRIBUTOR_RETURN_ERRORS = {
     message: 'Invoice has expired and its pairs can no longer be returned',
     statusCode: 422,
   },
+  RETURN_NOT_FOUND: {
+    code: 'DRT_008',
+    message: 'Return not found',
+    statusCode: 404,
+  },
 } as const;

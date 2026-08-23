@@ -5,7 +5,7 @@ import { BusinessException } from 'src/default/error/business.exception';
 import { ERROR_CODES } from 'src/default/error/error.code';
 import { InvoicePairRepository, InvoiceRepository, InvoiceSessionRepository } from '../repository';
 import { InvoiceScanSessionEntity } from '../entities/invoice-scan-session.entity';
-import { InvoiceScanStatus } from '../enum/invoice.enum';
+import { InvoiceScanStatus, InvoiceStatus } from '../enum/invoice.enum';
 import { ScanSessionStatus } from '../enum/invoice-scan-session.enum';
 import { InvoicePairScanStatus } from '../enum/invoice-pair-scan-status.enum';
 import { ScanProgressResponseDto, ScannedPairItemDto } from '../dto';
@@ -40,14 +40,8 @@ export class ScanSessionService {
     if (session.invoice?.id) {
       const scannedRows = await this.invoicePairRepository
         .createQueryBuilder('pair')
-        .innerJoin('pair.assortment', 'assortment')
-        .select([
-          'pair.pair_qr',
-          'pair.pair_uid',
-          'pair.sub_item_code',
-          'pair.scanned_at',
-          'assortment.packing_item_code',
-        ])
+        .innerJoinAndSelect('pair.assortment', 'assortment')
+        .leftJoinAndSelect('assortment.item', 'item')
         .where('assortment.invoice_id = :invoiceId', { invoiceId: session.invoice.id })
         .andWhere('pair.status IN (:...statuses)', {
           statuses: [
@@ -62,10 +56,12 @@ export class ScanSessionService {
 
       if (includePairList) {
         scannedPairList = scannedRows.map((p) => ({
-          pairCode: p.pair_qr,
-          pairUid: p.pair_uid,
-          subItemCode: p.sub_item_code || p.assortment?.packing_item_code,
-          scannedAt: p.scanned_at || new Date(),
+          pairCode: p?.pair_qr,
+          pairUid: p?.pair_uid,
+          subItemCode: p?.sub_item_code || p?.assortment?.packing_item_code,
+          itemCode: p?.assortment?.item?.item_code || p?.assortment?.parent_item_code || undefined,
+          itemName: p?.assortment?.item?.item_name || undefined,
+          scannedAt: p?.scanned_at || new Date(),
         }));
       }
     }
@@ -94,6 +90,7 @@ export class ScanSessionService {
     }
 
     const invoice = await this.validationService.findInvoice(invoiceIdOrNumber);
+
     if (!invoice) {
       throw new BusinessException(ERROR_CODES.INVOICE_SCAN.INVOICE_NOT_FOUND);
     }
@@ -101,6 +98,15 @@ export class ScanSessionService {
     // Verify invoice belongs to req.user.id
     if (!invoice.user || String(invoice.user.id) !== String(userId)) {
       throw new BusinessException(ERROR_CODES.INVOICE_SCAN.INVOICE_NOT_FOUND);
+    }
+
+    // If invoice is submitted / completed / fully scanned, no new session can be generated
+    if (
+      invoice.status === InvoiceStatus.COMPLETED ||
+      invoice.scan_status === InvoiceScanStatus.FULLY_SCANNED ||
+      invoice.scan_status === InvoiceScanStatus.SCANNED
+    ) {
+      throw new BusinessException(ERROR_CODES.INVOICE_SCAN.INVOICE_ALREADY_SCANNED);
     }
 
     return this.lock.withLock(`lock:invoice:${invoice.id}:${userId}`, async () => {
@@ -164,12 +170,29 @@ export class ScanSessionService {
       throw new BusinessException(ERROR_CODES.INVOICE_SCAN.SESSION_NOT_FOUND);
     }
 
-    session.status = ScanSessionStatus.CANCELLED;
-    await this.sessionRepository.saveSession(session);
+    if (session.status != ScanSessionStatus.ACTIVE) {
+      throw new BusinessException(ERROR_CODES.INVOICE_SCAN.SESSION_NOT_ACTIVE);
+    }
 
     const invoice = session.invoice?.id
       ? await this.invoiceRepository.findOne({ id: Number(session.invoice.id) })
       : null;
+
+    if (
+      invoice &&
+      (invoice.status === InvoiceStatus.COMPLETED ||
+        invoice.scan_status === InvoiceScanStatus.FULLY_SCANNED ||
+        invoice.scan_status === InvoiceScanStatus.SCANNED)
+    ) {
+      throw new BusinessException(ERROR_CODES.INVOICE_SCAN.INVOICE_ALREADY_SCANNED);
+    }
+
+    if (session.invoice?.scan_status != InvoiceScanStatus.IN_PROGRESS) {
+      throw new BusinessException(ERROR_CODES.INVOICE_SCAN.SESSION_NOT_ACTIVE);
+    }
+
+    session.status = ScanSessionStatus.CANCELLED;
+    await this.sessionRepository.saveSession(session);
 
     if (invoice && invoice.scan_status === InvoiceScanStatus.IN_PROGRESS) {
       invoice.scan_status =

@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { BusinessException } from 'src/default/error/business.exception';
 import { ERROR_CODES } from 'src/default/error/error.code';
 import { AddressPaginationDTO } from 'src/modules/addresses/dto/address-list-response.dto';
-import { InvoicePairReturnEntity } from 'src/modules/distributor-return/entities/invoice-pair-return.entity';
+import { DistributorReturnEntity } from 'src/modules/distributor-return/entities/distributor-return.entity';
 import { SuperAdminDistributorReturnRepository } from './repository/super-admin-distributor-return.repository';
 import { ListDistributorReturnsQueryDto } from './dto';
 
@@ -40,23 +40,18 @@ export class SuperAdminDistributorReturnService {
     return this.toResponse(item);
   }
 
-  private toResponse(item: InvoicePairReturnEntity) {
+  private toResponse(item: DistributorReturnEntity) {
     return {
       id: item.id,
-      pairUid: item.pair_uid,
-      pointsRefunded: item.points_refunded,
+      returnNo: item.return_no,
+      totalPairs: item.total_pairs,
+      totalPointsRefunded: item.total_points_refunded,
       remarks: item.remarks,
-      createdAt: item.createdAt,
+      createdAt: item.created_at,
       invoice: {
         id: item.invoice?.id,
         invoiceNumber: item.invoice?.invoice_no,
         partyName: item.invoice?.party_name,
-      },
-      pair: {
-        id: item.pair?.id,
-        pairUid: item.pair?.pair_uid,
-        pairQr: item.pair?.pair_qr,
-        status: item.pair?.status,
       },
       retailer: {
         id: item.retailer?.id,
@@ -68,6 +63,10 @@ export class SuperAdminDistributorReturnService {
         name: item.distributor?.firmName || item.distributor?.username,
         mobile: item.distributor?.mobile,
       },
+      pairs: (item.details ?? []).map((detail) => ({
+        pairUid: detail.pair_uid,
+        pointsRefunded: detail.points_refunded,
+      })),
     };
   }
 }

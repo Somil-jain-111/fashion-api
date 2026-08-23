@@ -14,6 +14,7 @@ import {
 } from 'class-validator';
 import { InvoiceHistoryStatus } from '../enum/invoice-scan-session.enum';
 import { ScanExceptionStatus } from '../enum/exception.enum';
+import { PaginationQueryDto } from 'src/default/common/dto/pagination-query.dto';
 
 export class ValidateInvoiceDto {
   @IsOptional()
@@ -78,7 +79,7 @@ export class SubmitSessionDto {
   idempotencyKey?: string;
 }
 
-export class InvoiceHistoryQueryDto {
+export class InvoiceHistoryQueryDto extends PaginationQueryDto {
   @IsOptional()
   @IsString()
   @Length(1, 100)
@@ -90,24 +91,11 @@ export class InvoiceHistoryQueryDto {
 
   @IsOptional()
   @IsDateString()
-  fromDate?: string;
+  startDate?: string;
 
   @IsOptional()
   @IsDateString()
-  toDate?: string;
-
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  @IsOptional()
-  page = 1;
-
-  @Type(() => Number)
-  @IsInt()
-  @Min(1)
-  @Max(100)
-  @IsOptional()
-  limit = 20;
+  endDate?: string;
 }
 
 export class ScannedPairItemDto {

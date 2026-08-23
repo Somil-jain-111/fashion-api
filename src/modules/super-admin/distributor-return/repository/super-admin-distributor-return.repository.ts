@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { DataSource } from 'typeorm';
-import { InvoicePairReturnEntity } from 'src/modules/distributor-return/entities/invoice-pair-return.entity';
+import { DistributorReturnEntity } from 'src/modules/distributor-return/entities/distributor-return.entity';
 
 export interface ListDistributorReturnsFilters {
   distributorId?: number;
@@ -18,41 +18,59 @@ export class SuperAdminDistributorReturnRepository {
 
   private baseQuery() {
     return this.dataSource
-      .getRepository(InvoicePairReturnEntity)
+      .getRepository(DistributorReturnEntity)
       .createQueryBuilder('return')
       .innerJoin('return.invoice', 'invoice')
       .addSelect(['invoice.id', 'invoice.invoice_no', 'invoice.party_name'])
-      .innerJoin('return.pair', 'pair')
-      .addSelect(['pair.id', 'pair.pair_uid', 'pair.pair_qr', 'pair.status'])
       .innerJoin('return.retailer', 'retailer')
       .addSelect(['retailer.id', 'retailer.firmName', 'retailer.username', 'retailer.mobile'])
       .innerJoin('return.distributor', 'distributor')
-      .addSelect(['distributor.id', 'distributor.firmName', 'distributor.username', 'distributor.mobile']);
+      .addSelect(['distributor.id', 'distributor.firmName', 'distributor.username', 'distributor.mobile'])
+      .leftJoin('return.details', 'details')
+      .addSelect(['details.id', 'details.pair_uid', 'details.points_refunded']);
   }
 
   async list(filters: ListDistributorReturnsFilters) {
-    const qb = this.baseQuery()
+    // details is one-to-many — page over return ids first (no one-to-many join), then
+    // re-fetch just those ids with details joined in a second, unpaginated query. Joining
+    // details directly into a paginated query would multiply rows per return and corrupt
+    // getManyAndCount()'s totals/skip/take.
+    const idQb = this.dataSource
+      .getRepository(DistributorReturnEntity)
+      .createQueryBuilder('return')
+      .innerJoin('return.invoice', 'invoice')
+      .innerJoin('return.retailer', 'retailer')
+      .innerJoin('return.distributor', 'distributor')
       .orderBy('return.id', 'DESC')
       .skip((filters.page - 1) * filters.limit)
       .take(filters.limit);
 
     if (filters.distributorId) {
-      qb.andWhere('return.distributor_id = :distributorId', { distributorId: filters.distributorId });
+      idQb.andWhere('return.distributor_id = :distributorId', { distributorId: filters.distributorId });
     }
     if (filters.retailerId) {
-      qb.andWhere('return.retailer_id = :retailerId', { retailerId: filters.retailerId });
+      idQb.andWhere('return.retailer_id = :retailerId', { retailerId: filters.retailerId });
     }
     if (filters.invoiceNumber) {
-      qb.andWhere('invoice.invoice_no = :invoiceNumber', { invoiceNumber: filters.invoiceNumber });
+      idQb.andWhere('invoice.invoice_no = :invoiceNumber', { invoiceNumber: filters.invoiceNumber });
     }
     if (filters.fromDate) {
-      qb.andWhere('return.created_at >= :fromDate', { fromDate: filters.fromDate });
+      idQb.andWhere('return.created_at >= :fromDate', { fromDate: filters.fromDate });
     }
     if (filters.toDate) {
-      qb.andWhere('return.created_at <= :toDate', { toDate: filters.toDate });
+      idQb.andWhere('return.created_at <= :toDate', { toDate: filters.toDate });
     }
 
-    const [items, total] = await qb.getManyAndCount();
+    const [idRows, total] = await idQb.getManyAndCount();
+    if (!idRows.length) {
+      return { items: [], total };
+    }
+
+    const items = await this.baseQuery()
+      .where('return.id IN (:...ids)', { ids: idRows.map((row) => row.id) })
+      .orderBy('return.id', 'DESC')
+      .getMany();
+
     return { items, total };
   }
 

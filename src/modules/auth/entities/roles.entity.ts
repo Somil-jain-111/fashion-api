@@ -3,7 +3,7 @@ import { Column, Entity, ManyToMany, OneToMany } from 'typeorm';
 import { User } from '.';
 import { BaseEntity } from '../../../default/common/entities';
 import { UserRole, UserType } from '../../../default/common/enums/user-type.enum';
-import { BannerEntity, CmsPageEntity, FaqEntity, AnnouncementEntity } from '../../auth/entities';
+import { BannerEntity, CmsPageEntity, FaqEntity, AnnouncementEntity, VideoEntity } from '../../auth/entities';
 
 @Entity('roles')
 export class Roles extends BaseEntity {
@@ -34,4 +34,7 @@ export class Roles extends BaseEntity {
 
   @ManyToMany(() => AnnouncementEntity, (announcement) => announcement.roles)
   announcements!: AnnouncementEntity[];
+
+  @ManyToMany(() => VideoEntity, (video) => video.roles)
+  videos!: VideoEntity[];
 }

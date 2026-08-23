@@ -15,12 +15,12 @@ constructor(private readonly userAuthValidator: UserAuthValidator) {}
     const istHours = istTime.getHours();
 
     // Log for debugging
-    ConsoleLogger.log(`User: ${user?.userId}, IST Hour: ${istHours}`, 'UserStatusGuard');
+    ConsoleLogger.log(`User: ${user?.id}, IST Hour: ${istHours}`, 'UserStatusGuard');
 
-    if (!user || !user.userId) {
+    if (!user || !user.id) {
       throw new UnauthorizedException('User not authenticated');
     }
-    await this.userAuthValidator.validateActiveUserById(user.userId);
+    await this.userAuthValidator.validateActiveUserById(user.id);
 
     return true;
   }
