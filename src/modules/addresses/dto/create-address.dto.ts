@@ -1,18 +1,22 @@
 import {
-  IsEmail,
   IsEnum,
   IsNotEmpty,
   IsOptional,
   IsString,
   Matches,
   MaxLength,
+  MinLength,
 } from 'class-validator';
 import { AddressType } from 'src/default/common/enums/address.enum';
 
 export class CreateAddressDto {
   @IsNotEmpty()
   @IsString()
+  @MinLength(3, { message: 'Full name must be at least 3 characters long' })
   @MaxLength(100)
+  @Matches(/^[a-zA-Z\s]+$/, {
+    message: 'Full name must contain only letters and spaces without special characters or numbers',
+  })
   fullName: string;
 
   @IsNotEmpty()

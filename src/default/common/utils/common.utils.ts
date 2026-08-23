@@ -41,6 +41,15 @@ export class CommonUtils {
     return `${prefix}_${year}_${month}_${rand5}`;
   }
 
+  static generateSubmissionId(prefix: string = 'SUB'): string {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const rand5 = Math.floor(10000 + Math.random() * 90000);
+    return `${prefix}_${year}${month}${day}_${rand5}`;
+  }
+
   static async hashPassword(password: string): Promise<string> {
     const salt = await bcrypt.genSalt(CommonUtils.SALT_ROUNDS);
     return bcrypt.hash(password, salt);
@@ -356,5 +365,47 @@ export class CommonUtils {
       dateStyle: 'full',
       timeStyle: 'medium',
     });
+  }
+
+  static parseDob(dob: Date | string): { year: number; month: number; day: number } | null {
+    if (dob instanceof Date) {
+      if (isNaN(dob.getTime())) return null;
+      const isoDate = dob.toISOString().split('T')[0];
+      const [y, m, d] = isoDate.split('-').map((val) => parseInt(val, 10));
+      return { year: y, month: m, day: d };
+    }
+
+    if (typeof dob === 'string') {
+      const trimmed = dob.trim();
+      if (trimmed.includes('/')) {
+        const parts = trimmed.split('/');
+        if (parts.length === 3) {
+          const d = parseInt(parts[0], 10);
+          const m = parseInt(parts[1], 10);
+          const y = parseInt(parts[2], 10);
+          if (y && m && d) return { year: y, month: m, day: d };
+        }
+      }
+      if (trimmed.includes('-')) {
+        const datePart = trimmed.split('T')[0];
+        const parts = datePart.split('-');
+        if (parts.length === 3) {
+          const y = parseInt(parts[0], 10);
+          const m = parseInt(parts[1], 10);
+          const d = parseInt(parts[2], 10);
+          if (y && m && d) return { year: y, month: m, day: d };
+        }
+      }
+      const parsedDate = new Date(trimmed);
+      if (!isNaN(parsedDate.getTime())) {
+        return {
+          year: parsedDate.getUTCFullYear(),
+          month: parsedDate.getUTCMonth() + 1,
+          day: parsedDate.getUTCDate(),
+        };
+      }
+    }
+
+    return null;
   }
 }

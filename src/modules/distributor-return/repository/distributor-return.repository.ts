@@ -49,7 +49,9 @@ export class DistributorReturnRepository extends BaseRepository<InvoicePairRetur
     itemCode: string,
     manager?: EntityManager
   ): Promise<InvoiceItemEntity | null> {
-    return (manager?.getRepository(InvoiceItemEntity) ?? this.dataSource.getRepository(InvoiceItemEntity))
+    return (
+      manager?.getRepository(InvoiceItemEntity) ?? this.dataSource.getRepository(InvoiceItemEntity)
+    )
       .createQueryBuilder('item')
       .select(['item.id', 'item.item_code', 'item.item_name'])
       .where('item.invoice_id = :invoiceId', { invoiceId })
@@ -62,7 +64,9 @@ export class DistributorReturnRepository extends BaseRepository<InvoicePairRetur
    * since a SELECT ... FOR UPDATE with a join locks every table it touches in MySQL.
    */
   findInvoiceById(invoiceId: string, manager?: EntityManager, forUpdate = false) {
-    const query = (manager?.getRepository(InvoiceEntity) ?? this.dataSource.getRepository(InvoiceEntity))
+    const query = (
+      manager?.getRepository(InvoiceEntity) ?? this.dataSource.getRepository(InvoiceEntity)
+    )
       .createQueryBuilder('invoice')
       .innerJoinAndSelect('invoice.user', 'retailer')
       .where('invoice.id = :invoiceId', { invoiceId });
@@ -80,7 +84,7 @@ export class DistributorReturnRepository extends BaseRepository<InvoicePairRetur
 
   findExistingReturn(pairId: string, manager?: EntityManager) {
     return (manager?.getRepository(InvoicePairReturnEntity) ?? this.repository).findOne({
-      where: { pair_id: pairId },
+      where: { pair: { id: Number(pairId) } },
     });
   }
 

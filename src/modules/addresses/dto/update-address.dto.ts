@@ -1,10 +1,14 @@
-import { IsEnum, IsOptional, IsString, Matches, MaxLength } from 'class-validator';
+import { IsEnum, IsOptional, IsString, Matches, MaxLength, MinLength } from 'class-validator';
 import { AddressType } from 'src/default/common/enums/address.enum';
 
 export class UpdateAddressDto {
   @IsOptional()
   @IsString()
+  @MinLength(3, { message: 'Full name must be at least 3 characters long' })
   @MaxLength(100)
+  @Matches(/^[a-zA-Z\s]+$/, {
+    message: 'Full name must contain only letters and spaces without special characters or numbers',
+  })
   fullName?: string;
 
   @IsOptional()

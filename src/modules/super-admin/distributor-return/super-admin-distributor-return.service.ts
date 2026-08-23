@@ -23,7 +23,12 @@ export class SuperAdminDistributorReturnService {
 
     return {
       items: items.map((item) => this.toResponse(item)),
-      pagination: new AddressPaginationDTO(total, Math.ceil(total / query.limit), query.page, query.limit),
+      pagination: new AddressPaginationDTO(
+        total,
+        Math.ceil(total / query.limit),
+        query.page,
+        query.limit
+      ),
     };
   }
 
@@ -41,7 +46,7 @@ export class SuperAdminDistributorReturnService {
       pairUid: item.pair_uid,
       pointsRefunded: item.points_refunded,
       remarks: item.remarks,
-      createdAt: item.created_at,
+      createdAt: item.createdAt,
       invoice: {
         id: item.invoice?.id,
         invoiceNumber: item.invoice?.invoice_no,
