@@ -227,14 +227,13 @@ export class InvoiceService {
 
     if (invoice.items?.length) {
       for (const item of invoice.items) {
-        console.log(item);
         const rate = Number(item.rate || 0);
 
         itemsMap.set(item.item_code, {
           itemCode: item.item_code,
           itemName: item.item_name,
           rate,
-          quantity: 0,
+          quantity: Number(item?.quantity),
           scannedQuantity: 0,
           amount: 0,
           pairs: [],
@@ -249,7 +248,6 @@ export class InvoiceService {
         const group = itemsMap.get(code)!;
 
         group.pairs.push(pair);
-        group.quantity += 1;
         group.scannedQuantity += 1;
         group.amount = Number((group.quantity * group.rate).toFixed(2));
       } else if (code) {
@@ -257,7 +255,6 @@ export class InvoiceService {
 
         if (existing) {
           existing.pairs.push(pair);
-          existing.quantity += 1;
           existing.scannedQuantity += 1;
           existing.amount = Number((existing.quantity * existing.rate).toFixed(2));
         } else {
@@ -278,7 +275,6 @@ export class InvoiceService {
 
         if (existing) {
           existing.pairs.push(pair);
-          existing.quantity += 1;
           existing.scannedQuantity += 1;
         } else {
           itemsMap.set(unknownCode, {
@@ -294,7 +290,7 @@ export class InvoiceService {
       }
     }
 
-    const groupedItems = Array.from(itemsMap.values());
+    const groupedItems = Array.from(itemsMap.values()).filter((item) => item.scannedQuantity > 0);
 
     delete invoice.items;
 
