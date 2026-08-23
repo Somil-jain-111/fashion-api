@@ -69,8 +69,8 @@ export class InvoiceRepository extends BaseRepository<InvoiceEntity> {
     filters: {
       invoiceNumber?: string;
       status?: string;
-      fromDate?: string;
-      toDate?: string;
+      startDate?: string;
+      endDate?: string;
       page: number;
       limit: number;
     },
@@ -90,12 +90,12 @@ export class InvoiceRepository extends BaseRepository<InvoiceEntity> {
       query.andWhere('invoice.status = :status', { status: filters.status });
     }
 
-    if (filters.fromDate) {
-      query.andWhere('invoice.createdAt >= :fromDate', { fromDate: filters.fromDate });
+    if (filters.startDate) {
+      query.andWhere('invoice.createdAt >= :fromDate', { fromDate: filters.startDate });
     }
 
-    if (filters.toDate) {
-      query.andWhere('invoice.createdAt <= :toDate', { toDate: `${filters.toDate} 23:59:59` });
+    if (filters.endDate) {
+      query.andWhere('invoice.createdAt <= :toDate', { toDate: `${filters.endDate} 23:59:59` });
     }
 
     const [items, total] = await query

@@ -91,11 +91,11 @@ export class InvoiceHistoryQueryDto extends PaginationQueryDto {
 
   @IsOptional()
   @IsDateString()
-  fromDate?: string;
+  startDate?: string;
 
   @IsOptional()
   @IsDateString()
-  toDate?: string;
+  endDate?: string;
 }
 
 export class ScannedPairItemDto {
