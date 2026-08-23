@@ -1,9 +1,10 @@
-import { Column, Entity, Index, JoinColumn, ManyToOne } from 'typeorm';
+import { Column, Entity, Index, JoinColumn, ManyToOne, OneToMany } from 'typeorm';
 import { BaseEntity } from '../../../default/common/entities';
 import { User } from '../../auth/entities/users.entity';
 import { InvoiceEntity } from '../../invoices/entities/invoice.entity';
 import { InvoicePairDetailEntity } from '../../invoices/entities/invoice-pair-detail.entity';
 import { InvoiceItemEntity } from '../../../modules/auth/entities';
+import { CustomerReturnAttachmentEntity } from './customer-return-attachment.entity';
 
 @Entity({ name: 'customer_returns' })
 @Index('idx_customer_returns_pair_uid', ['pair_uid'])
@@ -32,6 +33,8 @@ export class CustomerReturnEntity extends BaseEntity {
   @Column({ type: 'varchar', length: 255, nullable: true })
   remarks?: string | null;
 
-  @Column({ name: 'photo_url', type: 'varchar', length: 500, nullable: true })
-  photo_url?: string | null;
+  @OneToMany(() => CustomerReturnAttachmentEntity, (attachment) => attachment.customerReturn, {
+    cascade: true,
+  })
+  attachments?: CustomerReturnAttachmentEntity[];
 }
