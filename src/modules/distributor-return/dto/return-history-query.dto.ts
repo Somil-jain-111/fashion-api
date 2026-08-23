@@ -1,5 +1,5 @@
 import { Type } from 'class-transformer';
-import { IsInt, IsOptional, Max, Min } from 'class-validator';
+import { IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
 
 export class ReturnHistoryQueryDto {
   @Type(() => Number)
@@ -14,4 +14,11 @@ export class ReturnHistoryQueryDto {
   @Max(100)
   @IsOptional()
   limit = 20;
+
+  /**
+   * Matches against the return number or the source invoice number.
+   */
+  @IsOptional()
+  @IsString()
+  search?: string;
 }
