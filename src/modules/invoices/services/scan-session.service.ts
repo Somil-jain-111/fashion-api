@@ -40,14 +40,8 @@ export class ScanSessionService {
     if (session.invoice?.id) {
       const scannedRows = await this.invoicePairRepository
         .createQueryBuilder('pair')
-        .innerJoin('pair.assortment', 'assortment')
-        .select([
-          'pair.pair_qr',
-          'pair.pair_uid',
-          'pair.sub_item_code',
-          'pair.scanned_at',
-          'assortment.packing_item_code',
-        ])
+        .innerJoinAndSelect('pair.assortment', 'assortment')
+        .leftJoinAndSelect('assortment.item', 'item')
         .where('assortment.invoice_id = :invoiceId', { invoiceId: session.invoice.id })
         .andWhere('pair.status IN (:...statuses)', {
           statuses: [
@@ -62,10 +56,12 @@ export class ScanSessionService {
 
       if (includePairList) {
         scannedPairList = scannedRows.map((p) => ({
-          pairCode: p.pair_qr,
-          pairUid: p.pair_uid,
-          subItemCode: p.sub_item_code || p.assortment?.packing_item_code,
-          scannedAt: p.scanned_at || new Date(),
+          pairCode: p?.pair_qr,
+          pairUid: p?.pair_uid,
+          subItemCode: p?.sub_item_code || p?.assortment?.packing_item_code,
+          itemCode: p?.assortment?.item?.item_code || p?.assortment?.parent_item_code || undefined,
+          itemName: p?.assortment?.item?.item_name || undefined,
+          scannedAt: p?.scanned_at || new Date(),
         }));
       }
     }

@@ -114,6 +114,8 @@ export class ScannedPairItemDto {
   pairCode: string;
   pairUid: string;
   subItemCode?: string;
+  itemCode?: string;
+  itemName?: string;
   scannedAt: Date;
 }
 
