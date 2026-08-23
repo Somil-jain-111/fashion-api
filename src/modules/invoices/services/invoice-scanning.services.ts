@@ -191,7 +191,7 @@ export class InvoiceService {
   }
 
   async history(userId: string, query: InvoiceHistoryQueryDto) {
-    const { items, total } = await this.histories.findHistory(userId, query);
+    const { items, total } = await this.invoiceRepository.findHistory(userId, query);
 
     return {
       items,
@@ -200,21 +200,19 @@ export class InvoiceService {
   }
 
   async historyDetail(id: string, userId: string) {
-    const history = await this.histories.findOwnedById(id, userId);
+    const invoice = await this.invoiceRepository.findOwnedById(id, userId);
 
-    if (!history) {
+    if (!invoice) {
       throw new BusinessException(ERROR_CODES.COMMON.NOT_FOUND);
     }
 
-    const pairs = history.invoice?.id
-      ? await this.pairHistories.findByInvoice(history.invoice.id, userId)
-      : [];
+    const pairs = await this.pairHistories.findByInvoice(invoice.id, userId);
 
     return {
-      invoice: history,
+      invoice,
       scannedPairs: pairs,
-      points: history.pointsAwarded,
-      status: history.status,
+      points: invoice.earned_points,
+      status: invoice.status,
     };
   }
 

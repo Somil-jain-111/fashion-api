@@ -54,6 +54,59 @@ export class InvoiceRepository extends BaseRepository<InvoiceEntity> {
     return await this.save(invoice, queryRunner);
   }
 
+  async findOwnedById(
+    id: string | number,
+    userId: string | number,
+    queryRunner?: QueryRunner
+  ): Promise<InvoiceEntity | null> {
+    return await this.getRepository(queryRunner).findOne({
+      where: { id: Number(id), user: { id: Number(userId) } },
+    });
+  }
+
+  async findHistory(
+    userId: string | number,
+    filters: {
+      invoiceNumber?: string;
+      status?: string;
+      fromDate?: string;
+      toDate?: string;
+      page: number;
+      limit: number;
+    },
+    queryRunner?: QueryRunner
+  ): Promise<{ items: InvoiceEntity[]; total: number }> {
+    const query = this.getRepository(queryRunner)
+      .createQueryBuilder('invoice')
+      .where('invoice.user_id = :userId', { userId: String(userId) });
+
+    if (filters.invoiceNumber) {
+      query.andWhere('invoice.invoice_no LIKE :invoiceNumber', {
+        invoiceNumber: `%${filters.invoiceNumber.trim()}%`,
+      });
+    }
+
+    if (filters.status) {
+      query.andWhere('invoice.status = :status', { status: filters.status });
+    }
+
+    if (filters.fromDate) {
+      query.andWhere('invoice.createdAt >= :fromDate', { fromDate: filters.fromDate });
+    }
+
+    if (filters.toDate) {
+      query.andWhere('invoice.createdAt <= :toDate', { toDate: `${filters.toDate} 23:59:59` });
+    }
+
+    const [items, total] = await query
+      .orderBy('invoice.id', 'DESC')
+      .skip((filters.page - 1) * filters.limit)
+      .take(filters.limit)
+      .getManyAndCount();
+
+    return { items, total };
+  }
+
   async getSummary(
     userId: string,
     queryRunner?: QueryRunner
