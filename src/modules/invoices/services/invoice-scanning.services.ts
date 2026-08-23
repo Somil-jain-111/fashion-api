@@ -212,8 +212,95 @@ export class InvoiceService {
 
     const pairs = await this.pairHistories.findByInvoice(invoice.id, userId);
 
+    const itemsMap = new Map<
+      string,
+      {
+        itemCode: string;
+        itemName: string;
+        rate: number;
+        quantity: number;
+        scannedQuantity: number;
+        amount: number;
+        pairs: typeof pairs;
+      }
+    >();
+
+    if (invoice.items?.length) {
+      for (const item of invoice.items) {
+        console.log(item);
+        const rate = Number(item.rate || 0);
+
+        itemsMap.set(item.item_code, {
+          itemCode: item.item_code,
+          itemName: item.item_name,
+          rate,
+          quantity: 0,
+          scannedQuantity: 0,
+          amount: 0,
+          pairs: [],
+        });
+      }
+    }
+
+    for (const pair of pairs) {
+      const code = pair.itemCode;
+
+      if (code && itemsMap.has(code)) {
+        const group = itemsMap.get(code)!;
+
+        group.pairs.push(pair);
+        group.quantity += 1;
+        group.scannedQuantity += 1;
+        group.amount = Number((group.quantity * group.rate).toFixed(2));
+      } else if (code) {
+        const existing = itemsMap.get(code);
+
+        if (existing) {
+          existing.pairs.push(pair);
+          existing.quantity += 1;
+          existing.scannedQuantity += 1;
+          existing.amount = Number((existing.quantity * existing.rate).toFixed(2));
+        } else {
+          itemsMap.set(code, {
+            itemCode: code,
+            itemName: pair.itemName || code,
+            rate: 0,
+            quantity: 1,
+            scannedQuantity: 1,
+            amount: 0,
+            pairs: [pair],
+          });
+        }
+      } else {
+        const unknownCode = 'UNKNOWN';
+
+        const existing = itemsMap.get(unknownCode);
+
+        if (existing) {
+          existing.pairs.push(pair);
+          existing.quantity += 1;
+          existing.scannedQuantity += 1;
+        } else {
+          itemsMap.set(unknownCode, {
+            itemCode: unknownCode,
+            itemName: 'Unknown Item',
+            rate: 0,
+            quantity: 1,
+            scannedQuantity: 1,
+            amount: 0,
+            pairs: [pair],
+          });
+        }
+      }
+    }
+
+    const groupedItems = Array.from(itemsMap.values());
+
+    delete invoice.items;
+
     return {
       invoice,
+      groupedItems,
       scannedPairs: pairs,
       points: invoice.earned_points,
       status: invoice.status,
