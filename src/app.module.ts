@@ -59,6 +59,7 @@ import { RetailerInvoiceModule } from './modules/retailer-invoice/retailer-invoi
 import { DistributorReturnModule } from './modules/distributor-return/distributor-return.module';
 import { DistributorTransferModule } from './modules/distributor-transfer/distributor-transfer.module';
 import { SuperAdminModule } from './modules/super-admin/super-admin.module';
+import { CustomerReturnModule } from './modules/customer-return/customer-return.module';
 
 @Module({
   imports: [
@@ -116,6 +117,7 @@ import { SuperAdminModule } from './modules/super-admin/super-admin.module';
     DistributorReturnModule,
     DistributorTransferModule,
     SuperAdminModule,
+    CustomerReturnModule,
   ],
   providers: [
     {
