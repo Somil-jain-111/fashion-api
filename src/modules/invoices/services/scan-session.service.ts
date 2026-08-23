@@ -103,7 +103,6 @@ export class ScanSessionService {
     // If invoice is submitted / completed / fully scanned, no new session can be generated
     if (
       invoice.status === InvoiceStatus.COMPLETED ||
-      invoice.status === InvoiceStatus.SCANNED ||
       invoice.scan_status === InvoiceScanStatus.FULLY_SCANNED ||
       invoice.scan_status === InvoiceScanStatus.SCANNED
     ) {
@@ -182,7 +181,6 @@ export class ScanSessionService {
     if (
       invoice &&
       (invoice.status === InvoiceStatus.COMPLETED ||
-        invoice.status === InvoiceStatus.SCANNED ||
         invoice.scan_status === InvoiceScanStatus.FULLY_SCANNED ||
         invoice.scan_status === InvoiceScanStatus.SCANNED)
     ) {
