@@ -1,34 +1,37 @@
-import { Column, Entity, Index, JoinColumn, ManyToOne, OneToMany } from 'typeorm';
+import { Column, Entity, Index, JoinColumn, ManyToOne } from 'typeorm';
 import { BaseEntity } from '../../../default/common/entities';
 import { User } from '../../auth/entities/users.entity';
-import { CustomerReturnStatus } from '../enum/customer-return.enum';
-import { CustomerReturnItemEntity } from './customer-return-item.entity';
+import { InvoiceEntity } from '../../invoices/entities/invoice.entity';
+import { InvoicePairDetailEntity } from '../../invoices/entities/invoice-pair-detail.entity';
+import { InvoiceItemEntity } from '../../../modules/auth/entities';
 
 @Entity({ name: 'customer_returns' })
-@Index('uq_customer_returns_return_number', ['return_number'], { unique: true })
+@Index('idx_customer_returns_pair_uid', ['pair_uid'])
 @Index('idx_customer_returns_retailer_id', ['retailer'])
-@Index('idx_customer_returns_status', ['status'])
+@Index('idx_customer_returns_invoice_id', ['invoice'])
 export class CustomerReturnEntity extends BaseEntity {
-  @Column({ name: 'return_number', type: 'varchar', length: 50 })
-  return_number: string;
+  @Column({ name: 'pair_uid', type: 'varchar', length: 100 })
+  pair_uid: string;
 
   @ManyToOne(() => User, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'retailer_id' })
   retailer: User;
 
-  @Column({ name: 'total_pairs', type: 'int', default: 0 })
-  total_pairs: number;
+  @ManyToOne(() => InvoiceEntity, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'invoice_id' })
+  invoice?: InvoiceEntity | null;
 
-  @Column({
-    type: 'enum',
-    enum: CustomerReturnStatus,
-    default: CustomerReturnStatus.PENDING,
-  })
-  status: CustomerReturnStatus;
+  @ManyToOne(() => InvoiceItemEntity, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'invoice_item_id' })
+  invoiceItem?: InvoiceItemEntity | null;
+
+  @ManyToOne(() => InvoicePairDetailEntity, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'pair_id' })
+  pair?: InvoicePairDetailEntity | null;
 
   @Column({ type: 'varchar', length: 255, nullable: true })
   remarks?: string | null;
 
-  @OneToMany(() => CustomerReturnItemEntity, (item) => item.customerReturn)
-  items: CustomerReturnItemEntity[];
+  @Column({ name: 'photo_url', type: 'varchar', length: 500, nullable: true })
+  photo_url?: string | null;
 }
