@@ -160,6 +160,14 @@ export class ScanSessionService {
       throw new BusinessException(ERROR_CODES.INVOICE_SCAN.SESSION_NOT_FOUND);
     }
 
+    if (session.status != ScanSessionStatus.ACTIVE) {
+      throw new BusinessException(ERROR_CODES.INVOICE_SCAN.SESSION_NOT_ACTIVE);
+    }
+
+    if (session.invoice.scan_status != InvoiceScanStatus.IN_PROGRESS) {
+      throw new BusinessException(ERROR_CODES.INVOICE_SCAN.SESSION_NOT_ACTIVE);
+    }
+
     session.status = ScanSessionStatus.CANCELLED;
     await this.sessionRepository.saveSession(session);
 

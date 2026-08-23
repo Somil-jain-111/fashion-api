@@ -61,6 +61,7 @@ export class InvoiceRepository extends BaseRepository<InvoiceEntity> {
   ): Promise<InvoiceEntity | null> {
     return await this.getRepository(queryRunner).findOne({
       where: { id: Number(id), user: { id: Number(userId) } },
+      relations: ['items'],
     });
   }
 
