@@ -102,4 +102,9 @@ export const INVOICE_SCAN_ERRORS = {
     message: 'Invoice is currently being scanned in another active session',
     statusCode: 409,
   },
+  INVOICE_NOT_SCANNED: {
+    code: 'ISC_028',
+    message: 'Invoice scan process is not yet completed',
+    statusCode: 422,
+  },
 } as const;

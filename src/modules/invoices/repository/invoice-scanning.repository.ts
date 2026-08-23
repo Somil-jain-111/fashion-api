@@ -437,6 +437,22 @@ export class InvoicePairRepository extends BaseRepository<InvoicePairDetailEntit
     super(dataSource.getRepository(InvoicePairDetailEntity));
   }
 
+  async findByPairUidOrQr(
+    pairCodeOrUid: string,
+    queryRunner?: QueryRunner
+  ): Promise<InvoicePairDetailEntity | null> {
+    const val = pairCodeOrUid.trim();
+    return await this.getRepository(queryRunner)
+      .createQueryBuilder('pair')
+      .leftJoinAndSelect('pair.assortment', 'assortment')
+      .leftJoinAndSelect('assortment.invoice', 'invoice')
+      .leftJoinAndSelect('invoice.user', 'invoiceUser')
+      .leftJoinAndSelect('assortment.item', 'item')
+      .leftJoinAndSelect('pair.scannedByUser', 'scannedByUser')
+      .where('(pair.pair_uid = :val OR pair.pair_qr = :val)', { val })
+      .getOne();
+  }
+
   findForInvoice(invoiceId: string, pairUids: string[], queryRunner?: QueryRunner) {
     if (!pairUids.length) return Promise.resolve([]);
     return this.createQueryBuilder('pair', queryRunner)

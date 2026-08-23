@@ -4,7 +4,6 @@ import { CustomerReturnController } from './customer-return.controller';
 import { CustomerReturnService } from './customer-return.service';
 import { CustomerReturnRepository } from './repository/customer-return.repository';
 import { InvoicePairRepository } from '../invoices/repository';
-import { RedisLockService } from '../invoices/services/redis-lock.service';
 import { IdempotencyInterceptor } from 'src/default/common/interceptors/idempotency-check.interceptor';
 import { IdempotencyService } from 'src/default/idempotency/idempotency.service';
 
@@ -16,7 +15,6 @@ import { IdempotencyService } from 'src/default/idempotency/idempotency.service'
     IdempotencyInterceptor,
     CustomerReturnRepository,
     InvoicePairRepository,
-    RedisLockService,
     CustomerReturnService,
   ],
   exports: [

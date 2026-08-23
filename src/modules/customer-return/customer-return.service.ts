@@ -1,323 +1,135 @@
 import { Injectable } from '@nestjs/common';
 import { CommonUtils } from 'src/default/common/utils/common.utils';
-import { TransactionService } from 'src/default/databases/transaction';
 import { BusinessException } from 'src/default/error/business.exception';
 import { ERROR_CODES } from 'src/default/error/error.code';
 import { ConsoleLogger } from 'src/default/logger/console/console.service';
 import { InvoicePairRepository } from '../invoices/repository';
 import { InvoicePairScanStatus } from '../invoices/enum/invoice-pair-scan-status.enum';
 import { CustomerReturnRepository } from './repository/customer-return.repository';
-import { CustomerReturnIssueType, CustomerReturnStatus } from './enum/customer-return.enum';
 import {
   CustomerReturnHistoryQueryDto,
-  ScanCustomerReturnPairDto,
-  UpdateCustomerReturnPairIssueDto,
+  SubmitCustomerReturnDto,
+  ValidateCustomerReturnPairDto,
 } from './dto';
-import { RedisLockService } from '../invoices/services/redis-lock.service';
+import { InvoiceScanStatus, InvoiceStatus } from '../invoices/enum/invoice.enum';
 
 @Injectable()
 export class CustomerReturnService {
   constructor(
     private readonly repository: CustomerReturnRepository,
-    private readonly pairRepository: InvoicePairRepository,
-    private readonly lock: RedisLockService,
-    private readonly transactionService: TransactionService
+    private readonly pairRepository: InvoicePairRepository
   ) {}
 
   /**
-   * @Helper returns formatted response
-   *
-   * @param item
-   * @returns
+   * Helper returns formatted response object
    */
   private toResponse(item: any) {
     return {
       id: String(item?.id),
-      returnNumber: item?.return_number,
-      totalPairs: item?.total_pairs ?? (item?.items?.length || 0),
-      status: item?.status,
+      pairUid: item?.pair_uid,
+      issueType: item?.issue_type,
       remarks: item?.remarks,
+      photoUrl: item?.photo_url,
       createdAt: item?.createdAt,
       updatedAt: item?.updatedAt,
-      items: (item?.items || []).map((i: any) => ({
-        id: String(i?.id),
-        pairUid: i?.pair_uid,
-        issueType: i?.issue_type,
-        remarks: i?.remarks,
-        itemCode: i?.item_code,
-        subItemCode: i?.sub_item_code,
-        invoiceNumber: i?.invoice?.invoice_no,
-        createdAt: i?.createdAt,
-      })),
+      invoiceNumber: item?.invoice?.invoice_no,
+      itemCode: item?.invoiceItem?.item_code || null,
+      itemName: item?.invoiceItem?.item_name || null,
     };
   }
 
   /**
-   * Creates / Gets the active return entries
-   *
-   * @param retailerId
-   * @returns
+   * Validates if pair UID belongs to a completed scan invoice of the same retailer
    */
-  async getOrCreateActivePendingReturn(retailerId: string | number) {
-    let pendingReturn = await this.repository.findActivePendingByRetailer(retailerId);
+  async validatePair(retailerId: string | number, dto: ValidateCustomerReturnPairDto) {
+    const pairCodeTrimmed = dto.pairUid.trim();
 
-    if (!pendingReturn) {
-      pendingReturn = await this.repository.createPendingReturn(retailerId);
-      pendingReturn = await this.repository.findActivePendingByRetailer(retailerId);
+    // Check if pair has already been returned
+    const existingReturn = await this.repository.findByPairUid(pairCodeTrimmed);
+
+    if (existingReturn) {
+      throw new BusinessException(ERROR_CODES.CUSTOMER_RETURN.PAIR_ALREADY_RETURNED);
     }
 
-    return this.toResponse(pendingReturn!);
-  }
+    const pair = await this.pairRepository.findByPairUidOrQr(pairCodeTrimmed);
 
-  /**
-   * Wrapper to call getOrCreateActivePendingReturn for backward compatibility
-   *
-   * @param retailerId
-   * @returns
-   */
-  async getActiveReturn(retailerId: string | number) {
-    return this.getOrCreateActivePendingReturn(retailerId);
-  }
-
-  /**
-   * Scans a pair to be added in return
-   *
-   * @param retailerId
-   * @param dto
-   * @returns
-   */
-  async scanPair(retailerId: string | number, dto: ScanCustomerReturnPairDto) {
-    const lockKey = `lock:customer-return:retailer:${retailerId}`;
-
-    return this.lock.withLock(lockKey, async () => {
-      if (dto.issueType === CustomerReturnIssueType.OTHER && !dto.remarks?.trim()) {
-        throw new BusinessException(ERROR_CODES.CUSTOMER_RETURN.REMARKS_REQUIRED_FOR_OTHER);
-      }
-
-      let pendingReturn = await this.repository.findActivePendingByRetailer(retailerId);
-
-      if (!pendingReturn) {
-        await this.repository.createPendingReturn(retailerId);
-        pendingReturn = await this.repository.findActivePendingByRetailer(retailerId);
-      }
-
-      const pairCodeTrimmed = dto.pairUid.trim();
-
-      // Query InvoicePairDetailEntity
-      const pair = await this.pairRepository
-        .createQueryBuilder('pair')
-        .leftJoinAndSelect('pair.assortment', 'assortment')
-        .leftJoinAndSelect('assortment.invoice', 'invoice')
-        .leftJoinAndSelect('invoice.user', 'invoiceUser')
-        .leftJoinAndSelect('assortment.item', 'item')
-        .leftJoinAndSelect('pair.scannedByUser', 'scannedByUser')
-        .where('(pair.pair_uid = :val OR pair.pair_qr = :val)', { val: pairCodeTrimmed })
-        .getOne();
-
-      if (!pair) {
-        throw new BusinessException(ERROR_CODES.CUSTOMER_RETURN.PAIR_NOT_FOUND);
-      }
-
-      // Verify pair was scanned/redeemed by this retailer
-      const isScannedStatus =
-        pair.status === InvoicePairScanStatus.SCANNED ||
-        pair.status === InvoicePairScanStatus.REDEEMED ||
-        pair.status === InvoicePairScanStatus.USED;
-
-      const scannedByRetailer =
-        String(pair.scannedByUser?.id ?? '') === String(retailerId) ||
-        String(pair.assortment?.invoice?.user?.id ?? '') === String(retailerId);
-
-      if (!isScannedStatus || !scannedByRetailer) {
-        throw new BusinessException(ERROR_CODES.CUSTOMER_RETURN.PAIR_NOT_SCANNED_BY_RETAILER);
-      }
-
-      // Verify pair has not been returned in a SUBMITTED return
-      const alreadyReturned = await this.repository.findReturnedPairUids([pair.pair_uid]);
-      if (alreadyReturned.length > 0) {
-        throw new BusinessException(ERROR_CODES.CUSTOMER_RETURN.PAIR_ALREADY_RETURNED);
-      }
-
-      // Verify pair is not already in current pending return
-      const inCurrentReturn = (pendingReturn?.items || []).some(
-        (item) => item.pair_uid === pair.pair_uid
-      );
-      if (inCurrentReturn) {
-        throw new BusinessException(ERROR_CODES.CUSTOMER_RETURN.PAIR_ALREADY_IN_SESSION);
-      }
-
-      const itemCode = pair.assortment?.item?.item_code || pair.assortment?.parent_item_code;
-      const subItemCode = pair.sub_item_code || pair.assortment?.packing_item_code;
-
-      await this.transactionService.runInTransaction(async (queryRunner) => {
-        await this.repository.addReturnItem(
-          {
-            customerReturn: pendingReturn!,
-            pair: pair ? ({ id: pair.id } as any) : null,
-            invoice: pair.assortment?.invoice ? ({ id: pair.assortment.invoice.id } as any) : null,
-            pair_uid: pair.pair_uid,
-            issue_type: dto.issueType,
-            remarks: dto.remarks?.trim() || null,
-            item_code: itemCode,
-            sub_item_code: subItemCode,
-          },
-          queryRunner
-        );
-
-        const newCount = (pendingReturn?.items?.length || 0) + 1;
-        await this.repository.updateTotalPairs(Number(pendingReturn!.id), newCount, queryRunner);
-      });
-
-      const updated = await this.repository.findActivePendingByRetailer(retailerId);
-      return this.toResponse(updated!);
-    });
-  }
-
-  /**
-   * Updates the issue type/remarks of a pair in the current pending return
-   *
-   * @param retailerId
-   * @param dto
-   * @returns
-   */
-  async updatePairIssue(retailerId: string | number, dto: UpdateCustomerReturnPairIssueDto) {
-    const lockKey = `lock:customer-return:retailer:${retailerId}`;
-
-    return this.lock.withLock(lockKey, async () => {
-      if (dto.issueType === CustomerReturnIssueType.OTHER && !dto.remarks?.trim()) {
-        throw new BusinessException(ERROR_CODES.CUSTOMER_RETURN.REMARKS_REQUIRED_FOR_OTHER);
-      }
-
-      const pendingReturn = await this.repository.findActivePendingByRetailer(retailerId);
-      if (!pendingReturn) {
-        throw new BusinessException(ERROR_CODES.CUSTOMER_RETURN.SESSION_NOT_FOUND);
-      }
-
-      const item = await this.repository.findItemInReturn(Number(pendingReturn.id), dto.pairCode);
-      if (!item) {
-        throw new BusinessException(ERROR_CODES.CUSTOMER_RETURN.PAIR_NOT_IN_SESSION);
-      }
-
-      await this.repository.updateReturnItemIssue(
-        Number(item.id),
-        dto.issueType,
-        dto.remarks?.trim() || null
-      );
-
-      const updated = await this.repository.findActivePendingByRetailer(retailerId);
-      return this.toResponse(updated!);
-    });
-  }
-
-  /**
-   * Removes a pair from the current pending return
-   *
-   * @param retailerId
-   * @param pairCode
-   * @returns
-   */
-  async removePair(retailerId: string | number, pairCode: string) {
-    const lockKey = `lock:customer-return:retailer:${retailerId}`;
-
-    return this.lock.withLock(lockKey, async () => {
-      const pendingReturn = await this.repository.findActivePendingByRetailer(retailerId);
-      if (!pendingReturn) {
-        throw new BusinessException(ERROR_CODES.CUSTOMER_RETURN.SESSION_NOT_FOUND);
-      }
-
-      const item = await this.repository.findItemInReturn(Number(pendingReturn.id), pairCode);
-
-      if (!item) {
-        throw new BusinessException(ERROR_CODES.CUSTOMER_RETURN.PAIR_NOT_IN_SESSION);
-      }
-
-      await this.transactionService.runInTransaction(async (queryRunner) => {
-        await this.repository.removeReturnItem(Number(item.id), queryRunner);
-
-        const newCount = Math.max(0, (pendingReturn.items?.length || 1) - 1);
-
-        await this.repository.updateTotalPairs(Number(pendingReturn.id), newCount, queryRunner);
-      });
-
-      const updated = await this.repository.findActivePendingByRetailer(retailerId);
-      return this.toResponse(updated!);
-    });
-  }
-
-  /**
-   * Cancels the current pending return
-   *
-   * @param retailerId
-   * @returns
-   */
-  async cancelActiveReturn(retailerId: string | number) {
-    const pendingReturn = await this.repository.findActivePendingByRetailer(retailerId);
-    if (!pendingReturn) {
-      throw new BusinessException(ERROR_CODES.CUSTOMER_RETURN.SESSION_NOT_FOUND);
+    if (!pair) {
+      throw new BusinessException(ERROR_CODES.CUSTOMER_RETURN.PAIR_NOT_FOUND);
     }
 
-    await this.repository.updateReturnStatus(
-      Number(pendingReturn.id),
-      CustomerReturnStatus.CANCELLED
-    );
+    // Verify scanned by retailer
+    const isScannedStatus =
+      pair.status === InvoicePairScanStatus.SCANNED ||
+      pair.status === InvoicePairScanStatus.REDEEMED ||
+      pair.status === InvoicePairScanStatus.USED ||
+      pair.is_scanned;
 
-    return { success: true, message: 'Active customer return cancelled successfully' };
+    const scannedByRetailer =
+      String(pair.scannedByUser?.id ?? '') === String(retailerId) ||
+      String(pair.assortment?.invoice?.user?.id ?? '') === String(retailerId);
+
+    if (!isScannedStatus || !scannedByRetailer) {
+      throw new BusinessException(ERROR_CODES.CUSTOMER_RETURN.PAIR_NOT_SCANNED_BY_RETAILER);
+    }
+
+    // Verify invoice is completed/scanned
+    const invoice = pair.assortment?.invoice;
+    const isInvoiceCompleted =
+      invoice &&
+      (invoice.status === InvoiceStatus.COMPLETED ||
+        invoice.scan_status === InvoiceScanStatus.FULLY_SCANNED ||
+        invoice.scan_status === InvoiceScanStatus.SCANNED);
+
+    if (!isInvoiceCompleted) {
+      throw new BusinessException(ERROR_CODES.INVOICE_SCAN.INVOICE_NOT_SCANNED);
+    }
+
+    return {
+      isValid: true,
+      pairUid: pair.pair_uid,
+      invoiceNumber: invoice?.invoice_no,
+      itemCode: pair.assortment?.item?.item_code || pair.assortment?.parent_item_code || null,
+      itemName: pair.assortment?.item?.item_name || null,
+    };
   }
 
   /**
-   * Submits the current pending return
-   *
-   * @param retailerId
-   * @param remarks
-   * @returns
+   * Submits a customer return entry (pairUID, issue, remarks, photoUrl)
    */
-  async submitActiveReturn(retailerId: string | number, remarks?: string) {
-    const lockKey = `lock:customer-return:retailer:${retailerId}`;
+  async submitReturn(retailerId: string | number, dto: SubmitCustomerReturnDto) {
+    const validation = await this.validatePair(retailerId, { pairUid: dto.pairUid });
 
-    return this.lock.withLock(lockKey, async () => {
-      const pendingReturn = await this.repository.findActivePendingByRetailer(retailerId);
-      if (!pendingReturn) {
-        throw new BusinessException(ERROR_CODES.CUSTOMER_RETURN.SESSION_NOT_FOUND);
-      }
+    if (!validation.isValid) {
+      throw new BusinessException(ERROR_CODES.CUSTOMER_RETURN.PAIR_NOT_SCANNED_BY_RETAILER);
+    }
 
-      if (!pendingReturn.items?.length) {
-        throw new BusinessException(ERROR_CODES.CUSTOMER_RETURN.SESSION_EMPTY);
-      }
+    const pairCodeTrimmed = dto.pairUid.trim();
+    const pair = await this.pairRepository.findByPairUidOrQr(pairCodeTrimmed);
 
-      await this.transactionService.runInTransaction(async (queryRunner) => {
-        await this.repository.updateTotalPairs(
-          Number(pendingReturn.id),
-          pendingReturn.items.length,
-          queryRunner
-        );
-        await this.repository.updateReturnStatus(
-          Number(pendingReturn.id),
-          CustomerReturnStatus.SUBMITTED,
-          remarks?.trim() || null,
-          queryRunner
-        );
-      });
+    console.log(pair);
 
-      const submitted = await this.repository.findDetailOwnedByRetailer(
-        pendingReturn.id,
-        retailerId
-      );
-
-      ConsoleLogger.log('CUSTOMER_RETURN_SUBMITTED', {
-        tag: 'CustomerReturnService',
-        data: { id: pendingReturn.id, returnNumber: pendingReturn.return_number },
-      });
-
-      return this.toResponse(submitted!);
+    const saved = await this.repository.saveCustomerReturn({
+      pair_uid: pair!.pair_uid,
+      retailer: { id: Number(retailerId) } as any,
+      invoice: pair?.assortment?.invoice ? ({ id: pair.assortment.invoice.id } as any) : null,
+      invoiceItem: pair?.assortment?.item ? ({ id: pair.assortment.item.id } as any) : null,
+      pair: pair ? ({ id: pair.id } as any) : null,
+      remarks: dto.remarks?.trim() || null,
+      photo_url: dto.photoUrl?.trim() || null,
     });
+
+    ConsoleLogger.log('CUSTOMER_RETURN_SAVED', {
+      tag: 'CustomerReturnService',
+      data: { id: saved.id, pairUid: saved.pair_uid, retailerId },
+    });
+
+    const fullRecord = await this.repository.findDetailOwnedByRetailer(saved.id, retailerId);
+
+    return this.toResponse(fullRecord || saved);
   }
 
   /**
-   * Gets history of returns made by a retailer
-   *
-   * @param retailerId
-   * @param query
-   * @returns
+   * Gets history of customer returns for a retailer
    */
   async getHistory(retailerId: string | number, query: CustomerReturnHistoryQueryDto) {
     const page = query.page ?? 1;
@@ -338,11 +150,7 @@ export class CustomerReturnService {
   }
 
   /**
-   * Gets history of a specific return
-   *
-   * @param retailerId
-   * @param id
-   * @returns
+   * Gets detail of a specific customer return record
    */
   async getHistoryDetail(retailerId: string | number, id: string) {
     const returnRecord = await this.repository.findDetailOwnedByRetailer(id, retailerId);

@@ -16,15 +16,15 @@ import { RolesGuard } from 'src/default/common/guards/roles.guard';
 import { Roles } from 'src/default/common/decorators/roles.decorator';
 import { UserRole } from 'src/default/common/enums/user-type.enum';
 import { DataSanitizer } from 'src/default/common/utils/sanitize.utils';
+import { IdempotencyInterceptor } from 'src/default/common/interceptors/idempotency-check.interceptor';
 import { CustomerReturnService } from './customer-return.service';
 import {
   CustomerReturnHistoryQueryDto,
-  RemoveCustomerReturnPairDto,
-  ScanCustomerReturnPairDto,
-  UpdateCustomerReturnPairIssueDto,
+  SubmitCustomerReturnDto,
+  ValidateCustomerReturnPairDto,
 } from './dto';
-import { IdempotencyInterceptor } from 'src/default/common/interceptors/idempotency-check.interceptor';
 
+@NoCache()
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles([UserRole.RETAILER])
 @Controller('customer-return')
@@ -32,86 +32,26 @@ export class CustomerReturnController {
   constructor(private readonly service: CustomerReturnService) {}
 
   /**
-   * Start / Get Active Pending Customer Return
-   * POST /customer-return/start
+   * Validate pair UID against completed scanned invoices of the retailer
+   * POST /customer-return/validate
    */
   @NoCache()
-  @UseInterceptors(IdempotencyInterceptor)
-  @Post('start')
-  async startReturn(@Req() request: any) {
-    const response = await this.service.getOrCreateActivePendingReturn(request.user.id);
+  @SkipThrottle()
+  @Post('validate')
+  async validatePair(@Req() request: any, @Body() dto: ValidateCustomerReturnPairDto) {
+    const response = await this.service.validatePair(request.user.id, dto);
     return DataSanitizer.sanitizeData(response);
   }
 
   /**
-   * Scan Pair into Active Customer Return
-   * POST /customer-return/scan
-   */
-  @NoCache()
-  @UseInterceptors(IdempotencyInterceptor)
-  @Post('scan')
-  async scanPair(@Req() request: any, @Body() dto: ScanCustomerReturnPairDto) {
-    const response = await this.service.scanPair(request.user.id, dto);
-    return DataSanitizer.sanitizeData(response);
-  }
-
-  /**
-   * Update Issue Type / Remarks for Pair
-   * POST /customer-return/update-issue
-   */
-  @NoCache()
-  @UseInterceptors(IdempotencyInterceptor)
-  @Post('update-issue')
-  async updatePairIssue(@Req() request: any, @Body() dto: UpdateCustomerReturnPairIssueDto) {
-    const response = await this.service.updatePairIssue(request.user.id, dto);
-    return DataSanitizer.sanitizeData(response);
-  }
-
-  /**
-   * Remove Pair from Active Customer Return
-   * POST /customer-return/remove-pair
-   */
-  @NoCache()
-  @UseInterceptors(IdempotencyInterceptor)
-  @Post('remove-pair')
-  async removePair(@Req() request: any, @Body() dto: RemoveCustomerReturnPairDto) {
-    const response = await this.service.removePair(request.user.id, dto.pairUid);
-    return DataSanitizer.sanitizeData(response);
-  }
-
-  /**
-   * Cancel Active Customer Return
-   * POST /customer-return/cancel
-   */
-  @NoCache()
-  @UseInterceptors(IdempotencyInterceptor)
-  @Post('cancel')
-  async cancelReturn(@Req() request: any) {
-    const response = await this.service.cancelActiveReturn(request.user.id);
-    return DataSanitizer.sanitizeData(response);
-  }
-
-  /**
-   * Submit Active Customer Return
+   * Submit customer return (pairUID, issueType, remarks, photoUrl)
    * POST /customer-return/submit
    */
   @NoCache()
   @UseInterceptors(IdempotencyInterceptor)
   @Post('submit')
-  async submitReturn(@Req() request: any, @Body('remarks') remarks?: string) {
-    const response = await this.service.submitActiveReturn(request.user.id, remarks);
-    return DataSanitizer.sanitizeData(response);
-  }
-
-  /**
-   * Get Active Pending Customer Return
-   * GET /customer-return/active
-   */
-  @NoCache()
-  @SkipThrottle()
-  @Get('active')
-  async getActiveReturn(@Req() request: any) {
-    const response = await this.service.getActiveReturn(request.user.id);
+  async submitReturn(@Req() request: any, @Body() dto: SubmitCustomerReturnDto) {
+    const response = await this.service.submitReturn(request.user.id, dto);
     return DataSanitizer.sanitizeData(response);
   }
 
