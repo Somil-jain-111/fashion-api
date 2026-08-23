@@ -24,12 +24,17 @@ export class CustomerReturnService {
    * Helper returns formatted response object
    */
   private toResponse(item: any) {
+    const attachmentUrls: string[] = (item?.attachments ?? []).map((att: any) => att.url);
+
+    if (!attachmentUrls.length && item?.photo_url) {
+      attachmentUrls.push(item.photo_url);
+    }
+
     return {
       id: String(item?.id),
       pairUid: item?.pair_uid,
-      issueType: item?.issue_type,
       remarks: item?.remarks,
-      photoUrl: item?.photo_url,
+      attachments: attachmentUrls,
       createdAt: item?.createdAt,
       updatedAt: item?.updatedAt,
       invoiceNumber: item?.invoice?.invoice_no,
@@ -94,7 +99,7 @@ export class CustomerReturnService {
   }
 
   /**
-   * Submits a customer return entry (pairUID, issue, remarks, photoUrl)
+   * Submits a customer return entry (pairUID, issue, remarks, photoUrl, attachments)
    */
   async submitReturn(retailerId: string | number, dto: SubmitCustomerReturnDto) {
     const validation = await this.validatePair(retailerId, { pairUid: dto.pairUid });
@@ -106,7 +111,11 @@ export class CustomerReturnService {
     const pairCodeTrimmed = dto.pairUid.trim();
     const pair = await this.pairRepository.findByPairUidOrQr(pairCodeTrimmed);
 
-    console.log(pair);
+    const attachmentUrls: string[] = [];
+
+    if (dto.attachments?.length) {
+      attachmentUrls.push(...dto.attachments.filter((url) => !!url?.trim()).slice(0, 5));
+    }
 
     const saved = await this.repository.saveCustomerReturn({
       pair_uid: pair!.pair_uid,
@@ -115,12 +124,17 @@ export class CustomerReturnService {
       invoiceItem: pair?.assortment?.item ? ({ id: pair.assortment.item.id } as any) : null,
       pair: pair ? ({ id: pair.id } as any) : null,
       remarks: dto.remarks?.trim() || null,
-      photo_url: dto.photoUrl?.trim() || null,
+      attachments: attachmentUrls.map((url) => ({ url }) as any),
     });
 
     ConsoleLogger.log('CUSTOMER_RETURN_SAVED', {
       tag: 'CustomerReturnService',
-      data: { id: saved.id, pairUid: saved.pair_uid, retailerId },
+      data: {
+        id: saved.id,
+        pairUid: saved.pair_uid,
+        retailerId,
+        attachmentsCount: attachmentUrls.length,
+      },
     });
 
     const fullRecord = await this.repository.findDetailOwnedByRetailer(saved.id, retailerId);

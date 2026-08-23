@@ -42,6 +42,7 @@ export class CustomerReturnRepository extends BaseRepository<CustomerReturnEntit
       .leftJoinAndSelect('cr.invoice', 'invoice')
       .leftJoinAndSelect('cr.invoiceItem', 'invoiceItem')
       .leftJoinAndSelect('cr.pair', 'pair')
+      .leftJoinAndSelect('cr.attachments', 'attachments')
       .where('cr.retailer_id = :retailerId', { retailerId: String(retailerId) })
       .orderBy('cr.createdAt', 'DESC')
       .skip((options.page - 1) * options.limit)
@@ -77,6 +78,7 @@ export class CustomerReturnRepository extends BaseRepository<CustomerReturnEntit
       .leftJoinAndSelect('cr.invoice', 'invoice')
       .leftJoinAndSelect('cr.invoiceItem', 'invoiceItem')
       .leftJoinAndSelect('cr.pair', 'pair')
+      .leftJoinAndSelect('cr.attachments', 'attachments')
       .where('cr.id = :id', { id: Number(id) })
       .andWhere('cr.retailer_id = :retailerId', { retailerId: String(retailerId) })
       .getOne();
