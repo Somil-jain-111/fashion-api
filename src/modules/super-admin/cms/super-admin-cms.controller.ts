@@ -32,9 +32,14 @@ import { AppVersionService } from 'src/modules/cms/app-version/app-version.servi
 import { CreateAppVersionDto } from 'src/modules/cms/app-version/dto/create-app-version.dto';
 import { UpdateAppVersionDto } from 'src/modules/cms/app-version/dto/update-app-version.dto';
 
+import { VideoService } from 'src/modules/cms/video/video.service';
+import { CreateVideoDto } from 'src/modules/cms/video/dto/create-video.dto';
+import { UpdateVideoDto } from 'src/modules/cms/video/dto/update-video.dto';
+
 import { AdminCmsPageQueryDto } from './dto/admin-cms-page-query.dto';
 import { AdminFaqQueryDto } from './dto/admin-faq-query.dto';
 import { AdminBannerQueryDto } from './dto/admin-banner-query.dto';
+import { AdminVideoQueryDto } from './dto/admin-video-query.dto';
 import { SuperAdminCmsPageResponseDto, SuperAdminCmsPageListResponseDto } from './dto/response/page-response.dto';
 import { SuperAdminFaqResponseDto, SuperAdminFaqListResponseDto } from './dto/response/faq-response.dto';
 import {
@@ -46,9 +51,10 @@ import {
   SuperAdminAppVersionResponseDto,
   SuperAdminAppVersionListResponseDto,
 } from './dto/response/app-version-response.dto';
+import { SuperAdminVideoResponseDto, SuperAdminVideoListResponseDto } from './dto/response/video-response.dto';
 
 /**
- * Thin proxy over the existing cms-page/faq/announcement/banner/app-version services
+ * Thin proxy over the existing cms-page/faq/announcement/banner/app-version/video services
  * (src/modules/cms) — re-exposed under the consolidated super-admin/* surface. GET + POST
  * only, no PATCH/DELETE: update is POST /:id, delete is POST /delete/:id, same convention
  * already used by SuperAdminBannersController / the announcement module's own controller.
@@ -70,6 +76,7 @@ export class SuperAdminCmsController {
     private readonly announcementService: AnnouncementService,
     private readonly bannerService: BannerService,
     private readonly appVersionService: AppVersionService,
+    private readonly videoService: VideoService,
     private readonly auditService: AuditService
   ) {}
 
@@ -321,6 +328,49 @@ export class SuperAdminCmsController {
     const before = await this.appVersionService.findOne(id);
     const response = await this.appVersionService.remove(id);
     await this.auditService.recordDelete('APP_VERSION', id, String(request.user.id), before as any);
+    return DataSanitizer.sanitizeData(new MessageResponseDto(response.message));
+  }
+
+  // ---- Videos ----
+
+  @ApiOkResponse({ type: SuperAdminVideoListResponseDto })
+  @Get('videos')
+  async listVideos(@Query() query: AdminVideoQueryDto) {
+    const offset = (query.page - 1) * query.limit;
+    const response = await this.videoService.findAll(query, offset, query.limit);
+    return DataSanitizer.sanitizeData(new SuperAdminVideoListResponseDto(response));
+  }
+
+  @ApiOkResponse({ type: SuperAdminVideoResponseDto })
+  @Get('videos/:id')
+  async getVideo(@Param('id') id: string) {
+    const response = await this.videoService.findOne(id);
+    return DataSanitizer.sanitizeData(new SuperAdminVideoResponseDto(response));
+  }
+
+  @ApiOkResponse({ type: SuperAdminVideoResponseDto })
+  @Post('videos')
+  async createVideo(@Req() request: any, @Body() dto: CreateVideoDto) {
+    const response = await this.videoService.create(dto);
+    await this.auditService.recordCreate('VIDEO', String(response.id), String(request.user.id), dto as any);
+    return DataSanitizer.sanitizeData(new SuperAdminVideoResponseDto(response));
+  }
+
+  @ApiOkResponse({ type: SuperAdminVideoResponseDto })
+  @Post('videos/:id')
+  async updateVideo(@Req() request: any, @Param('id') id: string, @Body() dto: UpdateVideoDto) {
+    const before = await this.videoService.findOne(id);
+    const response = await this.videoService.update(id, dto);
+    await this.auditService.recordUpdate('VIDEO', id, String(request.user.id), before as any, response as any);
+    return DataSanitizer.sanitizeData(new SuperAdminVideoResponseDto(response));
+  }
+
+  @ApiOkResponse({ type: MessageResponseDto })
+  @Post('videos/delete/:id')
+  async deleteVideo(@Req() request: any, @Param('id') id: string) {
+    const before = await this.videoService.findOne(id);
+    const response = await this.videoService.remove(id);
+    await this.auditService.recordDelete('VIDEO', id, String(request.user.id), before as any);
     return DataSanitizer.sanitizeData(new MessageResponseDto(response.message));
   }
 }

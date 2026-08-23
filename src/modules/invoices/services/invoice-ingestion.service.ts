@@ -124,6 +124,7 @@ export class InvoiceIngestionService {
       assortmentIds.forEach((assortmentId, index) => {
         for (const pair of pairsPerAssortment[index]) {
           pairRows.push({
+            invoice: invoice,
             assortment: { id: Number(assortmentId) } as any,
             pair_qr: pair.pairqr,
             pair_uid: pair.pairuid,

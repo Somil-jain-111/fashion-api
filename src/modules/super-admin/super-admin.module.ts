@@ -7,6 +7,7 @@ import { CmsPageModule } from '../cms/cms-page/cms-page.module';
 import { FaqModule } from '../cms/faq/faq.module';
 import { AnnouncementModule } from '../cms/announcement/announcement.module';
 import { AppVersionModule } from '../cms/app-version/app-version.module';
+import { VideoModule } from '../cms/video/video.module';
 import { AuditModule } from '../audit/audit.module';
 import { AddressesModule } from '../addresses/addresses.module';
 import { SuperAdminUsersController } from './users/super-admin-users.controller';
@@ -40,6 +41,7 @@ import { SuperAdminCmsController } from './cms/super-admin-cms.controller';
     FaqModule,
     AnnouncementModule,
     AppVersionModule,
+    VideoModule,
     AuditModule,
     AddressesModule,
   ],

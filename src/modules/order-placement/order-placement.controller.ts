@@ -23,6 +23,13 @@ export class OrderPlacementController {
   }
 
   @NoCache()
+  @Get('summary')
+  async getSummary(@Req() req: any) {
+    const response = await this.orderPlacementService.getSummary(req.user.id);
+    return DataSanitizer.sanitizeData(response);
+  }
+
+  @NoCache()
   @Get('history')
   async getOrderHistory(@Req() req: any, @Query() query: GetOrderHistoryQueryDto) {
     const response = await this.orderPlacementService.getOrderHistory(req.user.id, query);

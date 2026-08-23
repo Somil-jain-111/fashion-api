@@ -1,0 +1,15 @@
+export enum CustomerReturnIssueType {
+  DEFECTIVE = 'DEFECTIVE',
+  SIZE_ISSUE = 'SIZE_ISSUE',
+  DAMAGED = 'DAMAGED',
+  WRONG_ITEM = 'WRONG_ITEM',
+  COLOR_FADING = 'COLOR_FADING',
+  SOLE_PEELING = 'SOLE_PEELING',
+  OTHER = 'OTHER',
+}
+
+export enum CustomerReturnStatus {
+  PENDING = 'PENDING',
+  SUBMITTED = 'SUBMITTED',
+  CANCELLED = 'CANCELLED',
+}

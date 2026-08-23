@@ -6,6 +6,7 @@ import { CmsPageModule } from './cms-page/cms-page.module';
 import { FaqModule } from './faq/faq.module';
 import { AppVersionModule } from './app-version/app-version.module';
 import { AnnouncementModule } from './announcement/announcement.module';
+import { VideoModule } from './video/video.module';
 import { UserAuthValidator } from '../auth/validators/user-auth.validator';
 import { UserRepository, RolesRepository } from '../auth/repository';
 import { UserModule } from '../user/user.module';
@@ -17,6 +18,7 @@ import { UserModule } from '../user/user.module';
     FaqModule,
     AppVersionModule,
     AnnouncementModule,
+    VideoModule,
     UserModule,
   ],
   controllers: [CmsController],
