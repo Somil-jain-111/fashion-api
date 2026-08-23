@@ -191,7 +191,11 @@ export class InvoiceService {
   }
 
   async history(userId: string, query: InvoiceHistoryQueryDto) {
-    const { items, total } = await this.invoiceRepository.findHistory(userId, query);
+    const { items, total } = await this.invoiceRepository.findHistory(userId, {
+      ...query,
+      page: query.page || 1,
+      limit: query.limit || 10,
+    });
 
     return {
       items,
