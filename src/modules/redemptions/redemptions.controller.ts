@@ -22,12 +22,18 @@ import { VerifyCartOrderDto } from './dto/verify-cart-order.dto';
 import { GetOrdersQueryDto } from './dto/get-orders-query.dto';
 import { ResendOtpDto } from './dto/resend-otp.dto';
 import { ResponseMessage } from 'src/default/common/decorators/response-message.decorator';
+import { OrderStatus } from './enum/order-status.enum';
+import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationEventType } from '../notifications/enum/notification-event-type.enum';
 
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles([UserRole.RETAILER, UserRole.EMPLOYEE])
 @Controller('redemptions')
 export class RedemptionsController {
-  constructor(private readonly redemptionsService: RedemptionsService) {}
+  constructor(
+    private readonly redemptionsService: RedemptionsService,
+    private readonly notifications: NotificationsService
+  ) {}
 
   @NoCache()
   @UseInterceptors(IdempotencyInterceptor)
@@ -63,6 +69,19 @@ export class RedemptionsController {
   @ResponseMessage('Redemption cart OTP verified and order placed successfully')
   async verifyCartOrder(@Req() req: any, @Body() dto: VerifyCartOrderDto) {
     const response = await this.redemptionsService.verifyCartOrder(req.user.id, dto);
+
+    // Hooked here rather than inside the service: verifyCartOrder() returns the
+    // runInTransaction(...) promise directly with no post-commit point inside the method
+    // itself (see redemptions.service.ts) — this is the first point after commit.
+    if (response.status !== OrderStatus.FAILED && response.grandTotalPoints > 0) {
+      await this.notifications.notify(
+        String(req.user.id),
+        NotificationEventType.REWARD_REDEEMED,
+        { orderNumber: response.orderNumber, points: response.grandTotalPoints },
+        { type: 'redemption', id: String(response.orderId) }
+      );
+    }
+
     return DataSanitizer.sanitizeData(response);
   }
 

@@ -6,6 +6,7 @@ import { BusinessException } from 'src/default/error/business.exception';
 import { ERROR_CODES } from 'src/default/error/error.code';
 import { ConsoleLogger } from 'src/default/logger/console/console.service';
 import { InvoicePairScanStatus } from '../enum/invoice-pair-scan-status.enum';
+import { InvoiceOwnerType } from '../enum/invoice.enum';
 import { InvoiceHistoryQueryDto } from '../dto';
 import {
   InvoiceHistoryRepository,
@@ -61,7 +62,8 @@ export class PairValidationService {
       } else if (
         pair.status === InvoicePairScanStatus.SCANNED ||
         pair.status === InvoicePairScanStatus.REDEEMED ||
-        pair.status === InvoicePairScanStatus.USED
+        pair.status === InvoicePairScanStatus.USED ||
+        pair.status === InvoicePairScanStatus.STOCKED
       ) {
         invalid.push({ pairUid: uid, reason: 'PAIR_UNAVAILABLE' });
       } else if (pair.status === InvoicePairScanStatus.EXPIRED) {
@@ -158,8 +160,8 @@ export class InvoiceService {
     private readonly invoiceRepository: InvoiceRepository
   ) {}
 
-  validate(invoiceIdOrNumber: string, userId: string) {
-    return this.validationService.validateInvoice(invoiceIdOrNumber, userId);
+  validate(invoiceIdOrNumber: string, userId: string, ownerType?: InvoiceOwnerType) {
+    return this.validationService.validateInvoice(invoiceIdOrNumber, userId, ownerType);
   }
 
   start(invoiceIdOrNumber: string, userId: string) {

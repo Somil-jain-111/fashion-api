@@ -24,4 +24,9 @@ export const NOTIFICATION_ERRORS = {
     message: 'Notification template not found',
     statusCode: 404,
   },
+  NOTIFICATION_TEMPLATE_ALREADY_EXISTS: {
+    code: 'NTF_006',
+    message: 'A template for this event type already exists',
+    statusCode: 409,
+  },
 } as const;

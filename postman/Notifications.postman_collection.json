@@ -1,0 +1,249 @@
+{
+  "info": {
+    "_postman_id": "e1b4a2f6-9c3d-4a7e-8b1f-2d6c5a9e0f31",
+    "name": "Campus Shoes - Notifications",
+    "description": "In-app notification system: (1) /notifications/* — any authenticated user reads their own notification log, marks read, manages per-event/per-channel preferences, and registers a device for push (JwtAuthGuard + UserStatusGuard, no role restriction); (2) /super-admin/notification-templates/* — SUPERADMIN-only CRUD over the message templates each event type renders (create/update/soft-delete, audit-logged). Six built-in event types: INVOICE_CREATED, INVOICE_SUBMITTED, POINTS_ALLOCATED, ORDER_PLACED, REWARD_REDEEMED, PRODUCT_RETURNED. Two channels: IN_APP (always written synchronously) and PUSH (queued via BullMQ, real firebase-admin code but returns SKIPPED — not FAILED — until FIREBASE_PROJECT_ID/FIREBASE_CLIENT_EMAIL/FIREBASE_PRIVATE_KEY are set).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:4050/api/v1", "type": "string" },
+    { "key": "userToken", "value": "", "type": "string", "description": "Any authenticated user — retailer/distributor/sub-distributor/employee etc." },
+    { "key": "superadminToken", "value": "", "type": "string" },
+    { "key": "notificationId", "value": "1", "type": "string" },
+    { "key": "templateId", "value": "1", "type": "string" },
+    { "key": "deviceToken", "value": "TEST-DEVICE-TOKEN-1", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "Notifications",
+      "description": "The caller's own notification log and preferences. Guarded by JwtAuthGuard + UserStatusGuard — works for any active user regardless of role.",
+      "auth": {
+        "type": "bearer",
+        "bearer": [{ "key": "token", "value": "{{userToken}}", "type": "string" }]
+      },
+      "item": [
+        {
+          "name": "List notifications",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/notifications?page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["notifications"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" },
+                { "key": "unreadOnly", "value": "true", "disabled": true }
+              ]
+            },
+            "description": "Newest first. Response: { items: [{id, eventType, title, body, referenceType, referenceId, isRead, readAt, metadata, createdAt}], pagination }."
+          },
+          "response": []
+        },
+        {
+          "name": "Unread count",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/notifications/unread-count",
+              "host": ["{{baseUrl}}"],
+              "path": ["notifications", "unread-count"]
+            },
+            "description": "Response: { count }."
+          },
+          "response": []
+        },
+        {
+          "name": "Mark one read",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/notifications/{{notificationId}}/read",
+              "host": ["{{baseUrl}}"],
+              "path": ["notifications", "{{notificationId}}", "read"]
+            },
+            "description": "Set {{notificationId}} from 'List notifications'. Errors: NTF_001 not found (or not owned by this user), NTF_004 already read."
+          },
+          "response": []
+        },
+        {
+          "name": "Mark all read",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/notifications/read-all",
+              "host": ["{{baseUrl}}"],
+              "path": ["notifications", "read-all"]
+            },
+            "description": "Marks every unread notification for this user as read."
+          },
+          "response": []
+        },
+        {
+          "name": "Get preferences",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/notifications/preferences",
+              "host": ["{{baseUrl}}"],
+              "path": ["notifications", "preferences"]
+            },
+            "description": "Always returns all 6 event types x 2 channels (12 rows), merging any saved overrides with the opt-out default (enabled=true when no row exists yet). Response: { preferences: [{eventType, channel, enabled}] }."
+          },
+          "response": []
+        },
+        {
+          "name": "Update preference",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"eventType\": \"ORDER_PLACED\",\n  \"channel\": \"PUSH\",\n  \"enabled\": false\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/notifications/preferences",
+              "host": ["{{baseUrl}}"],
+              "path": ["notifications", "preferences"]
+            },
+            "description": "Upserts one (eventType, channel) preference row. eventType: INVOICE_CREATED | INVOICE_SUBMITTED | POINTS_ALLOCATED | ORDER_PLACED | REWARD_REDEEMED | PRODUCT_RETURNED. channel: IN_APP | PUSH."
+          },
+          "response": []
+        },
+        {
+          "name": "Register device token",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"deviceToken\": \"{{deviceToken}}\",\n  \"platform\": \"ANDROID\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/notifications/device-token",
+              "host": ["{{baseUrl}}"],
+              "path": ["notifications", "device-token"]
+            },
+            "description": "Upserts by device_token (unique) — re-registering the same token from a different user re-assigns it. platform: ANDROID | IOS | WEB. Used by FirebasePushProvider to know which devices to target for PUSH."
+          },
+          "response": []
+        },
+        {
+          "name": "Remove device token",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"deviceToken\": \"{{deviceToken}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/notifications/device-token/remove",
+              "host": ["{{baseUrl}}"],
+              "path": ["notifications", "device-token", "remove"]
+            },
+            "description": "e.g. on logout — stops PUSH targeting this device."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Super Admin - Notification Templates",
+      "description": "SUPERADMIN-only. GET/POST-only convention (no PATCH/DELETE) — update is POST /:id, delete is POST /delete/:id (soft — sets active=false; the notify() pipeline then treats that event type as having no template and skips it). Every create/update/delete is audit-logged via AuditService under entity type NOTIFICATION_TEMPLATE.",
+      "auth": {
+        "type": "bearer",
+        "bearer": [{ "key": "token", "value": "{{superadminToken}}", "type": "string" }]
+      },
+      "item": [
+        {
+          "name": "List templates",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/super-admin/notification-templates?page=1&limit=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["super-admin", "notification-templates"],
+              "query": [
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" }
+              ]
+            },
+            "description": "All 6 built-in templates are seeded by migration. Response: { items: [{id, eventType, title, body, active}], pagination }."
+          },
+          "response": []
+        },
+        {
+          "name": "Template detail",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/super-admin/notification-templates/{{templateId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["super-admin", "notification-templates", "{{templateId}}"]
+            },
+            "description": "Returns even soft-deleted (active=false) templates — deletion only hides them from the notify() pipeline, not from admin view. NTF_005 if the id doesn't exist at all."
+          },
+          "response": []
+        },
+        {
+          "name": "Create template",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"eventType\": \"ORDER_PLACED\",\n  \"title\": \"Order Placed\",\n  \"body\": \"Your order {{orderNumber}} has been placed successfully.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/super-admin/notification-templates",
+              "host": ["{{baseUrl}}"],
+              "path": ["super-admin", "notification-templates"]
+            },
+            "description": "title/body support {{placeholder}} substitution, rendered per-notify() call and snapshotted onto the resulting notifications row. NTF_006 if an (active) template for this eventType already exists — all 6 event types are pre-seeded, so this will normally only succeed after soft-deleting the existing one first."
+          },
+          "response": []
+        },
+        {
+          "name": "Update template",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Order Placed!\",\n  \"body\": \"Your order {{orderNumber}} has been placed successfully.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/super-admin/notification-templates/{{templateId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["super-admin", "notification-templates", "{{templateId}}"]
+            },
+            "description": "eventType is not editable (it's the unique key templates are looked up by) — only title/body, both optional (send just the one you're changing)."
+          },
+          "response": []
+        },
+        {
+          "name": "Delete template (soft)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/super-admin/notification-templates/delete/{{templateId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["super-admin", "notification-templates", "delete", "{{templateId}}"]
+            },
+            "description": "Sets active=false. No restore endpoint yet — re-activate directly in DB, or POST a new template for the same eventType (the uniqueness check only looks at active rows)."
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}

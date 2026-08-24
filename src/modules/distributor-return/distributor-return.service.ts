@@ -11,6 +11,8 @@ import { InvoiceScanStatus, InvoiceStatus } from 'src/modules/invoices/enum/invo
 import { AddressPaginationDTO } from 'src/modules/addresses/dto/address-list-response.dto';
 import { DistributorReturnRepository } from './repository/distributor-return.repository';
 import { ProcessReturnDto, ValidateReturnDto } from './dto';
+import { NotificationsService } from 'src/modules/notifications/notifications.service';
+import { NotificationEventType } from 'src/modules/notifications/enum/notification-event-type.enum';
 
 interface ResolvedPair {
   pairCode: string;
@@ -30,7 +32,8 @@ interface FailedPair {
 export class DistributorReturnService {
   constructor(
     private readonly repository: DistributorReturnRepository,
-    private readonly transactionService: TransactionService
+    private readonly transactionService: TransactionService,
+    private readonly notifications: NotificationsService
   ) {}
 
   async validate(distributorId: string, dto: ValidateReturnDto) {
@@ -162,6 +165,16 @@ export class DistributorReturnService {
       });
 
       ConsoleLogger.log('DISTRIBUTOR_RETURN_SUCCESS', { tag, data: result });
+
+      for (const entry of result.processed) {
+        await this.notifications.notify(
+          entry.retailerId,
+          NotificationEventType.PRODUCT_RETURNED,
+          { returnNo: entry.returnNo, points: entry.pointsRefunded, invoiceNumber: entry.invoiceNumber },
+          { type: 'distributor_return', id: entry.returnNo }
+        );
+      }
+
       return result;
     } catch (error) {
       ConsoleLogger.error('DISTRIBUTOR_RETURN_FAILED', error?.stack || error, tag);

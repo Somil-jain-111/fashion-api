@@ -17,10 +17,13 @@ import { InvoiceScanStatus, InvoiceStatus } from '../enum/invoice.enum';
 import { InvoiceHistoryStatus, ScanSessionStatus } from '../enum/invoice-scan-session.enum';
 import { PointsExpiryConfigService } from 'src/modules/redemptions/services/points-expiry.service';
 import { RedisLockService } from './redis-lock.service';
+import { NotificationsService } from 'src/modules/notifications/notifications.service';
+import { NotificationEventType } from 'src/modules/notifications/enum/notification-event-type.enum';
 
 const POINTS_PER_PAIR = 5;
 
 export interface SubmissionResultDto {
+  invoiceId: string;
   submissionId: string;
   sessionId: string;
   totalPairs: number;
@@ -50,7 +53,8 @@ export class RewardSettlementService {
     private readonly pointHistoryRepository: InvoicePointHistoryRepository,
     private readonly pointsExpiryConfig: PointsExpiryConfigService,
     private readonly lock: RedisLockService,
-    private readonly redis: RedisService
+    private readonly redis: RedisService,
+    private readonly notifications: NotificationsService
   ) {}
 
   async submitSession(sessionId: string, userId: string): Promise<SubmissionResultDto> {
@@ -171,6 +175,7 @@ export class RewardSettlementService {
           : [];
 
         return {
+          invoiceId: String(invoice.id),
           submissionId,
           sessionId,
           totalPairs: invoice.total_pairs,
@@ -196,6 +201,21 @@ export class RewardSettlementService {
         this.redis.delete(`session:${sessionId}:${userId}`),
         this.redis.delete(`invoice:${invoiceNo}:${userId}`),
       ]);
+
+      await this.notifications.notify(
+        userId,
+        NotificationEventType.INVOICE_SUBMITTED,
+        { invoiceNumber: invoiceNo, scannedPairs: result.scannedPairs },
+        { type: 'invoice', id: result.invoiceId }
+      );
+      if (result.pointsAwarded > 0) {
+        await this.notifications.notify(
+          userId,
+          NotificationEventType.POINTS_ALLOCATED,
+          { points: result.pointsAwarded, invoiceNumber: invoiceNo },
+          { type: 'invoice', id: result.invoiceId }
+        );
+      }
 
       return result;
     });

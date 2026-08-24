@@ -60,6 +60,7 @@ import { DistributorReturnModule } from './modules/distributor-return/distributo
 import { DistributorTransferModule } from './modules/distributor-transfer/distributor-transfer.module';
 import { SuperAdminModule } from './modules/super-admin/super-admin.module';
 import { CustomerReturnModule } from './modules/customer-return/customer-return.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
 
 @Module({
   imports: [
@@ -118,6 +119,7 @@ import { CustomerReturnModule } from './modules/customer-return/customer-return.
     DistributorTransferModule,
     SuperAdminModule,
     CustomerReturnModule,
+    NotificationsModule,
   ],
   providers: [
     {

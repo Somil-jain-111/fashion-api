@@ -48,6 +48,7 @@ export class ScanSessionService {
             InvoicePairScanStatus.SCANNED,
             InvoicePairScanStatus.REDEEMED,
             InvoicePairScanStatus.USED,
+            InvoicePairScanStatus.STOCKED,
           ],
         })
         .getMany();

@@ -2,7 +2,7 @@ import { Column, Entity, Index, JoinColumn, ManyToOne, OneToMany } from 'typeorm
 import { User } from '../../auth/entities/users.entity';
 import { InvoiceItemEntity } from './invoice-item.entity';
 import { InvoiceAssortmentEntity } from './invoice-assortment.entity';
-import { InvoiceScanStatus, InvoiceStatus } from '../enum/invoice.enum';
+import { InvoiceOwnerType, InvoiceScanStatus, InvoiceStatus } from '../enum/invoice.enum';
 import { InvoiceType } from '../enum/invoice-scan-session.enum';
 import { BaseEntity } from '../../../default/common/entities';
 import { InvoicePairDetailEntity, PointHistory } from '../../../modules/auth/entities';
@@ -100,6 +100,13 @@ export class InvoiceEntity extends BaseEntity {
     default: InvoiceStatus.PENDING,
   })
   status!: InvoiceStatus;
+
+  /**
+   * Which flow claimed this invoice — RETAILER (earns points) or SUB_DISTRIBUTOR (adds to
+   * their stock ledger). Null until claimed via validate().
+   */
+  @Column({ name: 'user_type', type: 'enum', enum: InvoiceOwnerType, nullable: true })
+  user_type?: InvoiceOwnerType;
 
   @Column({ type: 'varchar', length: 255, nullable: true })
   remarks!: string;

@@ -17,6 +17,8 @@ import { OrderPlacementItemRepository, OrderPlacementRepository } from './reposi
 import { GetOrderHistoryQueryDto } from './dto/get-order-history-query.dto';
 import { OrderHistoryResponseDto } from './dto/order-history-response.dto';
 import { CommonUtils } from 'src/default/common/utils/common.utils';
+import { NotificationsService } from 'src/modules/notifications/notifications.service';
+import { NotificationEventType } from 'src/modules/notifications/enum/notification-event-type.enum';
 
 @Injectable()
 export class OrderPlacementService {
@@ -25,7 +27,8 @@ export class OrderPlacementService {
     private readonly orderPlacementRepository: OrderPlacementRepository,
     private readonly orderPlacementItemRepository: OrderPlacementItemRepository,
     private readonly cartRepository: CartRepository,
-    private readonly cartItemRepository: CartItemRepository
+    private readonly cartItemRepository: CartItemRepository,
+    private readonly notifications: NotificationsService
   ) {}
 
   async placeOrder(
@@ -100,6 +103,13 @@ export class OrderPlacementService {
       tag,
       data: { userId, orderId: order.id, orderNumber: order.orderNumber },
     });
+
+    await this.notifications.notify(
+      String(userId),
+      NotificationEventType.ORDER_PLACED,
+      { orderNumber: order.orderNumber, totalAmount: order.totalPayable },
+      { type: 'order_placement', id: String(order.id) }
+    );
 
     return this.toResponse(order);
   }

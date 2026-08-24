@@ -114,6 +114,7 @@ export class PairScanningService {
               InvoicePairScanStatus.SCANNED,
               InvoicePairScanStatus.REDEEMED,
               InvoicePairScanStatus.USED,
+              InvoicePairScanStatus.STOCKED,
             ],
           })
           .getCount();
@@ -187,6 +188,7 @@ export class PairScanningService {
               InvoicePairScanStatus.SCANNED,
               InvoicePairScanStatus.REDEEMED,
               InvoicePairScanStatus.USED,
+              InvoicePairScanStatus.STOCKED,
             ],
           })
           .getCount();

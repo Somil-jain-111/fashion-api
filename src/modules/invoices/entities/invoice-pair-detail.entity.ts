@@ -56,7 +56,8 @@ export class InvoicePairDetailEntity extends BaseEntity {
     return (
       this.status === InvoicePairScanStatus.SCANNED ||
       this.status === InvoicePairScanStatus.REDEEMED ||
-      this.status === InvoicePairScanStatus.USED
+      this.status === InvoicePairScanStatus.USED ||
+      this.status === InvoicePairScanStatus.STOCKED
     );
   }
 

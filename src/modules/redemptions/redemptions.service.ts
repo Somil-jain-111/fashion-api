@@ -43,6 +43,8 @@ import { UserValidator } from 'src/default/common/validators';
 import { OtpAttemptType } from 'src/default/common/enums/common.enum';
 import { SmsService } from '../sms/sms.service';
 import { RedemptionCartRepository } from '../redemption-cart/repository/redemption-cart.repository';
+import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationEventType } from '../notifications/enum/notification-event-type.enum';
 
 @Injectable()
 export class RedemptionsService {
@@ -69,7 +71,8 @@ export class RedemptionsService {
     private readonly orderPlaceProvider: OrderPlaceProvider,
     private readonly dataSource: DataSource,
     private readonly appConfigService: AppConfigService,
-    private readonly smsService: SmsService
+    private readonly smsService: SmsService,
+    private readonly notifications: NotificationsService
   ) {}
 
   /**
@@ -581,6 +584,15 @@ export class RedemptionsService {
         queryRunner
       );
     });
+
+    if (finalStatus !== OrderStatus.FAILED && successfulPointsDeduction > 0) {
+      await this.notifications.notify(
+        String(userId),
+        NotificationEventType.REWARD_REDEEMED,
+        { orderNumber: order.order_number, points: successfulPointsDeduction },
+        { type: 'redemption', id: String(order.id) }
+      );
+    }
 
     return {
       orderId: order.id,

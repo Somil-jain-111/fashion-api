@@ -23,3 +23,13 @@ export enum InvoiceScanStatus {
   SCANNED = 'SCANNED',
   FULLY_SCANNED = 'FULLY_SCANNED',
 }
+
+/**
+ * Which scanning flow this invoice was claimed under — set once, at claim time, in
+ * InvoiceValidationService.validateInvoice(). Determines whether submit() awards reward
+ * points (RETAILER) or adds to the sub-distributor's stock ledger (SUB_DISTRIBUTOR).
+ */
+export enum InvoiceOwnerType {
+  RETAILER = 'retailer',
+  SUB_DISTRIBUTOR = 'sub_distributor',
+}

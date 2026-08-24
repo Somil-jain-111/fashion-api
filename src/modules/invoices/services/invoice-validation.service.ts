@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InvoiceRepository, InvoiceSessionRepository } from '../repository';
 import { UserMappingRepository } from 'src/modules/auth/repository/user-mapping.repository';
 import { MappingStatus } from 'src/default/common/enums/user-mapping.enum';
-import { InvoiceScanStatus, InvoiceStatus } from '../enum/invoice.enum';
+import { InvoiceOwnerType, InvoiceScanStatus, InvoiceStatus } from '../enum/invoice.enum';
 import { InvoiceSummaryResponseDto } from '../dto';
 import { BusinessException } from 'src/default/error/business.exception';
 import { ERROR_CODES } from 'src/default/error/error.code';
@@ -26,7 +26,8 @@ export class InvoiceValidationService {
 
   async validateInvoice(
     invoiceIdOrNumber: string,
-    userId: string
+    userId: string,
+    ownerType: InvoiceOwnerType = InvoiceOwnerType.RETAILER
   ): Promise<InvoiceSummaryResponseDto> {
     if (!invoiceIdOrNumber) {
       throw new BusinessException(ERROR_CODES.INVOICE_SCAN.INVOICE_NOT_FOUND);
@@ -69,6 +70,7 @@ export class InvoiceValidationService {
     // Claim invoice by the user IF it is not scanned
     if (!invoice.user) {
       invoice.user = { id: Number(userId) } as any;
+      invoice.user_type = ownerType;
       await this.invoiceRepository.saveInvoice(invoice);
     }
 

@@ -46,6 +46,10 @@ import { InvoiceIngestionService } from './services/invoice-ingestion.service';
 import { UserModule } from '../user/user.module';
 import { UserMappingRepository } from '../auth/repository/user-mapping.repository';
 import { IdempotencyModule } from 'src/default/idempotency/idempotency.module';
+import { SubDistributorInvoiceController } from './sub-distributor-invoices.controller';
+import { SubDistributorStockRepository } from './repository/sub-distributor-stock.repository';
+import { SubDistributorStockSettlementService } from './services/sub-distributor-stock-settlement.service';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
   imports: [
@@ -66,12 +70,14 @@ import { IdempotencyModule } from 'src/default/idempotency/idempotency.module';
     BullModule.registerQueue({ name: 'invoice-audit' }),
     UserModule,
     IdempotencyModule,
+    NotificationsModule,
   ],
   controllers: [
     InvoicesController,
     InvoiceExceptionsController,
     RetailerScanAgeController,
     InvoiceIngestionController,
+    SubDistributorInvoiceController,
   ],
   providers: [
     InvoiceRepository,
@@ -93,6 +99,9 @@ import { IdempotencyModule } from 'src/default/idempotency/idempotency.module';
     AuditService,
     InvoiceAuditProcessor,
     InvoiceService,
+
+    SubDistributorStockRepository,
+    SubDistributorStockSettlementService,
 
     RetailerScanAgeRepository,
     MasterCatalogueRepository,

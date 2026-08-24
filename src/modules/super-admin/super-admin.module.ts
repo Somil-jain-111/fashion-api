@@ -30,6 +30,7 @@ import { SuperAdminDistributorTransferService } from './distributor-transfer/sup
 import { SuperAdminDistributorTransferRepository } from './distributor-transfer/repository/super-admin-distributor-transfer.repository';
 import { SuperAdminSupportController } from './support/super-admin-support.controller';
 import { SuperAdminCmsController } from './cms/super-admin-cms.controller';
+import { SuperAdminNotificationTemplatesModule } from './notification-templates/super-admin-notification-templates.module';
 
 @Module({
   imports: [
@@ -44,6 +45,7 @@ import { SuperAdminCmsController } from './cms/super-admin-cms.controller';
     VideoModule,
     AuditModule,
     AddressesModule,
+    SuperAdminNotificationTemplatesModule,
   ],
   controllers: [
     SuperAdminUsersController,

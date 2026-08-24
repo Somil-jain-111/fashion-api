@@ -556,6 +556,21 @@ export class InvoicePairRepository extends BaseRepository<InvoicePairDetailEntit
       .getMany();
   }
 
+  /**
+   * Same as findScannedPairsForInvoice, but eagerly loads the assortment/item chain — needed
+   * by the sub-distributor stock settlement flow to group scanned pairs by SKU
+   * (assortment.packing_item_code) before crediting the stock ledger.
+   */
+  findScannedPairsWithSkuForInvoice(invoiceId: string, queryRunner?: QueryRunner) {
+    return this.getRepository(queryRunner)
+      .createQueryBuilder('pair')
+      .innerJoinAndSelect('pair.assortment', 'assortment')
+      .leftJoinAndSelect('assortment.item', 'item')
+      .where('assortment.invoice_id = :invoiceId', { invoiceId })
+      .andWhere('pair.status = :status', { status: InvoicePairScanStatus.SCANNED })
+      .getMany();
+  }
+
   async markScannedAsRedeemed(
     pairIds: (string | number)[],
     userId: string,
@@ -566,6 +581,26 @@ export class InvoicePairRepository extends BaseRepository<InvoicePairDetailEntit
       { id: In(pairIds) },
       {
         status: InvoicePairScanStatus.REDEEMED,
+        scanned_at: new Date(),
+        scannedByUser: { id: Number(userId) } as any,
+      }
+    );
+  }
+
+  /**
+   * Sub-distributor equivalent of markScannedAsRedeemed — commits scanned pairs into the
+   * STOCKED terminal status instead (no points earned).
+   */
+  async markScannedAsStocked(
+    pairIds: (string | number)[],
+    userId: string,
+    queryRunner?: QueryRunner
+  ): Promise<void> {
+    if (!pairIds.length) return;
+    await this.getRepository(queryRunner).update(
+      { id: In(pairIds) },
+      {
+        status: InvoicePairScanStatus.STOCKED,
         scanned_at: new Date(),
         scannedByUser: { id: Number(userId) } as any,
       }

@@ -11,6 +11,8 @@ import { InvoicePairScanStatus } from '../enum/invoice-pair-scan-status.enum';
 import { InvoiceItemEntity } from '../entities/invoice-item.entity';
 import { InvoiceAssortmentEntity } from '../entities/invoice-assortment.entity';
 import { InvoicePairDetailEntity } from '../entities/invoice-pair-detail.entity';
+import { NotificationsService } from 'src/modules/notifications/notifications.service';
+import { NotificationEventType } from 'src/modules/notifications/enum/notification-event-type.enum';
 
 const POINTS_PER_PAIR = 5;
 
@@ -29,7 +31,8 @@ export class InvoiceIngestionService {
   constructor(
     private readonly transactionService: TransactionService,
     private readonly ingestion: InvoiceIngestionRepository,
-    private readonly userRepository: UserRepository
+    private readonly userRepository: UserRepository,
+    private readonly notifications: NotificationsService
   ) {}
 
   async ingest(dto: CreateInvoiceDto): Promise<InvoiceIngestResult> {
@@ -64,7 +67,7 @@ export class InvoiceIngestionService {
       throw new BusinessException(ERROR_CODES.USER.USER_NOT_FOUND);
     }
 
-    return this.transactionService.runInTransaction(async (queryRunner) => {
+    const result = await this.transactionService.runInTransaction(async (queryRunner) => {
       const invoice = await this.ingestion.createInvoice(
         {
           distributor: { id: Number(distributorDetails.id) } as any,
@@ -144,5 +147,14 @@ export class InvoiceIngestionService {
         assortmentCount: assortmentRows.length,
       };
     });
+
+    await this.notifications.notify(
+      String(distributorDetails.id),
+      NotificationEventType.INVOICE_CREATED,
+      { invoiceNumber: result.invoiceNumber, totalPairs: result.totalPairs },
+      { type: 'invoice', id: result.invoiceId }
+    );
+
+    return result;
   }
 }

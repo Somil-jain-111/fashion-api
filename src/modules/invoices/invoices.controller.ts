@@ -26,8 +26,12 @@ import { JwtAuthGuard } from 'src/default/common/guards/jwt-auth.guard';
 import { DataSanitizer } from 'src/default/common/utils/sanitize.utils';
 import { IdempotencyInterceptor } from 'src/default/common/interceptors/idempotency-check.interceptor';
 import { RolesGuard } from 'src/default/common/guards/roles.guard';
+import { Roles } from 'src/default/common/decorators/roles.decorator';
+import { UserRole } from 'src/default/common/enums/user-type.enum';
+import { InvoiceOwnerType } from './enum/invoice.enum';
 
 @UseGuards(JwtAuthGuard, RolesGuard)
+@Roles([UserRole.RETAILER])
 @Controller('invoices')
 export class InvoicesController {
   constructor(private readonly invoices: InvoiceService) {}
@@ -41,7 +45,11 @@ export class InvoicesController {
   @Post('validate')
   async validate(@Req() request: any, @Body() dto: ValidateInvoiceDto) {
     const invoiceIdOrNumber = dto.invoiceId || dto.invoiceNumber || '';
-    const response = await this.invoices.validate(invoiceIdOrNumber, String(request.user.id));
+    const response = await this.invoices.validate(
+      invoiceIdOrNumber,
+      String(request.user.id),
+      InvoiceOwnerType.RETAILER
+    );
     return DataSanitizer.sanitizeData(response);
   }
 
