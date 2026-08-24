@@ -17,7 +17,7 @@ export class EmployeeController {
   constructor(private readonly employeeService: EmployeeService) {}
 
   /**
-   * Campus sends employee data here — single or batch.
+   * fashion sends employee data here — single or batch.
    *
    * Single:  { "employee": { "name": "...", "mobile": "...", "points": 100 } }
    * Batch:   { "employees": [{ ... }, { ... }] }

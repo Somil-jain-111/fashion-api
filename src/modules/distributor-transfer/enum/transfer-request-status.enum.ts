@@ -1,5 +1,0 @@
-export enum TransferRequestStatus {
-  PENDING_APPROVAL = 'PENDING_APPROVAL',
-  APPROVED = 'APPROVED',
-  REJECTED = 'REJECTED',
-}

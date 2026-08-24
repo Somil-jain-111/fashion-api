@@ -2,7 +2,7 @@ import { ParticipationOTPSmsTemplate, SMSPayload } from 'src/modules/sms/dto/sms
 import { SMSTemplateType } from '../enums/sms-template.enum';
 
 const SMSConfigs = {
-  THIRD_PARTY_REF_NO: 'CAMPUS_SHOES',
+  THIRD_PARTY_REF_NO: 'fashion_SHOES',
   SENDER_ID: 'TCHALM',
   U_KEY: 'KTXq25wGcHqv6xcnGjl9UnAWK',
 };

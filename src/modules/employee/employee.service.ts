@@ -22,7 +22,7 @@ export class EmployeeService {
 
   /**
    * Core method — creates a new employee OR tops up an existing one.
-   * Called by both the ingest endpoint (Campus data) and the topup endpoint.
+   * Called by both the ingest endpoint (fashion data) and the topup endpoint.
    *
    * If mobile doesn't exist → create employee user, set points, write earn row.
    * If mobile exists as employee → add points on top, write earn row.
@@ -85,7 +85,7 @@ export class EmployeeService {
           {
             user: { id: lockedUser.id } as any,
             points: data.points,
-            description: data.description ?? 'Points granted by Campus',
+            description: data.description ?? 'Points granted by fashion',
             type: 'earn' as any,
             status: PointStatusEnum.added,
             date: new Date(),
@@ -131,7 +131,7 @@ export class EmployeeService {
     await this.pointHistoryRepository.save({
       user: { id: newUser.id } as any,
       points: data.points,
-      description: data.description ?? 'Initial points granted by Campus',
+      description: data.description ?? 'Initial points granted by fashion',
       type: 'earn' as any,
       status: PointStatusEnum.added,
       date: new Date(),
@@ -151,7 +151,7 @@ export class EmployeeService {
   }
 
   /**
-   * Ingest — accepts single or batch from Campus.
+   * Ingest — accepts single or batch from fashion.
    * Processes each employee independently so one failure doesn't block the rest.
    */
   async ingest(employees: EmployeeDataDto[]): Promise<{

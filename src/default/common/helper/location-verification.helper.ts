@@ -53,7 +53,7 @@ export class LocationVerificationHelper {
       headers: {
         'Accept-Language': 'en',
         'Content-Type': 'application/json',
-        'User-Agent': `Campus/1.0`,
+        'User-Agent': `fashion/1.0`,
       },
     };
 
@@ -133,7 +133,7 @@ export class LocationVerificationHelper {
       },
       headers: {
         'Accept-Language': 'en',
-        'User-Agent': `Campus/1.0`,
+        'User-Agent': `fashion/1.0`,
       },
     };
 

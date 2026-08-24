@@ -169,7 +169,7 @@ export class MailerHelper {
       const response = await axios.post(MailerHelper.communicationUrl, payload, {
         headers: {
           'Content-Type': 'application/json',
-          Authorization: 'Bearer CAMPUS_EMAIL_AUTH_TOKEN',
+          Authorization: 'Bearer fashion_EMAIL_AUTH_TOKEN',
         },
         maxBodyLength: Infinity,
       });

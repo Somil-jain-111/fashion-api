@@ -33,7 +33,7 @@ export interface OtpConfigResult {
 
 @Injectable()
 export class UserValidator {
-  private readonly baseOTPAttemptsRedisKey = 'CAMPUS:OTP_ATTEMPTS';
+  private readonly baseOTPAttemptsRedisKey = 'fashion:OTP_ATTEMPTS';
 
   constructor(
     private readonly userRepository: UserRepository,

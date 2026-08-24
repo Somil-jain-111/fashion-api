@@ -31,7 +31,7 @@ export class EmployeeDataDto {
 
   @IsOptional()
   @IsString()
-  employeeCode?: string; // Campus's internal employee identifier
+  employeeCode?: string; // fashion's internal employee identifier
 
   @IsOptional()
   @IsString()

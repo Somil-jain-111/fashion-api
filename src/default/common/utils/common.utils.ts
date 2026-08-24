@@ -167,7 +167,7 @@ export class CommonUtils {
     // Strong random 4-digit
     const rand = Math.floor(1000 + Math.random() * 9000);
 
-    return `ALMONDBANK${yy}${mm}${dd}${timePart}${rand}CAMPUS`;
+    return `ALMONDBANK${yy}${mm}${dd}${timePart}${rand}fashion`;
   }
 
   static async generateSecretKey(data: {
@@ -272,10 +272,10 @@ export class CommonUtils {
       }
 
       const payload = {
-        project_id: 'CAMPUS_WHATSAPP_PROJECT_ID',
-        admin_id: 'CAMPUS_WHATSAPP_ADMIN_ID',
+        project_id: 'fashion_WHATSAPP_PROJECT_ID',
+        admin_id: 'fashion_WHATSAPP_ADMIN_ID',
         raw_template: {
-          name: 'CAMPUS_WHATSAPP_OTP_TEMPLATE_NAME',
+          name: 'fashion_WHATSAPP_OTP_TEMPLATE_NAME',
           parameter_format: 'POSITIONAL',
           components: [
             {
@@ -287,13 +287,13 @@ export class CommonUtils {
             },
             {
               type: 'FOOTER',
-              text: 'Campus Shoes Loyalty Program',
+              text: 'fashion Shoes Loyalty Program',
             },
           ],
           language: 'en',
           status: 'APPROVED',
           category: 'UTILITY',
-          id: 'CAMPUS_WHATSAPP_OTP_TEMPLATE_ID',
+          id: 'fashion_WHATSAPP_OTP_TEMPLATE_ID',
         },
         number: parseInt(mobileStr, 10),
         body: {
@@ -311,7 +311,7 @@ export class CommonUtils {
         {
           headers: {
             'Content-Type': 'application/json',
-            Authorization: 'Bearer CAMPUS_WHATSAPP_AUTH_TOKEN',
+            Authorization: 'Bearer fashion_WHATSAPP_AUTH_TOKEN',
           },
           maxBodyLength: Infinity,
         }
