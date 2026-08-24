@@ -1,6 +1,6 @@
 import { Entity, Column, ManyToOne, JoinColumn, Index } from 'typeorm';
 import { BaseEntity } from '../../../default/common/entities';
-import { User } from '../../auth/entities';
+import { User } from '.';
 import { MappingStatus, MappingType } from '../../../default/common/enums/user-mapping.enum';
 
 @Entity('user_mappings')

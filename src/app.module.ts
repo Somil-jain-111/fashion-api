@@ -26,41 +26,10 @@ import { APP_GUARD, APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { BullSetupModule } from './bull/bull.module';
 // import { MediaService } from './modules/media/media.service';
-import { AuditModule } from './modules/audit/audit.module';
-import { AuthModule } from './modules/auth/auth.module';
-import { KycModule } from './modules/kyc/kyc.module';
 import { JourneyIdMiddleware } from './default/common/middleware/journey-id.middleware';
-import { InvoicesModule } from './modules/invoices/invoices.module';
-import { RewardsModule } from './modules/rewards/rewards.module';
-import { RedemptionsModule } from './modules/redemptions/redemptions.module';
-import { SupportModule } from './modules/support/support.module';
-import { ComplaintsModule } from './modules/complaints/complaints.module';
-import { RoutesModule } from './modules/routes/routes.module';
-import { VisitsModule } from './modules/visits/visits.module';
-import { ApprovalsModule } from './modules/approvals/approvals.module';
-import { AddressesModule } from './modules/addresses/addresses.module';
-import { PublicModule } from './modules/public/public.module';
-import { PaymentModule } from './modules/payment/payment.module';
 // import { OnboardingApprovalModule } from './modules/onboarding-approval/onboarding-approval.module';
-import { OnboardingModule } from './modules/onboarding/onboarding.module';
-import { SoVerificationModule } from './modules/so-verification/so-verification.module';
 import { S3Module } from './default/common/services/s3/s3.module';
-import { DynamicConfigModule } from './modules/dynamic-config/dynamic-config.module';
-import { CmsModule } from './modules/cms/cms.module';
-import { OrderPlacementModule } from './modules/order-placement/order-placement.module';
-import { ProductsModule } from './modules/products/products.module';
-import { CartModule } from './modules/cart/cart.module';
-import { EmployeeModule } from './modules/employee/employee.module';
-import { AdminModule } from './modules/admin/admin.module';
-import { RedemptionCartModule } from './modules/redemption-cart/redemption-cart.module';
-import { SmsModule } from './modules/sms/sms.module';
-import { UserModule } from './modules/user/user.module';
-import { RetailerInvoiceModule } from './modules/retailer-invoice/retailer-invoice.module';
-import { DistributorReturnModule } from './modules/distributor-return/distributor-return.module';
-import { DistributorTransferModule } from './modules/distributor-transfer/distributor-transfer.module';
-import { SuperAdminModule } from './modules/super-admin/super-admin.module';
-import { CustomerReturnModule } from './modules/customer-return/customer-return.module';
-import { NotificationsModule } from './modules/notifications/notifications.module';
+
 
 @Module({
   imports: [
@@ -86,40 +55,8 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
     BullmqModule,
     IdempotencyModule,
     BullSetupModule,
-    AuditModule,
-    AuthModule,
-    KycModule,
-    InvoicesModule,
-    RewardsModule,
-    RedemptionsModule,
-    SupportModule,
-    ComplaintsModule,
-    RoutesModule,
-    VisitsModule,
-    ApprovalsModule,
-    AddressesModule,
-    PublicModule,
-    PaymentModule,
     // OnboardingApprovalModule,
-    OnboardingModule,
-    SoVerificationModule,
     S3Module,
-    DynamicConfigModule,
-    CmsModule,
-    OrderPlacementModule,
-    ProductsModule,
-    CartModule,
-    EmployeeModule,
-    AdminModule,
-    RedemptionCartModule,
-    SmsModule,
-    UserModule,
-    RetailerInvoiceModule,
-    DistributorReturnModule,
-    DistributorTransferModule,
-    SuperAdminModule,
-    CustomerReturnModule,
-    NotificationsModule,
   ],
   providers: [
     {

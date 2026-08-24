@@ -146,4 +146,10 @@ export const AUTH_ERRORS = {
     message: 'Failed to send OTP. Please try again later.',
     statusCode: 502,
   },
+
+  PASSWORD_ALREADY_SET: {
+    code: 'AUTH_028',
+    message: 'Password already set. Please login with your password.',
+    statusCode: 400,
+  },
 } as const;

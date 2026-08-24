@@ -46,7 +46,7 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
       throw new BusinessException(ERROR_CODES.USER.USER_NOT_FOUND);
     }
 
-    await this.userAuthValidator.validateUserBlockedStatus(user);
+    // await this.userAuthValidator.validateUserBlockedStatus(user);
     this.userAuthValidator.validateUserStatus(user.status);
 
     return {

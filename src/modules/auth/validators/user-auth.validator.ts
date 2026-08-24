@@ -4,46 +4,13 @@ import { UserRepository } from 'src/modules/auth/repository';
 import { ERROR_CODES } from 'src/default/error/error.code';
 import { BusinessException } from 'src/default/error/business.exception';
 import { UserStatus } from '../constants/auth.constants';
-import { UserBlockRepository } from 'src/modules/user/repository/user-block.repository';
-import { BlockType } from 'src/modules/user/enums/user-block.enum';
 
 @Injectable()
 export class UserAuthValidator {
   constructor(
     private readonly userRepository: UserRepository,
-    private readonly userBlockRepository: UserBlockRepository
   ) {}
 
-  async validateUserBlockedStatus(userOrUserId: User | number): Promise<void> {
-    const userId = typeof userOrUserId === 'number' ? userOrUserId : Number(userOrUserId.id);
-    const status = typeof userOrUserId === 'number' ? null : userOrUserId.status;
-
-    if (status === UserStatus.BLOCKED) {
-      throw new BusinessException(ERROR_CODES.USER.USER_BLOCKED);
-    }
-
-    const activeBlock = await this.userBlockRepository.findActiveBlockByUserId(userId);
-
-    if (activeBlock) {
-      if (activeBlock.blockType === BlockType.PERMANENT_BLOCK) {
-        throw new BusinessException(ERROR_CODES.USER.USER_BLOCKED);
-      }
-
-      if (activeBlock.blockType === BlockType.TEMP_BLOCK && activeBlock.blockedTill) {
-        const formattedTill = activeBlock.blockedTill.toISOString();
-
-        throw new BusinessException(
-          ERROR_CODES.USER.USER_TEMP_BLOCKED,
-          { blockedTill: formattedTill },
-          {
-            blockedTill: activeBlock.blockedTill,
-            remarks: activeBlock.remarks,
-            blockType: BlockType.TEMP_BLOCK,
-          }
-        );
-      }
-    }
-  }
 
   async getAllowedUserById(userId: number): Promise<User> {
     const user = await this.userRepository.findById(userId);
@@ -52,7 +19,6 @@ export class UserAuthValidator {
       throw new BusinessException(ERROR_CODES.USER.USER_NOT_FOUND);
     }
 
-    await this.validateUserBlockedStatus(user);
     this.validateUserStatus(user.status);
 
     return user;
@@ -65,7 +31,6 @@ export class UserAuthValidator {
       throw new BusinessException(ERROR_CODES.USER.USER_NOT_FOUND);
     }
 
-    await this.validateUserBlockedStatus(user);
     this.validateUserStatus(user.status);
 
     return user;
@@ -78,7 +43,6 @@ export class UserAuthValidator {
       throw new BusinessException(ERROR_CODES.USER.USER_NOT_FOUND);
     }
 
-    await this.validateUserBlockedStatus(user);
     this.throwIfUserNotActive(user.status);
 
     return user;
@@ -91,7 +55,6 @@ export class UserAuthValidator {
       throw new BusinessException(ERROR_CODES.USER.USER_NOT_FOUND);
     }
 
-    await this.validateUserBlockedStatus(user);
     this.throwIfUserNotActive(user.status);
 
     return user;

@@ -24,4 +24,24 @@ export const PRODUCT_ERRORS = {
     message: 'Product already exists',
     statusCode: 400,
   },
+  PRODUCT_SELLER_KYC_NOT_APPROVED: {
+    code: 'PRD_006',
+    message: 'Your seller KYC must be approved before you can list products',
+    statusCode: 403,
+  },
+  PRODUCT_REJECTION_REASON_REQUIRED: {
+    code: 'PRD_007',
+    message: 'A rejection reason is required when rejecting a product',
+    statusCode: 400,
+  },
+  PRODUCT_INVALID_STATUS_TRANSITION: {
+    code: 'PRD_008',
+    message: 'Product cannot move from {from} to {to}',
+    statusCode: 400,
+  },
+  PRODUCT_NOT_OWNED: {
+    code: 'PRD_009',
+    message: 'You do not own this product',
+    statusCode: 403,
+  },
 } as const;

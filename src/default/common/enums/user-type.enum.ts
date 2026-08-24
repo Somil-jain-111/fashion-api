@@ -7,6 +7,9 @@ export enum UserRole {
   SUPERADMIN = 'super_admin',
   L1 = 'l1',
   L2 = 'l2',
+  // Fashion Fizz marketplace roles
+  ADMIN = 'admin',
+  SELLER_ADMIN = 'seller_admin',
 }
 
 export enum DistUserRoles {

@@ -17,7 +17,7 @@ export const EMAIL_TEMPLATES: {
     const recipientEmail = data.email.trim();
     const name = data.name && data.name.trim() ? data.name.trim() : 'User';
     const otp = data.otp.trim();
-    const subject = 'Your OTP for fashion Shoes Loyalty Program';
+    const subject = 'Your OTP for Campus Shoes Loyalty Program';
 
     return {
       mailName: subject,
@@ -25,7 +25,7 @@ export const EMAIL_TEMPLATES: {
       from: DEFAULT_MAIL_FROM,
       to: [recipientEmail],
       cc: [],
-      htmlContent: `<p>Dear ${name},</p><p>Your OTP for verifying your email address is: <strong>${otp}</strong></p><p>This OTP is valid for 5 minutes. Do not share it with anyone.</p><p>Regards,<br/>fashion Shoes Loyalty Program</p>`,
+      htmlContent: `<p>Dear ${name},</p><p>Your OTP for verifying your email address is: <strong>${otp}</strong></p><p>This OTP is valid for 5 minutes. Do not share it with anyone.</p><p>Regards,<br/>Campus Shoes Loyalty Program</p>`,
       attachments: [],
     };
   },
@@ -45,7 +45,7 @@ export const EMAIL_TEMPLATES: {
 
     return {
       mailName: 'OTP Rate Limit Triggered',
-      mailSubject: `fashion - Possible Malicious OTP Activity - ${user.mobile}`,
+      mailSubject: `CAMPUS - Possible Malicious OTP Activity - ${user.mobile}`,
       from: DEFAULT_MAIL_FROM,
       to: recipients,
       cc: [],

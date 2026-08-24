@@ -9,24 +9,10 @@ import {
   Index,
   OneToOne,
 } from 'typeorm';
-import {
-  LoginHistories,
-  Roles,
-  RevokedToken,
-  KycVerificationEntity,
-  KycVerificationLogEntity,
-  Address,
-  Order,
-  PointHistory,
-  Approval,
-  InvoiceEntity,
-  UserBeneficiary,
-  RedemptionCart,
-} from '.';
+import { LoginHistories, Roles, RevokedToken } from '.';
 import { Salutation, UserPartnerType } from '../../../default/common/enums/user-type.enum';
 import { UserStatus } from '../constants/auth.constants';
 import { BaseEntity } from '../../../default/common/entities';
-import { UserStoreInfo } from './user-store-info.entity';
 @Entity('users')
 @Unique('UQ_MOBILE', ['mobile'])
 @Unique('UQ_WHATSAPP', ['whatsappNumber'])
@@ -170,12 +156,6 @@ export class User extends BaseEntity {
   @JoinColumn({ name: 'role_id' })
   role!: Roles;
 
-  @OneToOne(() => UserStoreInfo, (userStoreInfo) => userStoreInfo.user, {
-    nullable: true,
-    onDelete: 'CASCADE',
-  })
-  storeInformation!: UserStoreInfo;
-
   @OneToMany(() => LoginHistories, (loginHistories) => loginHistories.user)
   loginHistory!: LoginHistories[];
 
@@ -187,49 +167,4 @@ export class User extends BaseEntity {
     onDelete: 'CASCADE',
   })
   revokedTokens!: RevokedToken[];
-
-  @OneToMany(() => KycVerificationEntity, (kyc) => kyc.user, {
-    nullable: true,
-    onDelete: 'CASCADE',
-  })
-  kyc!: User[];
-
-  @OneToMany(() => KycVerificationLogEntity, (kyc_logs) => kyc_logs.user, {
-    nullable: true,
-    onDelete: 'CASCADE',
-  })
-  kyc_logs!: User[];
-
-  @OneToMany(() => Address, (address) => address.user, { nullable: true, onDelete: 'CASCADE' })
-  addresses?: Address[];
-
-  @OneToMany(() => Order, (Order) => Order.user, { nullable: true, onDelete: 'CASCADE' })
-  orders?: Order[];
-
-  @OneToMany(() => PointHistory, (PointHistory) => PointHistory.user, {
-    nullable: true,
-    onDelete: 'CASCADE',
-  })
-  pointHistories?: PointHistory[];
-
-  @OneToMany(() => Approval, (approval) => approval.user, { nullable: true })
-  approvals?: Approval[];
-
-  @OneToMany(() => InvoiceEntity, (invoice) => invoice.user, {
-    nullable: true,
-    onDelete: 'CASCADE',
-  })
-  invoices?: InvoiceEntity[];
-
-  @OneToMany(() => UserBeneficiary, (userBeneficiary) => userBeneficiary.user, {
-    nullable: true,
-    onDelete: 'CASCADE',
-  })
-  userBeneficiaries?: UserBeneficiary[];
-
-  @OneToOne(() => RedemptionCart, (redemptionCart) => redemptionCart.user, {
-    nullable: true,
-    onDelete: 'CASCADE',
-  })
-  redemptionCart?: RedemptionCart;
 }

@@ -1,8 +1,0 @@
-export enum SupportIssueType {
-  QR_ISSUE = 'QR_ISSUE',
-  REWARD_ISSUE = 'REWARD_ISSUE',
-  PAYMENT_ISSUE = 'PAYMENT_ISSUE',
-  KYC_ISSUE = 'KYC_ISSUE',
-  ORDER_ISSUE = 'ORDER_ISSUE',
-  OTHER = 'OTHER',
-}

@@ -24,6 +24,8 @@ import {
   APPROVAL_ERRORS,
   ONBOARD_ERRORS,
   REDEMPTIONS_ERRORS,
+  PERMISSION_ERRORS,
+  SELLER_ERRORS,
 } from './errors';
 import { ANNOUNCEMENT_ERRORS } from './errors/announcement.errors';
 import { APP_VERSION_ERRORS } from './errors/app_version.errors';
@@ -82,6 +84,8 @@ export const ERROR_CODES = {
   SUPER_ADMIN: SUPER_ADMIN_ERRORS,
   VIDEO: VIDEO_ERRORS,
   CUSTOMER_RETURN: CUSTOMER_RETURN_ERRORS,
+  PERMISSION: PERMISSION_ERRORS,
+  SELLER: SELLER_ERRORS,
 } as const;
 
 export type ErrorCodeGroups = typeof ERROR_CODES;

@@ -7,14 +7,10 @@ import { UserAuthValidator } from 'src/modules/auth/validators/user-auth.validat
 import { SendOtpDto } from 'src/modules/auth/dto/send-otp.dto';
 import { CommonUtils } from 'src/default/common/utils/common.utils';
 import { RedisService } from 'src/default/databases/redis/redis.service';
-import { DynamicConfigRepository } from 'src/modules/dynamic-config/repository';
 import { UserRole } from 'src/default/common/enums/user-type.enum';
-import { UserRoleConfig } from 'src/modules/dynamic-config/entities';
 import { OtpAttemptType } from '../enums/common.enum';
 import { KycStatus, KycType } from 'src/default/common/enums/kyc.enum';
-import { KycVerificationRepository } from 'src/modules/auth/repository';
 import { UserPartnerType } from 'src/default/common/enums/user-type.enum';
-import { RedemptionKYCRequirements } from 'src/default/common/constants/redemptions.option';
 import { User } from 'src/modules/auth/entities';
 
 export interface ValidateOtpAttemptsOptions {
@@ -33,41 +29,16 @@ export interface OtpConfigResult {
 
 @Injectable()
 export class UserValidator {
-  private readonly baseOTPAttemptsRedisKey = 'fashion:OTP_ATTEMPTS';
+  private readonly baseOTPAttemptsRedisKey = 'CAMPUS:OTP_ATTEMPTS';
 
   constructor(
     private readonly userRepository: UserRepository,
     private readonly roleRepository: RolesRepository,
     private readonly redisService: RedisService,
     private readonly userAuthValidator: UserAuthValidator,
-    private readonly dynamicConfigRepository: DynamicConfigRepository,
-    private readonly kycVerificationRepository: KycVerificationRepository
+
   ) {}
 
-  async validateUserKyc(user: any): Promise<{ isPanVerified: boolean }> {
-    const partnerType = user.partnerType || UserPartnerType.INDIVIDUAL;
-    const requiredKycs = RedemptionKYCRequirements[partnerType] || [KycType.PAN];
-
-    const verifiedKycs = await Promise.all(
-      requiredKycs.map((type: KycType) =>
-        this.kycVerificationRepository.findOne({
-          user: { id: user.id },
-          type: type as KycType,
-          status: KycStatus.VERIFIED,
-        })
-      )
-    );
-
-    const hasMissingKyc = verifiedKycs.some((kyc) => !kyc);
-    if (hasMissingKyc) {
-      throw new BusinessException(ERROR_CODES.KYC.KYC_REQUIRED_FOR_REDEMPTION);
-    }
-
-    const panIndex = requiredKycs.indexOf(KycType.PAN);
-    const isPanVerified = panIndex !== -1 ? Boolean(verifiedKycs[panIndex]) : false;
-
-    return { isPanVerified };
-  }
 
   async findOrCreateActiveUserByMobile(dto: SendOtpDto, createUser: boolean = true) {
     let user = await this.userRepository.findByMobile(dto.mobile);
@@ -101,107 +72,82 @@ export class UserValidator {
     return user;
   }
 
-  async getOtpConfig(
-    userRole?: UserRole | string,
-    otpType: OtpAttemptType = OtpAttemptType.LOGIN
-  ): Promise<OtpConfigResult> {
-    let config: UserRoleConfig | null = null;
-
-    if (userRole) {
-      config = await this.dynamicConfigRepository.getUserConfigByUserRole(userRole as UserRole);
-    }
-
-    if (otpType === 'login') {
-      return {
-        maxAttempts: config?.loginMaxOtpAttempts ?? 3,
-        timeoutSeconds: config?.loginOtpTimeoutSeconds ?? 3600,
-        expirySeconds: config?.loginOtpExpirySeconds ?? 300,
-      };
-    } else {
-      return {
-        maxAttempts: config?.redemptionMaxOtpAttempts ?? 3,
-        timeoutSeconds: config?.redemptionOtpTimeoutSeconds ?? 3600,
-        expirySeconds: config?.redemptionOtpExpirySeconds ?? 300,
-      };
-    }
-  }
-
   /**
    * Universal OTP attempts validator
    * Validates & tracks OTP attempts for a user based on their role configuration in `UserRoleConfig`.
    * Only allows up to maxAttempts within the timeout period.
    * Increments attempt count if `increment` argument is true and count is not > maxAttempts.
    */
-  async validateOtpAttempts(options: ValidateOtpAttemptsOptions) {
-    const { mobile, otpType, increment = false } = options;
-    let { userRole } = options;
+  // async validateOtpAttempts(options: ValidateOtpAttemptsOptions) {
+  //   const { mobile, otpType, increment = false } = options;
+  //   let { userRole } = options;
 
-    let userDetails: User | null = null;
+  //   let userDetails: User | null = null;
 
-    if (options.userId) {
-      userDetails = await this.userRepository.findById(options.userId, ['role']);
-    } else if (mobile) {
-      userDetails = await this.userRepository.findByMobile(String(mobile));
-    }
+  //   if (options.userId) {
+  //     userDetails = await this.userRepository.findById(options.userId, ['role']);
+  //   } else if (mobile) {
+  //     userDetails = await this.userRepository.findByMobile(String(mobile));
+  //   }
 
-    if (!userRole) {
-      userRole = userDetails?.role?.name;
-    }
+  //   if (!userRole) {
+  //     userRole = userDetails?.role?.name;
+  //   }
 
-    const config = await this.getOtpConfig(userRole, otpType);
+  //   const config = await this.getOtpConfig(userRole, otpType);
 
-    const redisKey = `${this.baseOTPAttemptsRedisKey}:${otpType}:${mobile}`;
+  //   const redisKey = `${this.baseOTPAttemptsRedisKey}:${otpType}:${mobile}`;
 
-    const currentVal = await this.redisService.get(redisKey);
-    let currentCount =
-      typeof currentVal === 'number'
-        ? currentVal
-        : currentVal
-          ? parseInt(String(currentVal), 10)
-          : 0;
+  //   const currentVal = await this.redisService.get(redisKey);
+  //   let currentCount =
+  //     typeof currentVal === 'number'
+  //       ? currentVal
+  //       : currentVal
+  //         ? parseInt(String(currentVal), 10)
+  //         : 0;
 
-    if (currentCount >= config.maxAttempts) {
-      CommonUtils.sendMaliciousOTPEmail({
-        user: {
-          attempts: Number(currentCount),
-          id: userDetails.id,
-          mobile: userDetails.mobile,
-          timeframeSeconds: Number(config.timeoutSeconds),
-          username: userDetails.username,
-        },
-      });
+  //   if (currentCount >= config.maxAttempts) {
+  //     CommonUtils.sendMaliciousOTPEmail({
+  //       user: {
+  //         attempts: Number(currentCount),
+  //         id: userDetails.id,
+  //         mobile: userDetails.mobile,
+  //         timeframeSeconds: Number(config.timeoutSeconds),
+  //         username: userDetails.username,
+  //       },
+  //     });
 
-      throw new BusinessException(ERROR_CODES.AUTH.TOO_MANY_REQUESTS);
-    }
+  //     throw new BusinessException(ERROR_CODES.AUTH.TOO_MANY_REQUESTS);
+  //   }
 
-    if (increment) {
-      currentCount += 1;
+  //   if (increment) {
+  //     currentCount += 1;
 
-      await this.redisService.set(redisKey, currentCount, config.timeoutSeconds);
+  //     await this.redisService.set(redisKey, currentCount, config.timeoutSeconds);
 
-      if (currentCount > config.maxAttempts) {
-        CommonUtils.sendMaliciousOTPEmail({
-          user: {
-            attempts: Number(currentCount),
-            id: userDetails.id,
-            mobile: userDetails.mobile,
-            timeframeSeconds: Number(config.timeoutSeconds),
-            username: userDetails.username,
-          },
-        });
+  //     if (currentCount > config.maxAttempts) {
+  //       CommonUtils.sendMaliciousOTPEmail({
+  //         user: {
+  //           attempts: Number(currentCount),
+  //           id: userDetails.id,
+  //           mobile: userDetails.mobile,
+  //           timeframeSeconds: Number(config.timeoutSeconds),
+  //           username: userDetails.username,
+  //         },
+  //       });
 
-        throw new BusinessException(ERROR_CODES.AUTH.TOO_MANY_REQUESTS);
-      }
-    }
+  //       throw new BusinessException(ERROR_CODES.AUTH.TOO_MANY_REQUESTS);
+  //     }
+  //   }
 
-    return {
-      allowed: true,
-      currentCount,
-      maxAttempts: config.maxAttempts,
-      timeoutSeconds: config.timeoutSeconds,
-      expirySeconds: config.expirySeconds,
-    };
-  }
+  //   return {
+  //     allowed: true,
+  //     currentCount,
+  //     maxAttempts: config.maxAttempts,
+  //     timeoutSeconds: config.timeoutSeconds,
+  //     expirySeconds: config.expirySeconds,
+  //   };
+  // }
 
   async clearOtpAttempts(mobile: string | number, otpType: OtpAttemptType = OtpAttemptType.LOGIN) {
     const redisKey = `OTP_ATTEMPTS:${otpType}:${mobile}`;
@@ -209,16 +155,16 @@ export class UserValidator {
     await this.redisService.delete(redisKey);
   }
 
-  async validateSendOtpAttempts(
-    mobile: number | string,
-    increment: boolean = false,
-    userRole?: UserRole | string
-  ) {
-    return this.validateOtpAttempts({
-      mobile,
-      otpType: OtpAttemptType.LOGIN,
-      userRole,
-      increment,
-    });
-  }
+//   async validateSendOtpAttempts(
+//     mobile: number | string,
+//     increment: boolean = false,
+//     userRole?: UserRole | string
+//   ) {
+//     return this.validateOtpAttempts({
+//       mobile,
+//       otpType: OtpAttemptType.LOGIN,
+//       userRole,
+//       increment,
+//     });
+//   }
 }

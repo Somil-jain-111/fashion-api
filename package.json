@@ -29,7 +29,8 @@
     "migration:revert": "typeorm-ts-node-commonjs migration:revert -d src/default/databases/mysql/migration.config.ts",
     "migration:clean": "rm -rf src/migrations",
     "migration:create": "typeorm-ts-node-commonjs migration:create src/migrations/migration",
-    "seed:locations": "ts-node -r tsconfig-paths/register src/default/common/seeds/seed-locations.ts"
+    "seed:locations": "ts-node -r tsconfig-paths/register src/default/common/seeds/seed-locations.ts",
+    "seed:rbac": "ts-node -r tsconfig-paths/register src/default/common/seeds/seed-rbac.ts"
   },
   "dependencies": {
     "@aws-sdk/client-cloudwatch-logs": "^3.600.0",
@@ -95,7 +96,7 @@
     "@nestjs/cli": "^10.0.0",
     "@nestjs/schematics": "^10.0.0",
     "@nestjs/testing": "^10.4.17",
-    "@types/express": "^5.0.1",
+    "@types/express": "^4.17.25",
     "@types/jest": "^29.5.14",
     "@types/multer": "^1.4.12",
     "@types/node": "^20.17.46",

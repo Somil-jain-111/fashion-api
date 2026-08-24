@@ -24,4 +24,9 @@ export const CATEGORY_ERRORS = {
     message: 'Category update failed',
     statusCode: 400,
   },
+  CATEGORY_TOP_LEVEL_NOT_ALLOWED: {
+    code: 'CAT_006',
+    message: 'Only Super Admin can create top-level categories',
+    statusCode: 403,
+  },
 } as const;
