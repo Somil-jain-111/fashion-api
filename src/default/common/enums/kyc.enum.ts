@@ -32,3 +32,13 @@ export enum KycLogStatus {
   PROVIDER_ERROR = 'PROVIDER_ERROR',
   SUBMITTED = 'SUBMITTED',
 }
+
+/**
+ * Status of a Super Admin's manual override on a seller's overall KYC —
+ * distinct from KycStatus (per-type auto-verification result). A seller with
+ * no override row falls back to the automatic all-three-VERIFIED computation.
+ */
+export enum SellerKycStatus {
+  APPROVED = 'APPROVED',
+  REJECTED = 'REJECTED',
+}

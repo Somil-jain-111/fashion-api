@@ -1,9 +1,9 @@
 import { IsNotEmpty, IsString, MinLength } from 'class-validator';
 
 export class ResetPasswordDto {
-  @IsNotEmpty({ message: 'Reset token is required' })
+  @IsNotEmpty({ message: 'Reset ticket is required' })
   @IsString()
-  token!: string;
+  resetPasswordTicket!: string;
 
   @IsNotEmpty({ message: 'Password is required' })
   @IsString()
@@ -11,4 +11,8 @@ export class ResetPasswordDto {
     message: 'Password must be at least 8 characters',
   })
   password!: string;
+
+  @IsNotEmpty({ message: 'Confirm password is required' })
+  @IsString()
+  confirmPassword!: string;
 }

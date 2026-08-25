@@ -22,13 +22,13 @@ export class UserMappingRepository extends BaseRepository<UserMapping> {
         active: true,
         ...(distributorType && {
           parent: {
-            role: { name: distributorType } as any,
+            roles: { name: distributorType } as any,
           },
         }),
       },
       relations: {
         parent: {
-          role: true,
+          roles: true,
         },
       },
     });

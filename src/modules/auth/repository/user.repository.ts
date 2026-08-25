@@ -15,7 +15,7 @@ export class UserRepository extends BaseRepository<User> {
         mobile,
       } as any,
       relations: {
-        role: true,
+        roles: true,
       } as any,
     });
   }
@@ -27,7 +27,7 @@ export class UserRepository extends BaseRepository<User> {
         active: 1,
       } as any,
       relations: {
-        role: true,
+        roles: true,
       } as any,
     });
   }
@@ -38,7 +38,7 @@ export class UserRepository extends BaseRepository<User> {
         email,
       } as any,
       relations: {
-        role: true,
+        roles: true,
       } as any,
     });
   }
@@ -49,7 +49,7 @@ export class UserRepository extends BaseRepository<User> {
         uuid,
       } as any,
       relations: {
-        role: true,
+        roles: true,
       } as any,
     });
   }
@@ -117,7 +117,7 @@ export class UserRepository extends BaseRepository<User> {
         refreshToken,
       } as any,
       relations: {
-        role: true,
+        roles: true,
       } as any,
     });
   }
@@ -134,7 +134,7 @@ export class UserRepository extends BaseRepository<User> {
     return await this.getRepository(queryRunner).findOne({
       where: whereCondition as any,
       relations: {
-        role: true,
+        roles: true,
       } as any,
     });
   }
@@ -177,5 +177,28 @@ export class UserRepository extends BaseRepository<User> {
     );
 
     return Number(result.affected) > 0;
+  }
+
+  async countByRole(roleName: string): Promise<number> {
+    return await this.repository.count({
+      where: { roles: { name: roleName } } as any,
+    });
+  }
+
+  /**
+   * Grants an additional role without disturbing the ones a user already has —
+   * a customer onboarding as a seller keeps CUSTOMER and gains SELLER_ADMIN.
+   */
+  async addRole(userId: number, roleId: number): Promise<void> {
+    await this.repository.createQueryBuilder().relation(User, 'roles').of(userId).add(roleId);
+  }
+
+  async hasRole(userId: number, roleName: string): Promise<boolean> {
+    const user = await this.repository.findOne({
+      where: { id: userId } as any,
+      relations: { roles: true } as any,
+    });
+
+    return user?.roles?.some((r) => r.name === roleName) ?? false;
   }
 }

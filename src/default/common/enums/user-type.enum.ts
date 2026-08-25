@@ -10,6 +10,7 @@ export enum UserRole {
   // Fashion Fizz marketplace roles
   ADMIN = 'admin',
   SELLER_ADMIN = 'seller_admin',
+  CUSTOMER = 'customer',
 }
 
 export enum DistUserRoles {

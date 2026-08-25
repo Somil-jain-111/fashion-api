@@ -14,8 +14,8 @@ export class AuthTokenService {
       uuid: user.uuid,
       mobile: user.mobile,
       email: user.email,
-      role: user.role?.name,
-      user_type: user.role?.user_type,
+      role: user.roles?.map((r) => r.name),
+      user_type: user.roles?.map((r) => r.user_type),
     };
 
     const accessToken = await this.jwtService.signAsync(payload, {

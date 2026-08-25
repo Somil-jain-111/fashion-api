@@ -69,7 +69,7 @@ export class BaseRepository<T extends object> {
       where: {
         id,
       } as unknown as FindOptionsWhere<T>,
-      relations: ['role'],
+      relations: ['roles'],
     });
   }
 
@@ -105,6 +105,17 @@ export class BaseRepository<T extends object> {
     const repo = this.getRepository(queryRunner);
 
     const result = await repo.delete(id as any);
+    return Number(result.affected) > 0;
+  }
+
+  /**
+   * Hard-`deleteById` bypasses BaseEntity's `@DeleteDateColumn` — use this instead
+   * whenever the entity should be soft-deleted (recoverable).
+   */
+  async softDeleteById(id: string | number | bigint, queryRunner?: QueryRunner): Promise<boolean> {
+    const repo = this.getRepository(queryRunner);
+
+    const result = await repo.softDelete(id as any);
     return Number(result.affected) > 0;
   }
 

@@ -6,12 +6,10 @@ import { LoginDto } from './dto/login.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
+import { SetPasswordDto } from './dto/set-password.dto';
 import { DataSanitizer } from 'src/default/common/utils/sanitize.utils';
 import { ResponseMessage } from 'src/default/common/decorators/response-message.decorator';
 import { JwtAuthGuard } from 'src/default/common/guards/jwt-auth.guard';
-import { RolesGuard } from 'src/default/common/guards/roles.guard';
-import { Roles } from 'src/default/common/decorators/roles.decorator';
-import { UserRole } from 'src/default/common/enums/user-type.enum';
 import { NoCache } from 'src/default/cache/cache.decorator';
 import { IdempotencyInterceptor } from 'src/default/common/interceptors/idempotency-check.interceptor';
 
@@ -30,8 +28,17 @@ export class AuthController {
   @NoCache()
   @Post('verify-otp')
   @ResponseMessage('OTP verified successfully')
-  async verifyOtp(@Body() dto: VerifyOtpDto, @Req() req: any) {
-    return await this.authService.verifyOtp(dto, req);
+  async verifyOtp(@Body() dto: VerifyOtpDto) {
+    const response = await this.authService.verifyOtp(dto);
+    return DataSanitizer.sanitizeData(response);
+  }
+
+  @NoCache()
+  @Post('set-password')
+  @ResponseMessage('Password set successfully')
+  async setPassword(@Body() dto: SetPasswordDto, @Req() req: any) {
+    const response = await this.authService.setPassword(dto, req);
+    return DataSanitizer.sanitizeData(response);
   }
 
   @NoCache()
@@ -49,21 +56,22 @@ export class AuthController {
 
   @NoCache()
   @Post('forgot-password')
-  @ResponseMessage('Password reset token sent successfully')
+  @ResponseMessage('OTP sent successfully')
   async forgotPassword(@Body() dto: ForgotPasswordDto) {
-    return await this.authService.forgotPassword(dto);
+    const response = await this.authService.forgotPassword(dto);
+    return DataSanitizer.sanitizeData(response);
   }
 
   @NoCache()
   @Post('reset-password')
+  @ResponseMessage('Password reset successfully')
   resetPassword(@Body() dto: ResetPasswordDto) {
     return this.authService.resetPassword(dto);
   }
 
   @NoCache()
   @UseInterceptors(IdempotencyInterceptor)
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles([UserRole.RETAILER])
+  @UseGuards(JwtAuthGuard)
   @Post('logout')
   @ResponseMessage('Logout successfully')
   async logout(@Req() req: any) {

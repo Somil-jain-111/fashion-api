@@ -34,10 +34,37 @@ export const SUCCESS_MESSAGES = {
     BENEFICIARIES_FETCHED: 'Beneficiaries retrieved successfully',
     BENEFICIARIES_RELATIONSHIPS_FETCHED: 'Beneficiaries relationships retrieved successfully',
     BENEFICIARY_DELETED: 'Beneficiary deleted successfully',
+    PROFILE_FETCHED: 'KYC profile fetched successfully',
+    LIST_FETCHED: 'Seller KYC list fetched successfully',
+    REVIEWED: 'Seller KYC reviewed successfully',
   },
 
   ONBOARDING: {
     VERIFICATION_SUCCESSFUL: 'Verification successful',
     GEOLOCATION_VERIFICATION_UNSUCCESSFUL: 'Geolocation verification unsuccessful',
+  },
+
+  CATEGORY: {
+    CREATED: 'Category created successfully',
+    UPDATED: 'Category updated successfully',
+    DELETED: 'Category deleted successfully',
+    FETCHED: 'Category fetched successfully',
+  },
+
+  PRODUCT: {
+    CREATED: 'Product created successfully and is pending approval',
+    UPDATED: 'Product updated successfully',
+    DELETED: 'Product deleted successfully',
+    FETCHED: 'Product fetched successfully',
+    STATUS_UPDATED: 'Product status updated successfully',
+    REVIEWED: 'Product reviewed successfully',
+  },
+
+  REPORTS: {
+    OVERVIEW_FETCHED: 'Overview report fetched successfully',
+  },
+
+  SELLER: {
+    ONBOARDED: 'Seller onboarding successful',
   },
 } as const;

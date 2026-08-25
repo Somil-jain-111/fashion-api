@@ -1,0 +1,13 @@
+export enum ProductZone {
+  RETAIL = 'RETAIL',
+  WHOLESALE = 'WHOLESALE',
+  BOTH = 'BOTH',
+}
+
+export enum ProductStatus {
+  DRAFT = 'DRAFT',
+  PENDING_APPROVAL = 'PENDING_APPROVAL',
+  APPROVED = 'APPROVED',
+  REJECTED = 'REJECTED',
+  INACTIVE = 'INACTIVE',
+}

@@ -29,4 +29,19 @@ export const CATEGORY_ERRORS = {
     message: 'Only Super Admin can create top-level categories',
     statusCode: 403,
   },
+  CATEGORY_CIRCULAR_REFERENCE: {
+    code: 'CAT_007',
+    message: 'A category cannot become its own descendant',
+    statusCode: 400,
+  },
+  CATEGORY_HAS_CHILDREN: {
+    code: 'CAT_008',
+    message: 'Category has active subcategories and cannot be deleted',
+    statusCode: 400,
+  },
+  CATEGORY_SELLER_KYC_NOT_APPROVED: {
+    code: 'CAT_009',
+    message: 'Your seller KYC must be approved before you can create categories',
+    statusCode: 403,
+  },
 } as const;

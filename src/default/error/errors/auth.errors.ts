@@ -152,4 +152,16 @@ export const AUTH_ERRORS = {
     message: 'Password already set. Please login with your password.',
     statusCode: 400,
   },
+
+  PASSWORD_MISMATCH: {
+    code: 'AUTH_029',
+    message: 'Password and confirm password do not match',
+    statusCode: 400,
+  },
+
+  NO_PASSWORD_SET: {
+    code: 'AUTH_030',
+    message: 'No password set for this account yet. Please verify via OTP to set one first.',
+    statusCode: 400,
+  },
 } as const;

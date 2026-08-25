@@ -3,16 +3,18 @@ import {
   Column,
   Unique,
   OneToMany,
-  JoinColumn,
-  ManyToOne,
+  ManyToMany,
+  JoinTable,
   Check,
   Index,
   OneToOne,
 } from 'typeorm';
 import { LoginHistories, Roles, RevokedToken } from '.';
 import { Salutation, UserPartnerType } from '../../../default/common/enums/user-type.enum';
+import { OtpAttemptType } from '../../../default/common/enums/common.enum';
 import { UserStatus } from '../constants/auth.constants';
 import { BaseEntity } from '../../../default/common/entities';
+import { StoreInformation } from '../../sellers/entities/store-information.entity';
 @Entity('users')
 @Unique('UQ_MOBILE', ['mobile'])
 @Unique('UQ_WHATSAPP', ['whatsappNumber'])
@@ -102,6 +104,18 @@ export class User extends BaseEntity {
   image_url?: string;
 
   /**
+   * @Seller public-profile fields
+   * Stored average shown on the seller's public catalog profile — populated later
+   * by an out-of-scope reviews feature, no write path here (mirrors Product's
+   * ratingAverage/ratingCount, which has the same caveat).
+   */
+  @Column({ type: 'decimal', precision: 3, scale: 2, default: 0, name: 'rating_average' })
+  ratingAverage!: number;
+
+  @Column({ type: 'int', default: 0, name: 'rating_count' })
+  ratingCount!: number;
+
+  /**
    * @Auth Fields
    */
   @Column({ type: 'varchar', length: 255, nullable: true })
@@ -112,6 +126,13 @@ export class User extends BaseEntity {
 
   @Column({ type: 'bigint', default: 0 })
   otp_attempt_count!: number;
+
+  /**
+   * What the pending `otp` was issued for — decides which action ticket verify-otp issues
+   * on success (set-password vs reset-password). Cleared alongside otp/otp_expiry.
+   */
+  @Column({ type: 'enum', enum: OtpAttemptType, nullable: true, name: 'otp_purpose' })
+  otpPurpose?: OtpAttemptType | null;
 
   @Column({ type: 'boolean', default: false })
   isDefaultOtp!: boolean;
@@ -152,9 +173,20 @@ export class User extends BaseEntity {
   /**
    * @Relation fields
    */
-  @ManyToOne(() => Roles, (role) => role.users)
-  @JoinColumn({ name: 'role_id' })
-  role!: Roles;
+  @ManyToMany(() => Roles, (role) => role.users)
+  @JoinTable({
+    name: 'user_roles',
+    joinColumn: { name: 'user_id', referencedColumnName: 'id' },
+    inverseJoinColumn: { name: 'role_id', referencedColumnName: 'id' },
+  })
+  roles!: Roles[];
+
+  /**
+   * Present only once a user has onboarded as a seller (see SellersService.onboard) —
+   * a customer account with no seller capability has this as undefined/null.
+   */
+  @OneToOne(() => StoreInformation, (storeInformation) => storeInformation.seller, { nullable: true })
+  storeInformation?: StoreInformation | null;
 
   @OneToMany(() => LoginHistories, (loginHistories) => loginHistories.user)
   loginHistory!: LoginHistories[];

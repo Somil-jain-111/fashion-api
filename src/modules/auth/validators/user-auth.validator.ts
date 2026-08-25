@@ -37,7 +37,7 @@ export class UserAuthValidator {
   }
 
   async validateActiveUserById(userId: number): Promise<User> {
-    const user = await this.userRepository.findById(userId, ['role']);
+    const user = await this.userRepository.findById(userId, ['roles']);
 
     if (!user) {
       throw new BusinessException(ERROR_CODES.USER.USER_NOT_FOUND);

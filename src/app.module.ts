@@ -29,6 +29,13 @@ import { BullSetupModule } from './bull/bull.module';
 import { JourneyIdMiddleware } from './default/common/middleware/journey-id.middleware';
 // import { OnboardingApprovalModule } from './modules/onboarding-approval/onboarding-approval.module';
 import { S3Module } from './default/common/services/s3/s3.module';
+import { AuthModule } from './modules/auth/auth.module';
+import { SellerKycModule } from './modules/seller-kyc/seller-kyc.module';
+import { CategoriesModule } from './modules/categories/categories.module';
+import { ProductsModule } from './modules/products/products.module';
+import { CatalogModule } from './modules/catalog/catalog.module';
+import { AdminModule } from './modules/admin/admin.module';
+import { SellersModule } from './modules/sellers/sellers.module';
 
 
 @Module({
@@ -57,6 +64,13 @@ import { S3Module } from './default/common/services/s3/s3.module';
     BullSetupModule,
     // OnboardingApprovalModule,
     S3Module,
+    AuthModule,
+    SellerKycModule,
+    CategoriesModule,
+    ProductsModule,
+    CatalogModule,
+    AdminModule,
+    SellersModule,
   ],
   providers: [
     {

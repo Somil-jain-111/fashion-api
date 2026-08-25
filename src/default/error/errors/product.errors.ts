@@ -44,4 +44,9 @@ export const PRODUCT_ERRORS = {
     message: 'You do not own this product',
     statusCode: 403,
   },
+  PRODUCT_SKU_ALREADY_EXISTS: {
+    code: 'PRD_010',
+    message: 'SKU {sku} is already in use',
+    statusCode: 400,
+  },
 } as const;

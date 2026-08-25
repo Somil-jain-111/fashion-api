@@ -1,10 +1,14 @@
-import { IsNotEmpty, IsString, Matches } from 'class-validator';
+import { IsEmail, IsOptional, IsString, Matches } from 'class-validator';
 
 export class ForgotPasswordDto {
-  @IsNotEmpty({ message: 'Mobile number is required' })
+  @IsOptional()
   @IsString()
   @Matches(/^[6-9]\d{9}$/, {
-    message: 'Mobile number must be valid Indian mobile number',
+    message: 'Mobile number must be a valid Indian mobile number',
   })
-  mobile!: string;
+  mobile?: string;
+
+  @IsOptional()
+  @IsEmail({}, { message: 'Email must be a valid email address' })
+  email?: string;
 }

@@ -2,9 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { BusinessException } from 'src/default/error/business.exception';
 import { ERROR_CODES } from 'src/default/error/error.code';
 import { RolesRepository, UserRepository } from 'src/modules/auth/repository';
-import { UserStatus } from 'src/modules/auth/constants/auth.constants';
 import { UserAuthValidator } from 'src/modules/auth/validators/user-auth.validator';
-import { SendOtpDto } from 'src/modules/auth/dto/send-otp.dto';
 import { CommonUtils } from 'src/default/common/utils/common.utils';
 import { RedisService } from 'src/default/databases/redis/redis.service';
 import { UserRole } from 'src/default/common/enums/user-type.enum';
@@ -39,38 +37,6 @@ export class UserValidator {
 
   ) {}
 
-
-  async findOrCreateActiveUserByMobile(dto: SendOtpDto, createUser: boolean = true) {
-    let user = await this.userRepository.findByMobile(dto.mobile);
-
-    if (!user) {
-      if (createUser) {
-        const role = await this.roleRepository.findByName(dto.role);
-
-        if (!role) {
-          throw new BusinessException(ERROR_CODES.AUTH.INVALID_ROLE);
-        }
-
-        user = await this.userRepository.save({
-          mobile: dto.mobile,
-          status: UserStatus.IN_APPROVAL,
-          applicationId: CommonUtils.generateApplicationId(),
-          ...(dto.partnerType && {
-            partnerType: dto.partnerType,
-          }),
-          role: { id: role.id },
-        });
-
-        return user;
-      } else {
-        throw new BusinessException(ERROR_CODES.AUTH.INVALID_MOBILE);
-      }
-    }
-
-    await this.userAuthValidator.validateActiveUserByMobile(dto.mobile);
-
-    return user;
-  }
 
   /**
    * Universal OTP attempts validator

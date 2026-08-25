@@ -1,4 +1,4 @@
-import { Column, Entity, ManyToMany, OneToMany } from 'typeorm';
+import { Column, Entity, ManyToMany } from 'typeorm';
 //
 import { User } from '.';
 import { BaseEntity } from '../../../default/common/entities';
@@ -13,7 +13,7 @@ export class Roles extends BaseEntity {
   })
   name!: UserRole;
 
-  @OneToMany(() => User, (users) => users.role)
+  @ManyToMany(() => User, (user) => user.roles)
   users?: User[];
 
   @Column({
