@@ -48,6 +48,12 @@ export class AuthController {
   }
 
   @NoCache()
+  @Post('admin-login')
+  async adminLogin(@Body() dto: LoginDto, @Req() req: any) {
+    return await this.authService.adminLogin(dto, req);
+  }
+
+  @NoCache()
   @Post('refresh-token')
   @ResponseMessage('Token refreshed successfully')
   async refreshToken(@Body() dto: RefreshTokenDto) {
@@ -84,7 +90,7 @@ export class AuthController {
 
   @NoCache()
   @UseGuards(JwtAuthGuard)
-  @ResponseMessage("Profile fetched successfully")
+  @ResponseMessage('Profile fetched successfully')
   @Get('profile')
   async profile(@Req() req: any) {
     const response = await this.authService.profile(req.user.id);

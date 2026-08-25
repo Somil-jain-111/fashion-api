@@ -34,4 +34,9 @@ export const SELLER_ERRORS = {
     message: 'Seller KYC has not been approved yet',
     statusCode: 403,
   },
+  KYC_INCOMPLETE_FOR_APPROVAL: {
+    code: 'SEL_008',
+    message: 'Cannot approve seller KYC: {pending}',
+    statusCode: 400,
+  },
 } as const;

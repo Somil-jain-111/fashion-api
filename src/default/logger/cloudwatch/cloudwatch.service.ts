@@ -29,6 +29,14 @@ export class CloudwatchService implements OnModuleInit {
 
     this.logGroupName = `${appName}-${nodeEnv}`;
 
+    // CloudWatch is opt-in outside development — every call site below already
+    // guards on `this.cloudWatchClient` being set, so leaving it null here is
+    // enough to make the whole pipeline (log group/stream creation, PutLogEvents)
+    // a no-op in dev instead of spamming AWS auth errors on invalid/local creds.
+    if (nodeEnv === 'development') {
+      return;
+    }
+
     const awsRegion = this.appConfigService.get('AWS_REGION');
     const awsAccessKeyId = this.appConfigService.get('AWS_ACCESS_KEY_ID');
     const awsSecretAccessKey = this.appConfigService.get('AWS_SECRET_ACCESS_KEY');
@@ -43,6 +51,8 @@ export class CloudwatchService implements OnModuleInit {
   }
 
   async onModuleInit() {
+    if (!this.cloudWatchClient) return;
+
     await this.ensureLogGroupExists();
 
     for (const level of this.logLevels) {

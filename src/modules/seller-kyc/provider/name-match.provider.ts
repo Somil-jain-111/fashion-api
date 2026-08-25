@@ -4,6 +4,7 @@ import { KycHmacHelper } from 'src/default/common/helper/kyc-hmac.helper';
 import { AppConfigService } from 'src/default/config/config.service';
 import { ConsoleLogger } from 'src/default/logger/console/console.service';
 import { ApiResponseRepository } from '../repository';
+import { shouldMockKycProvider } from './dev-mock.util';
 
 type NameMatchInput = {
   userName: string;
@@ -34,6 +35,23 @@ export class NameMatchProvider {
       name_1: data.userName,
       name_2: data.apiUserName,
     };
+
+    if (shouldMockKycProvider(this.appConfigService)) {
+      const responseData = {
+        status: true,
+        message: 'Name matching successful (dev mock)',
+        data: { match_score: 100 },
+      };
+
+      return {
+        success: true,
+        requestConfig: { method: 'post', url: 'DEV_MOCK', headers: {}, data: payload },
+        requestPayload: payload,
+        responseData,
+        statusCode: 200,
+        message: responseData.message,
+      };
+    }
 
     const baseUrl = this.appConfigService.getRewardsUrl();
     const secretKey = this.appConfigService.getKycSecretKey();

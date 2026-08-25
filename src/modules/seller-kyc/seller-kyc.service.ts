@@ -3,11 +3,17 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { BusinessException } from 'src/default/error/business.exception';
 import { ERROR_CODES } from 'src/default/error/error.code';
 import { ConsoleLogger } from 'src/default/logger/console/console.service';
+import { CommonUtils } from 'src/default/common/utils/common.utils';
 import { AppConfigService } from 'src/default/config/config.service';
 import { KycEncryptionHelper } from 'src/default/common/helper/kyc-encryption.helper';
 import { ReferenceIdUtil } from 'src/default/common/utils/reference-id.util';
-import { KycLogStatus, KycStatus, KycType, SellerKycStatus } from 'src/default/common/enums/kyc.enum';
-import { UserRole } from 'src/default/common/enums/user-type.enum';
+import {
+  KycLogStatus,
+  KycStatus,
+  KycType,
+  SellerKycOverallStatus,
+  SellerKycStatus,
+} from 'src/default/common/enums/kyc.enum';
 import { LocalStorageContextUtil } from 'src/default/common/utils/local-storage.util';
 import { ContextType } from 'src/default/common/constants/context.option';
 import { UserAuthValidator } from '../auth/validators/user-auth.validator';
@@ -120,10 +126,11 @@ export class SellerKycService {
     const encryptedFrontImage = this.encryptKycData(aadharFrontImage);
     const encryptedBackImage = this.encryptKycData(aadharBackImage);
 
-    const existingVerifiedAadhaar = await this.kycVerificationRepository.findByDocumentNumberAndType(
-      encryptedAadhaarNumber,
-      KycType.AADHAAR
-    );
+    const existingVerifiedAadhaar =
+      await this.kycVerificationRepository.findByDocumentNumberAndType(
+        encryptedAadhaarNumber,
+        KycType.AADHAAR
+      );
 
     if (existingVerifiedAadhaar && Number(existingVerifiedAadhaar.user.id) !== Number(sellerId)) {
       throw new BusinessException(ERROR_CODES.KYC.AADHAAR_ALREADY_IN_USE);
@@ -172,7 +179,9 @@ export class SellerKycService {
         providerResult.responseData
       );
 
-      throw new BusinessException(ERROR_CODES.KYC.AADHAAR_OTP_GENERATION_FAILED, { reason: message });
+      throw new BusinessException(ERROR_CODES.KYC.AADHAAR_OTP_GENERATION_FAILED, {
+        reason: message,
+      });
     }
 
     ConsoleLogger.log('SELLER_AADHAAR_OTP_GENERATE_SUCCESS', { tag, data: { sellerId } });
@@ -213,7 +222,11 @@ export class SellerKycService {
       throw new BusinessException(ERROR_CODES.KYC.AADHAAR_OTP_EXPIRED);
     }
 
-    const providerResult = await this.aadhaarProvider.verifyOtp({ referenceId, referenceIdOtp, otp });
+    const providerResult = await this.aadhaarProvider.verifyOtp({
+      referenceId,
+      referenceIdOtp,
+      otp,
+    });
 
     await this.kycVerificationLogRepository.createLog({
       user_id: sellerId,
@@ -263,7 +276,10 @@ export class SellerKycService {
 
     await this.kycVerificationLogRepository.expireAllPendingOtpLogs(sellerId, KycType.AADHAAR);
 
-    ConsoleLogger.log('SELLER_AADHAAR_OTP_VERIFY_SUCCESS', { tag, data: { sellerId, referenceId } });
+    ConsoleLogger.log('SELLER_AADHAAR_OTP_VERIFY_SUCCESS', {
+      tag,
+      data: { sellerId, referenceId },
+    });
 
     return { verified: true, referenceId, message: 'Aadhaar verified successfully' };
   }
@@ -503,23 +519,47 @@ export class SellerKycService {
     const pan = byType(KycType.PAN);
     const gst = byType(KycType.GST);
     const aadhaar = byType(KycType.AADHAAR);
-    const autoApproved = pan.verified && gst.verified && aadhaar.verified;
+    const allVerified = pan.verified && gst.verified && aadhaar.verified;
+    const anyVerified = pan.verified || gst.verified || aadhaar.verified;
+
+    let status: SellerKycOverallStatus;
+    if (override) {
+      status =
+        override.status === SellerKycStatus.APPROVED
+          ? SellerKycOverallStatus.APPROVED
+          : SellerKycOverallStatus.REJECTED;
+    } else if (allVerified) {
+      status = SellerKycOverallStatus.USER_PROFILE_APPROVAL;
+    } else if (anyVerified) {
+      status = SellerKycOverallStatus.PENDING;
+    } else {
+      status = SellerKycOverallStatus.NOT_STARTED;
+    }
 
     return {
       pan,
       gst,
       aadhaar,
-      kycApproved: override ? override.status === SellerKycStatus.APPROVED : autoApproved,
+      status,
+      // Finishing all three KYC types alone only queues the seller for Super
+      // Admin review (status becomes USER_PROFILE_APPROVAL) — it does not
+      // approve them. Only an explicit APPROVED override does that.
+      kycApproved: override?.status === SellerKycStatus.APPROVED,
       override: override
-        ? { status: override.status, reason: override.reason ?? null, reviewedAt: override.reviewedAt }
+        ? {
+            status: override.status,
+            reason: override.reason ?? null,
+            reviewedAt: override.reviewedAt,
+          }
         : null,
     };
   }
 
   /**
-   * The Products module's create-gate calls this directly to check the seller is
-   * fully KYC-verified before allowing a listing. A manual override (see `review`)
-   * takes precedence over the automatic all-three-VERIFIED computation either way.
+   * The Products/Categories create-gates call this directly to check a seller
+   * may upload — true only once a Super Admin has explicitly approved them
+   * (see `review`). Completing all three KYC types is a prerequisite for that
+   * approval, not a substitute for it.
    */
   async isSellerKycApproved(sellerId: number): Promise<boolean> {
     const profile = await this.getProfile(sellerId);
@@ -529,7 +569,10 @@ export class SellerKycService {
   /**
    * Super Admin manual override — approves or rejects a seller's overall KYC
    * regardless of the automatic per-type result (e.g. an offline exception
-   * process). Not gated by any prior state: an admin may change their mind.
+   * process). Rejecting is ungated (an admin may reject at any point), but
+   * approving still requires all three of PAN/GST/Aadhaar to be individually
+   * VERIFIED first — the override exists to formalize that result, not to
+   * bypass it.
    */
   async review(
     sellerId: number,
@@ -543,6 +586,21 @@ export class SellerKycService {
 
     if (options.status === SellerKycStatus.REJECTED && !options.reason) {
       throw new BusinessException(ERROR_CODES.SELLER.KYC_REJECTION_REASON_REQUIRED);
+    }
+
+    if (options.status === SellerKycStatus.APPROVED) {
+      const profile = await this.getProfile(sellerId);
+      const pending = [
+        !profile.pan.verified && 'PAN card pending',
+        !profile.gst.verified && 'GST pending',
+        !profile.aadhaar.verified && 'Aadhaar pending',
+      ].filter((entry): entry is string => Boolean(entry));
+
+      if (pending.length > 0) {
+        throw new BusinessException(ERROR_CODES.SELLER.KYC_INCOMPLETE_FOR_APPROVAL, {
+          pending: pending.join(', '),
+        });
+      }
     }
 
     await this.sellerKycOverrideRepository.upsert({
@@ -564,63 +622,25 @@ export class SellerKycService {
 
   /**
    * Paginated seller list for the Super Admin KYC panel, with a derived overall
-   * status per seller (override takes precedence over the auto-computed one).
-   * Fetched as 3 flat queries (sellers, per-seller verified-type counts, overrides)
-   * rather than N+1; filtering/pagination happen in-memory after that — acceptable
-   * at expected seller-panel scale, same tradeoff as the category tree read.
+   * status per seller. Filtering and pagination both happen in the query
+   * itself (see KycVerificationRepository.findSellersByDerivedStatus), not by
+   * fetching everything and filtering in memory.
    */
   async listForAdmin(options: {
-    status?: 'NOT_STARTED' | 'PENDING' | 'APPROVED' | 'REJECTED';
+    status?: SellerKycOverallStatus;
     page: number;
     limit: number;
   }): Promise<any> {
     const { page, limit } = options;
-    const status = options.status ?? 'PENDING';
+    const status = options.status;
 
-    const [sellers, verifiedCounts, overrides] = await Promise.all([
-      this.userRepository.findMany({
-        where: { roles: { name: UserRole.SELLER_ADMIN } } as any,
-        relations: ['roles'],
-      }),
-      this.kycVerificationRepository.countVerifiedTypesByUser(),
-      this.sellerKycOverrideRepository.findMany(),
-    ]);
+    const { items, total } = await this.kycVerificationRepository.findSellersByDerivedStatus(
+      status,
+      page,
+      limit
+    );
 
-    const overrideBySeller = new Map(overrides.map((o) => [Number(o.sellerId), o]));
-
-    const enriched = sellers.map((seller) => {
-      const verifiedCount = verifiedCounts.get(Number(seller.id)) ?? 0;
-      const override = overrideBySeller.get(Number(seller.id));
-
-      let derivedStatus: string;
-      if (override) {
-        derivedStatus = override.status;
-      } else if (verifiedCount === 3) {
-        derivedStatus = 'APPROVED';
-      } else if (verifiedCount === 0) {
-        derivedStatus = 'NOT_STARTED';
-      } else {
-        derivedStatus = 'PENDING';
-      }
-
-      return {
-        sellerId: seller.id,
-        name: seller.username ?? null,
-        email: seller.email ?? null,
-        businessName: seller.firmName ?? null,
-        verifiedCount,
-        status: derivedStatus,
-        override: override
-          ? { status: override.status, reason: override.reason ?? null, reviewedAt: override.reviewedAt }
-          : null,
-      };
-    });
-
-    const filtered = enriched.filter((s) => s.status === status);
-    const total = filtered.length;
-    const items = filtered.slice((page - 1) * limit, (page - 1) * limit + limit);
-
-    return { items, page, limit, total, totalPages: Math.ceil(total / limit) };
+    return { items, pagination: CommonUtils.generatePaginationResponse(total, page, limit) };
   }
 
   /**

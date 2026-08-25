@@ -1,10 +1,11 @@
 import { Type } from 'class-transformer';
-import { IsIn, IsInt, IsOptional, Max, Min } from 'class-validator';
+import { IsEnum, IsInt, IsOptional, Max, Min } from 'class-validator';
+import { SellerKycOverallStatus } from 'src/default/common/enums/kyc.enum';
 
 export class KycAdminListQueryDto {
   @IsOptional()
-  @IsIn(['NOT_STARTED', 'PENDING', 'APPROVED', 'REJECTED'])
-  status?: 'NOT_STARTED' | 'PENDING' | 'APPROVED' | 'REJECTED';
+  @IsEnum(SellerKycOverallStatus)
+  status?: SellerKycOverallStatus;
 
   @IsOptional()
   @Type(() => Number)

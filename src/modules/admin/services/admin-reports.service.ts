@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { UserRole } from 'src/default/common/enums/user-type.enum';
 import { ProductStatus } from 'src/default/common/enums/product.enum';
+import { SellerKycOverallStatus } from 'src/default/common/enums/kyc.enum';
 import { UserRepository } from '../../auth/repository';
 import { ProductRepository } from '../../products/repository';
 import { SellerKycService } from '../../seller-kyc/seller-kyc.service';
@@ -20,13 +21,17 @@ export class AdminReportsService {
         this.userRepository.countByRole(UserRole.CUSTOMER),
         this.productRepository.count({ where: { status: ProductStatus.PENDING_APPROVAL } }),
         this.productRepository.count({ where: { status: ProductStatus.APPROVED } }),
-        this.sellerKycService.listForAdmin({ status: 'PENDING', page: 1, limit: 1 }),
+        this.sellerKycService.listForAdmin({
+          status: SellerKycOverallStatus.USER_PROFILE_APPROVAL,
+          page: 1,
+          limit: 1,
+        }),
       ]);
 
     return {
       totalSellers,
       totalRetailers,
-      pendingKycCount: pendingKyc.total,
+      pendingKycCount: pendingKyc.pagination.totalItems,
       pendingProductCount: pendingProducts,
       approvedProductCount: approvedProducts,
     };

@@ -25,7 +25,11 @@ import { BusinessException } from 'src/default/error/business.exception';
 import { ERROR_CODES } from 'src/default/error/error.code';
 import { PasswordHelper } from 'src/default/common/helper/password.helper';
 import { AuthTokenHelper } from 'src/default/common/helper/auth-token.helper';
-import { MAX_OTP_VERIFY_ATTEMPTS, OTP_EXPIRY_MINUTES, UserStatus } from './constants/auth.constants';
+import {
+  MAX_OTP_VERIFY_ATTEMPTS,
+  OTP_EXPIRY_MINUTES,
+  UserStatus,
+} from './constants/auth.constants';
 import { RevokedTokenRepository } from 'src/modules/auth/repository';
 import { TokenType } from 'src/default/common/enums/token-type.enum';
 import { TokenHashHelper } from 'src/default/common/helper/token-hash.helper';
@@ -70,7 +74,9 @@ export class AuthService {
     return {
       channel: identifier.type,
       maskedIdentifier:
-        identifier.type === 'mobile' ? OtpHelper.maskMobile(identifier.value) : OtpHelper.maskEmail(identifier.value),
+        identifier.type === 'mobile'
+          ? OtpHelper.maskMobile(identifier.value)
+          : OtpHelper.maskEmail(identifier.value),
       otpExpiryInMinutes: OTP_EXPIRY_MINUTES,
     };
   }
@@ -212,6 +218,53 @@ export class AuthService {
     };
   }
 
+  /**
+   * Same password-login mechanics as `login()`, scoped to admin/super_admin
+   * identities. A customer/seller account (even with a correct password) gets
+   * the same generic INVALID_CREDENTIALS as a wrong password or unknown
+   * identifier — this endpoint must never reveal whether a non-admin account
+   * exists or that its password happens to be right.
+   */
+  async adminLogin(dto: LoginDto, req: any) {
+    const identifier = IdentifierHelper.resolve(dto);
+    const user = await this.findByIdentifier(identifier);
+    const isAdmin = user?.roles?.some(
+      (role) => role.name === UserRole.SUPERADMIN || role.name === UserRole.ADMIN
+    );
+
+    if (!user || !isAdmin) {
+      if (user) {
+        await this.createLoginHistory(user, req, 0);
+      }
+      throw new BusinessException(ERROR_CODES.AUTH.INVALID_CREDENTIALS);
+    }
+
+    this.userAuthValidator.validateUserStatus(user.status);
+
+    if (!user.password) {
+      throw new BusinessException(ERROR_CODES.AUTH.PASSWORD_LOGIN_DISABLED);
+    }
+
+    const isPasswordValid = await PasswordHelper.comparePassword(dto.password, user.password);
+
+    if (!isPasswordValid) {
+      await this.createLoginHistory(user, req, 0);
+      throw new BusinessException(ERROR_CODES.AUTH.INVALID_CREDENTIALS);
+    }
+
+    const tokens = await AuthTokenHelper.generateTokens(this.jwtService, user);
+    const refreshTokenExpiry = await DateHelper.getRefreshTokenExpiryDate();
+
+    await this.userRepository.updateRefreshToken(user.id, tokens.refreshToken, refreshTokenExpiry);
+
+    await this.createLoginHistory(user, req, 1);
+
+    return {
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
+    };
+  }
+
   async refreshToken(dto: RefreshTokenDto) {
     const user = await this.userAuthValidator.validateActiveUserByRefreshToken(dto.refreshToken);
 
@@ -250,7 +303,9 @@ export class AuthService {
     return {
       channel: identifier.type,
       maskedIdentifier:
-        identifier.type === 'mobile' ? OtpHelper.maskMobile(identifier.value) : OtpHelper.maskEmail(identifier.value),
+        identifier.type === 'mobile'
+          ? OtpHelper.maskMobile(identifier.value)
+          : OtpHelper.maskEmail(identifier.value),
       otpExpiryInMinutes: OTP_EXPIRY_MINUTES,
     };
   }
@@ -381,6 +436,13 @@ export class AuthService {
       otp_attempt_count: 0,
       otpPurpose: purpose,
     });
+
+    // Non-prod already uses a fixed OTP (see above) — no need to actually hit the
+    // WhatsApp/email provider, which also avoids failures from dev-only invalid
+    // provider credentials.
+    if (!isProd) {
+      return;
+    }
 
     const dispatchResult =
       identifier.type === 'mobile'

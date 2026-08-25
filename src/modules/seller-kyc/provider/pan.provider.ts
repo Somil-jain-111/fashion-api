@@ -6,6 +6,7 @@ import { BusinessException } from 'src/default/error/business.exception';
 import { ERROR_CODES } from 'src/default/error/error.code';
 import { ConsoleLogger } from 'src/default/logger/console/console.service';
 import { ApiResponseRepository } from '../repository';
+import { shouldMockKycProvider } from './dev-mock.util';
 
 type PanVerifyInput = {
   panCard: string;
@@ -46,6 +47,23 @@ export class PanProvider {
       id_number: pan,
       transaction_id: data.transactionId,
     };
+
+    if (shouldMockKycProvider(this.appConfigService)) {
+      const responseData = {
+        status: true,
+        message: 'PAN verification successful (dev mock)',
+        data: { full_name: 'Dev Mock User', aadhaar_linked: 'successful' },
+      };
+
+      return {
+        success: true,
+        requestConfig: { method: 'post', url: 'DEV_MOCK', headers: {}, data: payload },
+        requestPayload: payload,
+        responseData,
+        statusCode: 200,
+        message: responseData.message,
+      };
+    }
 
     const baseUrl = this.appConfigService.getRewardsUrl();
     const secretKey = this.appConfigService.getKycSecretKey();

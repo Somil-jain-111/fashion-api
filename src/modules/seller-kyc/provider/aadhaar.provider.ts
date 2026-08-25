@@ -6,6 +6,7 @@ import { BusinessException } from 'src/default/error/business.exception';
 import { ERROR_CODES } from 'src/default/error/error.code';
 import { ConsoleLogger } from 'src/default/logger/console/console.service';
 import { ApiResponseRepository } from '../repository';
+import { shouldMockKycProvider } from './dev-mock.util';
 
 type GenerateAadhaarOtpInput = {
   aadhaarNumber: string;
@@ -40,6 +41,26 @@ export class AadhaarProvider {
       id_number: data.aadhaarNumber,
       transaction_id: data.transactionId,
     };
+
+    if (shouldMockKycProvider(this.appConfigService)) {
+      const responseData = {
+        status: true,
+        message: 'Aadhaar OTP generated successfully (dev mock)',
+        data: {
+          client_id: `DEV-MOCK-${data.transactionId}`,
+          reference_id: `DEV-MOCK-${data.transactionId}`,
+        },
+      };
+
+      return {
+        success: true,
+        requestConfig: { method: 'post', url: 'DEV_MOCK', headers: {}, data: payload },
+        requestPayload: payload,
+        responseData,
+        statusCode: 200,
+        message: responseData.message,
+      };
+    }
 
     const baseUrl = this.appConfigService.getRewardsUrl();
     const secretKey = this.appConfigService.getKycSecretKey();
@@ -123,6 +144,29 @@ export class AadhaarProvider {
       transaction_id: data.referenceId,
       otp: data.otp,
     };
+
+    if (shouldMockKycProvider(this.appConfigService)) {
+      const responseData = {
+        status: true,
+        message: 'Aadhaar verified successfully (dev mock)',
+        data: {
+          full_name: 'Dev Mock User',
+          masked_aadhaar: 'XXXXXXXX0000',
+          dob: '1990-01-01',
+          gender: 'M',
+          address: 'Dev Mock Address',
+        },
+      };
+
+      return {
+        success: true,
+        requestConfig: { method: 'post', url: 'DEV_MOCK', headers: {}, data: payload },
+        requestPayload: { ...payload, otp: '******' },
+        responseData,
+        statusCode: 200,
+        message: responseData.message,
+      };
+    }
 
     const baseUrl = this.appConfigService.getRewardsUrl();
     const secretKey = this.appConfigService.getKycSecretKey();

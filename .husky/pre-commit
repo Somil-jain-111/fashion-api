@@ -1,0 +1,8 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+# lint-staged only runs prettier for now — eslint (^9.39.4, flat-config only)
+# doesn't have an eslint.config.js in this repo yet, only the legacy
+# .eslintrc.js, so `eslint --fix` fails on every commit until that's migrated.
+# Add it back to the "*.ts" list in package.json's "lint-staged" once fixed.
+npx lint-staged

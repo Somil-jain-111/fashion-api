@@ -6,6 +6,7 @@ import { BusinessException } from 'src/default/error/business.exception';
 import { ERROR_CODES } from 'src/default/error/error.code';
 import { ConsoleLogger } from 'src/default/logger/console/console.service';
 import { ApiResponseRepository } from '../repository';
+import { shouldMockKycProvider } from './dev-mock.util';
 
 type GstVerifyInput = {
   gstNumber: string;
@@ -49,6 +50,30 @@ export class GstProvider {
       id_number: gst,
       transaction_id: data.transactionId,
     };
+
+    if (shouldMockKycProvider(this.appConfigService)) {
+      const responseData = {
+        status: true,
+        message: 'GST verification successful (dev mock)',
+        data: {
+          business_name: 'Dev Mock Business',
+          legal_name: 'Dev Mock Business',
+          trade_name: 'Dev Mock Business',
+          address: 'Dev Mock Address',
+          gstin_status: 'Active',
+          date_of_registration: new Date().toISOString().split('T')[0],
+        },
+      };
+
+      return {
+        success: true,
+        requestConfig: { method: 'post', url: 'DEV_MOCK', headers: {}, data: payload },
+        requestPayload: payload,
+        responseData,
+        statusCode: 200,
+        message: responseData.message,
+      };
+    }
 
     const baseUrl = this.appConfigService.getRewardsUrl();
     const secretKey = this.appConfigService.getKycSecretKey();

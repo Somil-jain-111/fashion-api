@@ -1,8 +1,19 @@
 import { Injectable } from '@nestjs/common';
-import { DataSource, EntityManager, Repository } from 'typeorm';
-import { KycStatus, KycType } from 'src/default/common/enums/kyc.enum';
+import { DataSource, EntityManager, Repository, SelectQueryBuilder } from 'typeorm';
+import { KycStatus, KycType, SellerKycOverallStatus } from 'src/default/common/enums/kyc.enum';
+import { UserRole } from 'src/default/common/enums/user-type.enum';
 import { BaseRepository } from 'src/default/common/repositories/base.repository';
 import { KycVerificationEntity } from '../entities';
+
+export type AdminKycListItem = {
+  sellerId: number;
+  name: string | null;
+  email: string | null;
+  businessName: string | null;
+  verifiedCount: number;
+  status: SellerKycOverallStatus;
+  override: { status: string; reason: string | null; reviewedAt: Date } | null;
+};
 
 @Injectable()
 export class KycVerificationRepository extends BaseRepository<KycVerificationEntity> {
@@ -78,6 +89,119 @@ export class KycVerificationRepository extends BaseRepository<KycVerificationEnt
       .getRawMany<{ userId: string; count: string }>();
 
     return new Map(rows.map((r) => [Number(r.userId), Number(r.count)]));
+  }
+
+  /**
+   * The Super Admin KYC list, filtered by derived overall status at the DB
+   * level (not fetched-then-filtered-in-memory) — the status itself is a CASE
+   * expression over a per-seller verified-type count and an optional override
+   * row, wrapped as a derived table so the filter and pagination both run in
+   * SQL. Completing all three KYC types alone lands a seller in
+   * USER_PROFILE_APPROVAL, not APPROVED — only an explicit override does that
+   * (see SellerKycService.review).
+   */
+  async findSellersByDerivedStatus(
+    status: SellerKycOverallStatus | undefined,
+    page: number,
+    limit: number
+  ): Promise<{ items: AdminKycListItem[]; total: number }> {
+    const buildDerived = (qb: SelectQueryBuilder<any>) =>
+      qb
+        .select('u.id', 'sellerId')
+        .addSelect('u.username', 'name')
+        .addSelect('u.email', 'email')
+        .addSelect('u.firm_name', 'businessName')
+        .addSelect('COALESCE(vc.verifiedCount, 0)', 'verifiedCount')
+        .addSelect('ov.status', 'overrideStatus')
+        .addSelect('ov.reason', 'overrideReason')
+        .addSelect('ov.reviewed_at', 'overrideReviewedAt')
+        .addSelect(
+          `CASE
+             WHEN ov.status = 'APPROVED' THEN 'APPROVED'
+             WHEN ov.status = 'REJECTED' THEN 'REJECTED'
+             WHEN COALESCE(vc.verifiedCount, 0) = 3 THEN 'USER_PROFILE_APPROVAL'
+             WHEN COALESCE(vc.verifiedCount, 0) = 0 THEN 'NOT_STARTED'
+             ELSE 'PENDING'
+           END`,
+          'derivedStatus'
+        )
+        .from('users', 'u')
+        .innerJoin('user_roles', 'ur', 'ur.user_id = u.id')
+        .innerJoin(
+          'roles',
+          'r',
+          'r.id = ur.role_id AND r.name = :roleName AND r.deleted_at IS NULL',
+          { roleName: UserRole.SELLER_ADMIN }
+        )
+        .leftJoin(
+          (sub) =>
+            sub
+              .select('kv.user_id', 'userId')
+              .addSelect('COUNT(DISTINCT kv.type)', 'verifiedCount')
+              .from('kyc_verifications', 'kv')
+              .where('kv.status = :verifiedStatus', { verifiedStatus: KycStatus.VERIFIED })
+              .andWhere('kv.type IN (:...kycTypes)', {
+                kycTypes: [KycType.PAN, KycType.GST, KycType.AADHAAR],
+              })
+              .andWhere('kv.deleted_at IS NULL')
+              .groupBy('kv.user_id'),
+          'vc',
+          'vc.userId = u.id'
+        )
+        .leftJoin('seller_kyc_overrides', 'ov', 'ov.seller_id = u.id AND ov.deleted_at IS NULL')
+        .where('u.deleted_at IS NULL');
+
+    // No status → no filter at all (every seller, any status), not "match nothing".
+    const applyStatusFilter = (qb: SelectQueryBuilder<any>) =>
+      status ? qb.where('derived.derivedStatus = :status', { status }) : qb;
+
+    const [rows, totalRow] = await Promise.all([
+      applyStatusFilter(
+        this.repository.manager
+          .createQueryBuilder()
+          .select('derived.*')
+          .from((sub) => buildDerived(sub), 'derived')
+      )
+        .orderBy('derived.sellerId', 'ASC')
+        .offset((page - 1) * limit)
+        .limit(limit)
+        .getRawMany<{
+          sellerId: string;
+          name: string | null;
+          email: string | null;
+          businessName: string | null;
+          verifiedCount: string;
+          overrideStatus: string | null;
+          overrideReason: string | null;
+          overrideReviewedAt: Date | null;
+          derivedStatus: SellerKycOverallStatus;
+        }>(),
+      applyStatusFilter(
+        this.repository.manager
+          .createQueryBuilder()
+          .select('COUNT(*)', 'total')
+          .from((sub) => buildDerived(sub), 'derived')
+      ).getRawOne<{ total: string }>(),
+    ]);
+
+    return {
+      items: rows.map((r) => ({
+        sellerId: Number(r.sellerId),
+        name: r.name ?? null,
+        email: r.email ?? null,
+        businessName: r.businessName ?? null,
+        verifiedCount: Number(r.verifiedCount),
+        status: r.derivedStatus,
+        override: r.overrideStatus
+          ? {
+              status: r.overrideStatus,
+              reason: r.overrideReason ?? null,
+              reviewedAt: r.overrideReviewedAt as Date,
+            }
+          : null,
+      })),
+      total: Number(totalRow?.total ?? 0),
+    };
   }
 
   async upsertVerifiedKyc(
