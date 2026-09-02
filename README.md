@@ -10,3 +10,4 @@ This repository follows the standardized Prettier configuration to ensure code c
 - `master`: Main development branch
 - `release`: For release candidates
 - `production`: Stable production-ready code
+# fashion-fizz-api
