@@ -43,6 +43,57 @@ export class UserRepository extends BaseRepository<User> {
     });
   }
 
+  async findLoginCapabilities(identifier: {
+    type: 'mobile' | 'email';
+    value: string;
+  }): Promise<{ passwordAvailable: boolean } | null> {
+    const column = identifier.type === 'mobile' ? 'user.mobile' : 'user.email';
+    const row = await this.repository
+      .createQueryBuilder('user')
+      .select('CASE WHEN user.password IS NULL THEN 0 ELSE 1 END', 'passwordAvailable')
+      .where(`${column} = :value`, { value: identifier.value })
+      .andWhere('user.deletedAt IS NULL')
+      .getRawOne<{ passwordAvailable: string | number }>();
+
+    return row ? { passwordAvailable: Boolean(Number(row.passwordAvailable)) } : null;
+  }
+
+  async findProfileSummaryById(userId: number): Promise<User | null> {
+    return this.repository.findOne({
+      where: { id: userId } as any,
+      select: {
+        id: true,
+        uuid: true,
+        username: true,
+        mobile: true,
+        email: true,
+        image_url: true,
+        status: true,
+        roles: {
+          id: true,
+          name: true,
+          user_type: true,
+        },
+      } as any,
+      relations: { roles: true } as any,
+    });
+  }
+
+  async findAuthContextById(userId: number): Promise<User | null> {
+    return this.repository.findOne({
+      where: { id: userId } as any,
+      select: {
+        id: true,
+        uuid: true,
+        mobile: true,
+        email: true,
+        status: true,
+        roles: { name: true },
+      } as any,
+      relations: { roles: true } as any,
+    });
+  }
+
   async findByUuid(uuid: string, queryRunner?: QueryRunner): Promise<User | null> {
     return await this.getRepository(queryRunner).findOne({
       where: {
@@ -194,11 +245,14 @@ export class UserRepository extends BaseRepository<User> {
   }
 
   async hasRole(userId: number, roleName: string): Promise<boolean> {
-    const user = await this.repository.findOne({
-      where: { id: userId } as any,
-      relations: { roles: true } as any,
-    });
+    const match = await this.repository
+      .createQueryBuilder('user')
+      .innerJoin('user.roles', 'role', 'role.name = :roleName', { roleName })
+      .select('user.id')
+      .where('user.id = :userId', { userId })
+      .andWhere('user.deletedAt IS NULL')
+      .getRawOne();
 
-    return user?.roles?.some((r) => r.name === roleName) ?? false;
+    return Boolean(match);
   }
 }

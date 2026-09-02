@@ -4,6 +4,8 @@ import { CategoryRepository } from 'src/modules/categories/repository';
 import { SellerKycService } from 'src/modules/seller-kyc/seller-kyc.service';
 import { UserRole } from 'src/default/common/enums/user-type.enum';
 import { createMock } from '../utils/mock.util';
+import { ContentAuditRepository } from 'src/default/common/repositories/content-audit.repository';
+import { TransactionService } from 'src/default/databases/transaction';
 
 describe('CategoriesService', () => {
   let service: CategoriesService;
@@ -16,12 +18,16 @@ describe('CategoriesService', () => {
         CategoriesService,
         { provide: CategoryRepository, useValue: createMock<CategoryRepository>() },
         { provide: SellerKycService, useValue: createMock<SellerKycService>() },
+        { provide: ContentAuditRepository, useValue: createMock<ContentAuditRepository>() },
+        { provide: TransactionService, useValue: createMock<TransactionService>() },
       ],
     }).compile();
 
     service = module.get(CategoriesService);
     categoryRepository = module.get(CategoryRepository);
     sellerKycService = module.get(SellerKycService);
+    const transactionService = module.get(TransactionService) as jest.Mocked<TransactionService>;
+    transactionService.runInTransaction.mockImplementation(async (callback: any) => callback({}));
   });
 
   describe('create', () => {
@@ -43,7 +49,7 @@ describe('CategoriesService', () => {
 
     it('allows an approved seller to create a subcategory', async () => {
       sellerKycService.isSellerKycApproved.mockResolvedValue(true);
-      categoryRepository.findById.mockResolvedValue({ id: 1 } as any);
+      categoryRepository.findById.mockResolvedValue({ id: 1, status: 'APPROVED' } as any);
       categoryRepository.findBySlug.mockResolvedValue(null);
       categoryRepository.save.mockResolvedValue({ id: 2, name: 'Sneakers' } as any);
 
@@ -54,6 +60,10 @@ describe('CategoriesService', () => {
       );
 
       expect(result).toMatchObject({ id: 2 });
+      expect(categoryRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({ status: 'PENDING_APPROVAL', createdBy: 2 }),
+        expect.anything()
+      );
     });
 
     it('does not gate a superadmin on KYC at all, even for a top-level category', async () => {
@@ -79,15 +89,15 @@ describe('CategoriesService', () => {
       // Tree: 1 (root) -> 2 -> 3. Attempting to set 1's parent to 3 (a descendant of 1) must fail.
       categoryRepository.findById.mockImplementation(async (id: any) => {
         const nodes: Record<number, any> = {
-          1: { id: 1, slug: 'root', parentId: null },
-          2: { id: 2, slug: 'mid', parentId: 1 },
-          3: { id: 3, slug: 'leaf', parentId: 2 },
+          1: { id: 1, slug: 'root', parentId: null, status: 'APPROVED' },
+          2: { id: 2, slug: 'mid', parentId: 1, status: 'APPROVED' },
+          3: { id: 3, slug: 'leaf', parentId: 2, status: 'APPROVED' },
         };
         return nodes[Number(id)] ?? null;
       });
 
       await expect(
-        service.update(1, { parentId: 3 } as any, [UserRole.SUPERADMIN])
+        service.update(1, { parentId: 3 } as any, 1, [UserRole.SUPERADMIN])
       ).rejects.toMatchObject({ response: { errorCode: 'CAT_007' } });
     });
   });

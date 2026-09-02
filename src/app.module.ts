@@ -24,19 +24,24 @@ import { LocalStorageInterceptor } from './default/common/interceptors/local-sto
 import { IdempotencyModule } from './default/idempotency/idempotency.module';
 import { APP_GUARD, APP_INTERCEPTOR, APP_PIPE } from '@nestjs/core';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
-import { BullSetupModule } from './bull/bull.module';
 // import { MediaService } from './modules/media/media.service';
 import { JourneyIdMiddleware } from './default/common/middleware/journey-id.middleware';
 // import { OnboardingApprovalModule } from './modules/onboarding-approval/onboarding-approval.module';
 import { S3Module } from './default/common/services/s3/s3.module';
 import { AuthModule } from './modules/auth/auth.module';
-import { SellerKycModule } from './modules/seller-kyc/seller-kyc.module';
 import { CategoriesModule } from './modules/categories/categories.module';
 import { ProductsModule } from './modules/products/products.module';
 import { CatalogModule } from './modules/catalog/catalog.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { SellersModule } from './modules/sellers/sellers.module';
-
+import { MaintenanceModule } from './modules/maintenance/maintenance.module';
+import { ProductBoostModule } from './modules/product-boost/product-boost.module';
+import { MediaModule } from './modules/media/media.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
+import { SupportModule } from './modules/support/support.module';
+import { StaffModule } from './modules/staff/staff.module';
+import { SellerApprovalWriteInterceptor } from './default/common/interceptors/seller-approval-write.interceptor';
+import { SellerWriteAccessService } from './default/common/services/seller-write-access.service';
 
 @Module({
   imports: [
@@ -61,16 +66,20 @@ import { SellersModule } from './modules/sellers/sellers.module';
     CloudwatchModule,
     BullmqModule,
     IdempotencyModule,
-    BullSetupModule,
     // OnboardingApprovalModule,
     S3Module,
     AuthModule,
-    SellerKycModule,
     CategoriesModule,
     ProductsModule,
     CatalogModule,
     AdminModule,
     SellersModule,
+    MaintenanceModule,
+    ProductBoostModule,
+    MediaModule,
+    NotificationsModule,
+    SupportModule,
+    StaffModule,
   ],
   providers: [
     {
@@ -88,7 +97,6 @@ import { SellersModule } from './modules/sellers/sellers.module';
           // generic error instead.
           exceptionFactory: (errors: ValidationError[]) => {
             ConsoleLogger.error('DTO validation failed', JSON.stringify(errors), 'ValidationPipe');
-            console.log(errors);
             return new BusinessException(ERROR_CODES.VALIDATION.INVALID_PAYLOAD);
           },
         }),
@@ -105,6 +113,11 @@ import { SellersModule } from './modules/sellers/sellers.module';
       provide: APP_INTERCEPTOR,
       useClass: LocalStorageInterceptor,
     },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: SellerApprovalWriteInterceptor,
+    },
+    SellerWriteAccessService,
     AppConfigService,
     // MediaService,
   ],

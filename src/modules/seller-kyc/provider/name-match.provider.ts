@@ -104,11 +104,7 @@ export class NameMatchProvider {
 
       ConsoleLogger.error('NAME_MATCH_PROVIDER_ERROR', error?.stack, {
         tag: 'NameMatchProvider.matchName',
-        data: {
-          transactionId: data.transactionId,
-          statusCode,
-          errorResponse,
-        },
+        data: { transactionId: data.transactionId, statusCode },
       });
 
       await this.apiResponseRepository.updateResponseByTransactionId(

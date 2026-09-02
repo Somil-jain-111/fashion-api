@@ -7,7 +7,10 @@ export const sqlDbConfig = (configService: AppConfigService): TypeOrmModuleOptio
   const isLoggingEnabled = configService.get('ENABLE_CONSOLE_LOG') === 'true';
 
   const commonConfig = {
-    entities: [__dirname + '/../../../modules/**/*.entity{.ts,.js}',    __dirname + '/../../../default/common/entities/**/*.entity{.ts,.js}',],
+    entities: [
+      __dirname + '/../../../modules/**/*.entity{.ts,.js}',
+      __dirname + '/../../../default/common/entities/**/*.entity{.ts,.js}',
+    ],
 
     synchronize: false,
     migrationsRun: false,

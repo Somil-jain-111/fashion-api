@@ -7,15 +7,11 @@ import {
   EmailTemplateDataMap,
   MailPayload,
   OtpRateLimitTemplateData,
-  OtpRateLimitUserData,
   OtpVerificationTemplateData,
 } from '../dto/mailer.dto';
 import { EMAIL_TEMPLATES } from '../constants/email-templates.constant';
 
 export class MailerHelper {
-  private static readonly communicationUrl: string =
-    'https://communicationapi2.almond.solutions/api/mail';
-
   /**
    * Validate raw MailPayload to ensure no null or undefined or empty required fields pass through.
    */
@@ -157,7 +153,7 @@ export class MailerHelper {
   /**
    * Core method to send email payload to communication API.
    */
-  public static async sendMail(payload: MailPayload): Promise<any> {
+  public static async sendMail(payload: MailPayload): Promise<unknown> {
     MailerHelper.validatePayload(payload);
 
     try {
@@ -166,12 +162,18 @@ export class MailerHelper {
         'MailerHelper'
       );
 
-      const response = await axios.post(MailerHelper.communicationUrl, payload, {
+      const communicationUrl = process.env.COMMUNICATION_API_URL;
+      const communicationToken = process.env.COMMUNICATION_API_TOKEN;
+      if (!communicationUrl || !communicationToken) {
+        throw new Error('Communication API configuration is missing');
+      }
+      const response = await axios.post(communicationUrl, payload, {
         headers: {
           'Content-Type': 'application/json',
-          Authorization: 'Bearer CAMPUS_EMAIL_AUTH_TOKEN',
+          Authorization: `Bearer ${communicationToken}`,
         },
         maxBodyLength: Infinity,
+        timeout: 10_000,
       });
 
       ConsoleLogger.log(
@@ -202,7 +204,7 @@ export class MailerHelper {
   public static async sendMailByTemplate<T extends EmailTemplateType>(
     templateType: T,
     data: EmailTemplateDataMap[T]
-  ): Promise<any> {
+  ): Promise<unknown> {
     MailerHelper.validateTemplateData(templateType, data);
 
     const templateGenerator = EMAIL_TEMPLATES[templateType];
@@ -220,14 +222,16 @@ export class MailerHelper {
   /**
    * Helper method to send OTP Verification Email.
    */
-  public static async sendOtpVerificationEmail(data: OtpVerificationTemplateData): Promise<any> {
+  public static async sendOtpVerificationEmail(
+    data: OtpVerificationTemplateData
+  ): Promise<unknown> {
     return MailerHelper.sendMailByTemplate(EmailTemplateType.OTP_VERIFICATION, data);
   }
 
   /**
    * Helper method to send OTP Rate Limit Alert Email.
    */
-  public static async sendOtpRateLimitEmail(data: OtpRateLimitTemplateData): Promise<any> {
+  public static async sendOtpRateLimitEmail(data: OtpRateLimitTemplateData): Promise<unknown> {
     return MailerHelper.sendMailByTemplate(EmailTemplateType.OTP_RATE_LIMIT_TRIGGERED, data);
   }
 }

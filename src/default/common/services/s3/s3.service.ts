@@ -1,10 +1,20 @@
-import { DeleteObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import {
+  AbortMultipartUploadCommand,
+  CompleteMultipartUploadCommand,
+  CreateMultipartUploadCommand,
+  DeleteObjectCommand,
+  HeadObjectCommand,
+  PutObjectCommand,
+  S3Client,
+  UploadPartCommand,
+} from '@aws-sdk/client-s3';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { Upload } from '@aws-sdk/lib-storage';
 import { BadRequestException, Injectable, InternalServerErrorException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
-import { createReadStream, existsSync, mkdirSync, rmSync, writeFileSync } from 'fs';
+import { createReadStream, existsSync, mkdirSync, rmSync, statSync, writeFileSync } from 'fs';
 import { join } from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import {
@@ -105,6 +115,7 @@ export class S3Service {
 
     this.validateMimeType(file.mimetype, allowedMimeTypes);
     this.validateFileSize(file.size, 10); // 10MB limit
+    this.validateMagicBytes(file.buffer, file.mimetype);
 
     const finalFileName = this.generateFileName({
       fileName: file.originalname,
@@ -138,6 +149,7 @@ export class S3Service {
 
     this.validateMimeType(parsedFile.mimeType, allowedMimeTypes);
     this.validateFileSize(parsedFile.buffer.length, maxSizeInMB);
+    this.validateMagicBytes(parsedFile.buffer, parsedFile.mimeType);
 
     const finalFileName = this.generateFileName({
       fileName,
@@ -255,7 +267,7 @@ export class S3Service {
       totalChunks,
     });
 
-    const key = `${folder}/${finalFileName}`;
+    const key = `${this.normalizeFolder(folder)}/${finalFileName}`;
 
     try {
       const upload = new Upload({
@@ -297,7 +309,7 @@ export class S3Service {
   async uploadBufferToS3(params: UploadBufferToS3Params): Promise<UploadS3Response> {
     const { buffer, fileName, mimeType, folder = 'uploads', isPublic = false } = params;
 
-    const key = `${folder}/${fileName}`;
+    const key = `${this.normalizeFolder(folder)}/${fileName}`;
 
     try {
       await this.s3Client.send(
@@ -324,6 +336,80 @@ export class S3Service {
         error: error?.message,
       });
     }
+  }
+
+  createPresignedPutUrl(key: string, mimeType: string): Promise<string> {
+    return getSignedUrl(
+      this.s3Client,
+      new PutObjectCommand({
+        Bucket: this.bucketName,
+        Key: key,
+        ContentType: mimeType,
+      }),
+      { expiresIn: 900 }
+    );
+  }
+
+  async createMultipartUpload(key: string, mimeType: string): Promise<string> {
+    const result = await this.s3Client.send(
+      new CreateMultipartUploadCommand({
+        Bucket: this.bucketName,
+        Key: key,
+        ContentType: mimeType,
+      })
+    );
+    if (!result.UploadId) throw new Error('S3 did not return a multipart upload ID');
+    return result.UploadId;
+  }
+
+  createPresignedPartUrl(key: string, uploadId: string, partNumber: number): Promise<string> {
+    return getSignedUrl(
+      this.s3Client,
+      new UploadPartCommand({
+        Bucket: this.bucketName,
+        Key: key,
+        UploadId: uploadId,
+        PartNumber: partNumber,
+      }),
+      { expiresIn: 900 }
+    );
+  }
+
+  async completeMultipartUpload(
+    key: string,
+    uploadId: string,
+    parts: Array<{ partNumber: number; etag: string }>
+  ): Promise<void> {
+    await this.s3Client.send(
+      new CompleteMultipartUploadCommand({
+        Bucket: this.bucketName,
+        Key: key,
+        UploadId: uploadId,
+        MultipartUpload: {
+          Parts: parts.map((part) => ({ ETag: part.etag, PartNumber: part.partNumber })),
+        },
+      })
+    );
+  }
+
+  async abortMultipartUpload(key: string, uploadId: string): Promise<void> {
+    await this.s3Client.send(
+      new AbortMultipartUploadCommand({
+        Bucket: this.bucketName,
+        Key: key,
+        UploadId: uploadId,
+      })
+    );
+  }
+
+  async getObjectMetadata(key: string): Promise<{ size: number; mimeType: string }> {
+    const result = await this.s3Client.send(
+      new HeadObjectCommand({ Bucket: this.bucketName, Key: key })
+    );
+    return {
+      size: Number(result.ContentLength || 0),
+      mimeType: result.ContentType || '',
+    };
   }
 
   async deleteFile(key: string): Promise<{ message: string; key: string }> {
@@ -407,6 +493,27 @@ export class S3Service {
     }
   }
 
+  private validateMagicBytes(buffer: Buffer, mimeType: string): void {
+    const hex = buffer.subarray(0, 12).toString('hex');
+    const ascii = buffer.subarray(0, 8).toString('ascii');
+    const valid =
+      (['image/jpeg', 'image/jpg'].includes(mimeType) && hex.startsWith('ffd8ff')) ||
+      (mimeType === 'image/png' && hex.startsWith('89504e470d0a1a0a')) ||
+      (mimeType === 'image/webp' &&
+        ascii.startsWith('RIFF') &&
+        buffer.subarray(8, 12).toString('ascii') === 'WEBP') ||
+      (mimeType === 'application/pdf' && ascii.startsWith('%PDF-')) ||
+      ([
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      ].includes(mimeType) &&
+        hex.startsWith('504b0304')) ||
+      (mimeType === 'application/msword' && hex.startsWith('d0cf11e0a1b11ae1')) ||
+      (mimeType === 'application/vnd.ms-excel' && hex.startsWith('d0cf11e0a1b11ae1')) ||
+      mimeType === 'text/csv';
+    if (!valid) throw new BadRequestException('File content does not match declared type');
+  }
+
   private generateFileName(params: { fileName?: string; mimeType: string }): string {
     const extension = EXTENSION_BY_MIME_TYPE[params.mimeType];
 
@@ -423,6 +530,14 @@ export class S3Service {
       .toLowerCase();
 
     return `${cleanName}-${uuidv4()}${extension}`;
+  }
+
+  private normalizeFolder(folder: string): string {
+    const normalized = String(folder || 'uploads').replace(/^\/+|\/+$/g, '');
+    if (!/^[a-zA-Z0-9/_-]{1,160}$/.test(normalized) || normalized.includes('..')) {
+      throw new BadRequestException('Invalid upload folder');
+    }
+    return normalized;
   }
 
   private ensureDirectory(path: string): void {
@@ -476,13 +591,11 @@ export class S3Service {
   }
 
   private getFileSizeFromChunks(uploadDir: string, totalChunks: number): number {
-    const fs = require('fs');
-
     let totalSize = 0;
 
     for (let i = 0; i < totalChunks; i++) {
       const chunkPath = join(uploadDir, `${i}.part`);
-      totalSize += fs.statSync(chunkPath).size;
+      totalSize += statSync(chunkPath).size;
     }
 
     return totalSize;

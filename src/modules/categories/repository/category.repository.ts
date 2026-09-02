@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { DataSource, QueryRunner } from 'typeorm';
 import { BaseRepository } from 'src/default/common/repositories/base.repository';
-import { Category } from '../entities';
+import { Category, CategoryStatus } from '../entities';
 
 @Injectable()
 export class CategoryRepository extends BaseRepository<Category> {
@@ -15,7 +15,7 @@ export class CategoryRepository extends BaseRepository<Category> {
 
   async findActive(queryRunner?: QueryRunner): Promise<Category[]> {
     return await this.getRepository(queryRunner).find({
-      where: { isActive: true },
+      where: { isActive: true, status: CategoryStatus.APPROVED },
       order: { sortOrder: 'ASC', id: 'ASC' } as any,
     });
   }
@@ -24,6 +24,23 @@ export class CategoryRepository extends BaseRepository<Category> {
     return await this.getRepository(queryRunner).find({
       where: { parentId } as any,
       order: { sortOrder: 'ASC', id: 'ASC' } as any,
+    });
+  }
+
+  findPaginated(options: {
+    status?: CategoryStatus;
+    createdBy?: number;
+    page: number;
+    limit: number;
+  }): Promise<[Category[], number]> {
+    return this.repository.findAndCount({
+      where: {
+        ...(options.status && { status: options.status }),
+        ...(options.createdBy && { createdBy: options.createdBy }),
+      },
+      order: { createdAt: 'DESC' },
+      skip: (options.page - 1) * options.limit,
+      take: options.limit,
     });
   }
 
@@ -59,9 +76,7 @@ export class CategoryRepository extends BaseRepository<Category> {
     let hops = 0;
 
     while (frontier.length > 0 && hops < 20) {
-      const children = (
-        await Promise.all(frontier.map((id) => this.findChildren(id)))
-      ).flat();
+      const children = (await Promise.all(frontier.map((id) => this.findChildren(id)))).flat();
 
       const childIds = children.map((c) => Number(c.id));
       ids.push(...childIds);

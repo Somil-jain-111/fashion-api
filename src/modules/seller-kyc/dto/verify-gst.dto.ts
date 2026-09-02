@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsString, Matches } from 'class-validator';
+import { IsNotEmpty, IsString, IsUrl, Matches, MaxLength } from 'class-validator';
 
 export class VerifyGstDto {
   @IsString()
@@ -7,4 +7,13 @@ export class VerifyGstDto {
     message: 'Invalid GST number',
   })
   gstNumber: string;
+
+  @IsString()
+  @IsNotEmpty({ message: 'GST certificate URL is required' })
+  @MaxLength(2048)
+  @IsUrl(
+    { protocols: ['http', 'https'], require_protocol: true },
+    { message: 'GST certificate must be a valid HTTP or HTTPS URL' }
+  )
+  gstImage: string;
 }

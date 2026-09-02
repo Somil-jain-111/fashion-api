@@ -26,6 +26,7 @@ import {
   REDEMPTIONS_ERRORS,
   PERMISSION_ERRORS,
   SELLER_ERRORS,
+  BOOST_ERRORS,
 } from './errors';
 import { ANNOUNCEMENT_ERRORS } from './errors/announcement.errors';
 import { APP_VERSION_ERRORS } from './errors/app_version.errors';
@@ -39,6 +40,7 @@ import { SUPPORT_ERRORS } from './errors/support.errors';
 import { SUPER_ADMIN_ERRORS } from './errors/super-admin.errors';
 import { VIDEO_ERRORS } from './errors/video.errors';
 import { CUSTOMER_RETURN_ERRORS } from './errors/customer-return.errors';
+import { STAFF_ERRORS } from './errors/staff.errors';
 
 export type ErrorCodeValue = {
   code: string;
@@ -86,6 +88,8 @@ export const ERROR_CODES = {
   CUSTOMER_RETURN: CUSTOMER_RETURN_ERRORS,
   PERMISSION: PERMISSION_ERRORS,
   SELLER: SELLER_ERRORS,
+  BOOST: BOOST_ERRORS,
+  STAFF: STAFF_ERRORS,
 } as const;
 
 export type ErrorCodeGroups = typeof ERROR_CODES;

@@ -58,6 +58,29 @@ export class DataSanitizer {
     return data;
   }
 
+  /**
+   * Converts every scalar API response value to a string while preserving the
+   * object/array shape. Nullish values become an empty string and dates use ISO
+   * format. Apply this only at the final HTTP response boundary so domain and
+   * persistence layers retain their correct boolean/number/date types.
+   */
+  static stringifyResponseScalars(data: unknown): unknown {
+    if (data === null || data === undefined) return '';
+    if (data instanceof Date) return data.toISOString();
+    if (Array.isArray(data)) return data.map((item) => this.stringifyResponseScalars(item));
+
+    if (typeof data === 'object') {
+      return Object.fromEntries(
+        Object.entries(data as Record<string, unknown>).map(([key, value]) => [
+          key,
+          this.stringifyResponseScalars(value),
+        ])
+      );
+    }
+
+    return String(data);
+  }
+
   private static removeSensitiveFields(obj: Record<string, any>, sensitiveFields: string[]): any {
     if (obj === null || obj === undefined || obj instanceof Date) {
       return obj;

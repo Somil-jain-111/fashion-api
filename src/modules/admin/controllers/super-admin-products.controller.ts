@@ -10,25 +10,30 @@ import { ResponseMessage } from 'src/default/common/decorators/response-message.
 import { SUCCESS_MESSAGES } from 'src/default/common/constants/success-messages.constant';
 import { DataSanitizer } from 'src/default/common/utils/sanitize.utils';
 import { NoCache } from 'src/default/cache/cache.decorator';
+import {
+  AdminProductDetailResponseDto,
+  AdminProductListResponseDto,
+  ProductResponseDto,
+} from '../../products/dto/product-response.dto';
 
 @NoCache()
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Controller('super-admin/products')
+@Controller(['super-admin/products', 'admin/products'])
 export class SuperAdminProductsController {
   constructor(private readonly productsService: ProductsService) {}
   @NoCache()
   @Roles([UserRole.SUPERADMIN, UserRole.ADMIN])
   @Get()
   @ResponseMessage(SUCCESS_MESSAGES.PRODUCT.FETCHED)
-  async list(@Query() query: AdminListProductsQueryDto) {
+  async list(@Query() query: AdminListProductsQueryDto): Promise<AdminProductListResponseDto> {
     const response = await this.productsService.adminList(query);
-    return DataSanitizer.sanitizeData(response);
+    return DataSanitizer.sanitizeData(response) as AdminProductListResponseDto;
   }
   @NoCache()
   @Roles([UserRole.SUPERADMIN, UserRole.ADMIN])
   @Get(':id')
   @ResponseMessage(SUCCESS_MESSAGES.PRODUCT.FETCHED)
-  async detail(@Param('id') id: string) {
+  async detail(@Param('id') id: string): Promise<AdminProductDetailResponseDto> {
     const response = await this.productsService.adminGetById(Number(id));
     return DataSanitizer.sanitizeData(response);
   }
@@ -36,16 +41,20 @@ export class SuperAdminProductsController {
   @Roles([UserRole.SUPERADMIN])
   @Post(':id/approve')
   @ResponseMessage(SUCCESS_MESSAGES.PRODUCT.REVIEWED)
-  async approve(@Param('id') id: string, @Req() req: any) {
+  async approve(@Param('id') id: string, @Req() req: any): Promise<ProductResponseDto> {
     const response = await this.productsService.approve(Number(id), req.user.id);
-    return DataSanitizer.sanitizeData(response);
+    return DataSanitizer.sanitizeData(response) as ProductResponseDto;
   }
   @NoCache()
   @Roles([UserRole.SUPERADMIN])
   @Post(':id/reject')
   @ResponseMessage(SUCCESS_MESSAGES.PRODUCT.REVIEWED)
-  async reject(@Param('id') id: string, @Body() dto: RejectProductDto, @Req() req: any) {
+  async reject(
+    @Param('id') id: string,
+    @Body() dto: RejectProductDto,
+    @Req() req: any
+  ): Promise<ProductResponseDto> {
     const response = await this.productsService.reject(Number(id), dto.reason, req.user.id);
-    return DataSanitizer.sanitizeData(response);
+    return DataSanitizer.sanitizeData(response) as ProductResponseDto;
   }
 }

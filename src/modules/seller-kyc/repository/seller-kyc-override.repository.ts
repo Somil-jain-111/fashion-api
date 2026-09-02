@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { DataSource } from 'typeorm';
+import { DataSource, EntityManager } from 'typeorm';
 import { BaseRepository } from 'src/default/common/repositories/base.repository';
 import { SellerKycStatus } from 'src/default/common/enums/kyc.enum';
 import { SellerKycOverride } from '../entities';
@@ -10,17 +10,25 @@ export class SellerKycOverrideRepository extends BaseRepository<SellerKycOverrid
     super(dataSource.getRepository(SellerKycOverride));
   }
 
-  async findBySellerId(sellerId: number): Promise<SellerKycOverride | null> {
-    return await this.repository.findOne({ where: { sellerId } as any });
+  async findBySellerId(
+    sellerId: number,
+    manager?: EntityManager
+  ): Promise<SellerKycOverride | null> {
+    const repository = manager ? manager.getRepository(SellerKycOverride) : this.repository;
+    return await repository.findOne({ where: { sellerId } as any });
   }
 
-  async upsert(data: {
-    sellerId: number;
-    status: SellerKycStatus;
-    reason?: string | null;
-    reviewerId: number;
-  }): Promise<SellerKycOverride> {
-    const existing = await this.findBySellerId(data.sellerId);
+  async upsert(
+    data: {
+      sellerId: number;
+      status: SellerKycStatus;
+      reason?: string | null;
+      reviewerId: number;
+    },
+    manager?: EntityManager
+  ): Promise<SellerKycOverride> {
+    const repository = manager ? manager.getRepository(SellerKycOverride) : this.repository;
+    const existing = await this.findBySellerId(data.sellerId, manager);
 
     const payload = {
       status: data.status,
@@ -30,10 +38,10 @@ export class SellerKycOverrideRepository extends BaseRepository<SellerKycOverrid
     };
 
     if (existing) {
-      await this.updateById(existing.id, payload);
+      await repository.update(existing.id, payload);
       return { ...existing, ...payload } as SellerKycOverride;
     }
 
-    return await this.save({ sellerId: data.sellerId, ...payload });
+    return await repository.save(repository.create({ sellerId: data.sellerId, ...payload }));
   }
 }

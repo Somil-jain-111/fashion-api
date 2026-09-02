@@ -43,7 +43,7 @@ async function bootstrap() {
           ],
           fontSrc: [`'self'`, 'fonts.gstatic.com', 'data:'],
           imgSrc: [`'self'`, 'data:', 'cdn.jsdelivr.net'],
-          scriptSrc: [`'self'`, `https: 'unsafe-inline'`, `cdn.jsdelivr.net`, `'unsafe-eval'`],
+          scriptSrc: [`'self'`, 'cdn.jsdelivr.net'],
         },
       }, // or false
     })
@@ -51,9 +51,13 @@ async function bootstrap() {
 
   // CORS. Auth is Bearer-token based (no cookies), so `credentials` stays false —
   // combining a wildcard origin with credentials:true is an invalid/rejected combination.
+  const allowedOrigins = String(configService.get<string>('CORS_ALLOWED_ORIGINS', ''))
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
   app.enableCors({
-    origin: '*',
-    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+    origin: allowedOrigins,
+    methods: 'GET,HEAD,POST',
     credentials: false,
   });
 
@@ -106,7 +110,6 @@ async function bootstrap() {
     const response = await appController.checkHealthService();
     ConsoleLogger.log(response, 'Bootstrap');
   } catch (error) {
-    console.log(error);
     ConsoleLogger.error('Health Check Error', error?.stack || error, 'Bootstrap');
   }
 }

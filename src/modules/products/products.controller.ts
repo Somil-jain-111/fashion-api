@@ -1,15 +1,4 @@
-import {
-  Body,
-  Controller,
-  Delete,
-  Get,
-  Param,
-  Patch,
-  Post,
-  Query,
-  Req,
-  UseGuards,
-} from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Query, Req, UseGuards } from '@nestjs/common';
 import { ProductsService } from './products.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
@@ -23,6 +12,13 @@ import { ResponseMessage } from 'src/default/common/decorators/response-message.
 import { SUCCESS_MESSAGES } from 'src/default/common/constants/success-messages.constant';
 import { DataSanitizer } from 'src/default/common/utils/sanitize.utils';
 import { NoCache } from 'src/default/cache/cache.decorator';
+import { ProductFormOptionsQueryDto } from './dto/product-form-options-query.dto';
+import {
+  ProductDeleteResponseDto,
+  ProductFormOptionsResponseDto,
+  ProductListResponseDto,
+  ProductResponseDto,
+} from './dto/product-response.dto';
 
 /**
  * @NoCache() on every route here: the global CustomCacheInterceptor keys GET
@@ -37,43 +33,73 @@ export class ProductsController {
 
   @NoCache()
   @Roles([UserRole.SELLER_ADMIN])
+  @Get('form-options')
+  @ResponseMessage(SUCCESS_MESSAGES.PRODUCT.FETCHED)
+  async getFormOptions(
+    @Query() query: ProductFormOptionsQueryDto
+  ): Promise<ProductFormOptionsResponseDto> {
+    const response = await this.productsService.getFormOptions(query.categoryId);
+    return DataSanitizer.sanitizeData(response) as ProductFormOptionsResponseDto;
+  }
+
+  /** Frontend-friendly alias used by the seller product wizard. */
+  @NoCache()
+  @Roles([UserRole.SELLER_ADMIN])
+  @Get('dropdowns')
+  @ResponseMessage(SUCCESS_MESSAGES.PRODUCT.FETCHED)
+  async getDropdowns(
+    @Query() query: ProductFormOptionsQueryDto
+  ): Promise<ProductFormOptionsResponseDto> {
+    const response = await this.productsService.getFormOptions(query.categoryId);
+    return DataSanitizer.sanitizeData(response) as ProductFormOptionsResponseDto;
+  }
+
+  @NoCache()
+  @Roles([UserRole.SELLER_ADMIN])
   @Post()
   @ResponseMessage(SUCCESS_MESSAGES.PRODUCT.CREATED)
-  async create(@Body() dto: CreateProductDto, @Req() req: any) {
+  async create(@Body() dto: CreateProductDto, @Req() req: any): Promise<ProductResponseDto> {
     const response = await this.productsService.create(req.user.id, dto);
-    return DataSanitizer.sanitizeData(response);
+    return DataSanitizer.sanitizeData(response) as ProductResponseDto;
   }
   @NoCache()
   @Roles([UserRole.SELLER_ADMIN])
   @Get()
   @ResponseMessage(SUCCESS_MESSAGES.PRODUCT.FETCHED)
-  async listOwn(@Query() query: ListProductsQueryDto, @Req() req: any) {
+  async listOwn(
+    @Query() query: ListProductsQueryDto,
+    @Req() req: any
+  ): Promise<ProductListResponseDto> {
     const response = await this.productsService.listOwn(req.user.id, query);
-    return DataSanitizer.sanitizeData(response);
+    return DataSanitizer.sanitizeData(response) as ProductListResponseDto;
   }
   @NoCache()
   @Roles([UserRole.SELLER_ADMIN, UserRole.ADMIN, UserRole.SUPERADMIN])
   @Get(':id')
   @ResponseMessage(SUCCESS_MESSAGES.PRODUCT.FETCHED)
-  async getOwn(@Param('id') id: string, @Req() req: any) {
+  async getOwn(@Param('id') id: string, @Req() req: any): Promise<ProductResponseDto> {
     const response = await this.productsService.getOwn(Number(id), req.user);
-    return DataSanitizer.sanitizeData(response);
+    return DataSanitizer.sanitizeData(response) as ProductResponseDto;
   }
   @NoCache()
   @Roles([UserRole.SELLER_ADMIN, UserRole.ADMIN, UserRole.SUPERADMIN])
   @Post(':id')
   @ResponseMessage(SUCCESS_MESSAGES.PRODUCT.UPDATED)
-  async update(@Param('id') id: string, @Body() dto: UpdateProductDto, @Req() req: any) {
+  async update(
+    @Param('id') id: string,
+    @Body() dto: UpdateProductDto,
+    @Req() req: any
+  ): Promise<ProductResponseDto> {
     const response = await this.productsService.update(Number(id), dto, req.user);
-    return DataSanitizer.sanitizeData(response);
+    return DataSanitizer.sanitizeData(response) as ProductResponseDto;
   }
   @NoCache()
   @Roles([UserRole.SELLER_ADMIN, UserRole.ADMIN, UserRole.SUPERADMIN])
   @Post('delete/:id')
   @ResponseMessage(SUCCESS_MESSAGES.PRODUCT.DELETED)
-  async remove(@Param('id') id: string, @Req() req: any) {
+  async remove(@Param('id') id: string, @Req() req: any): Promise<ProductDeleteResponseDto> {
     await this.productsService.remove(Number(id), req.user);
-    return DataSanitizer.sanitizeData(null);
+    return DataSanitizer.sanitizeData({ deleted: true }) as ProductDeleteResponseDto;
   }
 
   @NoCache()
@@ -84,8 +110,8 @@ export class ProductsController {
     @Param('id') id: string,
     @Body() dto: UpdateProductStatusDto,
     @Req() req: any
-  ) {
+  ): Promise<ProductResponseDto> {
     const response = await this.productsService.updateStatus(Number(id), dto.status, req.user.id);
-    return DataSanitizer.sanitizeData(response);
+    return DataSanitizer.sanitizeData(response) as ProductResponseDto;
   }
 }

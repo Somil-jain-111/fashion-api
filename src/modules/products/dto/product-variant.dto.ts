@@ -1,6 +1,16 @@
 import { IsInt, IsNotEmpty, IsNumber, IsOptional, IsString, Min } from 'class-validator';
 
 export class ProductVariantDto {
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  colorOptionId?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  sizeOptionId?: number;
+
   @IsNotEmpty({ message: 'Size is required' })
   @IsString()
   size!: string;

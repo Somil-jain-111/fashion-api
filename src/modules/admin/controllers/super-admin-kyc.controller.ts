@@ -11,6 +11,11 @@ import { ResponseMessage } from 'src/default/common/decorators/response-message.
 import { SUCCESS_MESSAGES } from 'src/default/common/constants/success-messages.constant';
 import { DataSanitizer } from 'src/default/common/utils/sanitize.utils';
 import { NoCache } from 'src/default/cache/cache.decorator';
+import {
+  AdminKycDetailResponseDto,
+  AdminKycListResponseDto,
+  SellerKycProfileResponseDto,
+} from '../../seller-kyc/dto/kyc-response.dto';
 
 @NoCache()
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -22,7 +27,7 @@ export class SuperAdminKycController {
   @NoCache()
   @Get()
   @ResponseMessage(SUCCESS_MESSAGES.KYC.LIST_FETCHED)
-  async list(@Query() query: KycAdminListQueryDto) {
+  async list(@Query() query: KycAdminListQueryDto): Promise<AdminKycListResponseDto> {
     const response = await this.sellerKycService.listForAdmin({
       status: query.status,
       page: query.page ?? 1,
@@ -33,14 +38,14 @@ export class SuperAdminKycController {
   @NoCache()
   @Get(':id')
   @ResponseMessage(SUCCESS_MESSAGES.KYC.PROFILE_FETCHED)
-  async detail(@Param('id') id: string) {
+  async detail(@Param('id') id: string): Promise<AdminKycDetailResponseDto> {
     const response = await this.sellerKycService.getAdminDetail(Number(id));
     return DataSanitizer.sanitizeData(response);
   }
 
   @Post(':id/approve')
   @ResponseMessage(SUCCESS_MESSAGES.KYC.REVIEWED)
-  async approve(@Param('id') id: string, @Req() req: any) {
+  async approve(@Param('id') id: string, @Req() req: any): Promise<SellerKycProfileResponseDto> {
     const response = await this.sellerKycService.review(Number(id), {
       status: SellerKycStatus.APPROVED,
       reviewerId: req.user.id,
@@ -50,10 +55,14 @@ export class SuperAdminKycController {
   @NoCache()
   @Post(':id/reject')
   @ResponseMessage(SUCCESS_MESSAGES.KYC.REVIEWED)
-  async reject(@Param('id') id: string, @Body() dto: RejectKycDto, @Req() req: any) {
+  async reject(
+    @Param('id') id: string,
+    @Body() dto: RejectKycDto,
+    @Req() req: any
+  ): Promise<SellerKycProfileResponseDto> {
     const response = await this.sellerKycService.review(Number(id), {
       status: SellerKycStatus.REJECTED,
-      reason: dto.reason,
+      issues: dto.issues,
       reviewerId: req.user.id,
     });
     return DataSanitizer.sanitizeData(response);

@@ -27,6 +27,20 @@ export class AppConfigService {
     return this.getNodeEnv() === 'development';
   }
 
+  isTest(): boolean {
+    return this.getNodeEnv() === 'test';
+  }
+
+  /**
+   * Strictly local-only: the only environments where a fixed/known OTP value
+   * and skipped OTP dispatch are safe. `uat`/`preprod` are remotely reachable
+   * staging environments, not local dev, so they must behave like production
+   * here even though they aren't `NODE_ENV=production` — see AuthService.issueAndDispatchOtp.
+   */
+  isLocalOnly(): boolean {
+    return this.isDevelopment() || this.isTest();
+  }
+
   getApiVersion(): number {
     return Number(this.configService.get<number>('API_VERSION'));
   }
@@ -37,6 +51,14 @@ export class AppConfigService {
 
   getApiSecret(): string {
     return this.configService.get<string>('API_SECRET');
+  }
+
+  getJwtAccessSecret(): string {
+    return this.get<string>('JWT_ACCESS_SECRET') || this.getApiSecret();
+  }
+
+  getJwtRefreshSecret(): string {
+    return this.get<string>('JWT_REFRESH_SECRET') || this.getApiSecret();
   }
 
   getRedisHost(): string {

@@ -11,7 +11,7 @@ export const APP_VERSION_ERRORS = {
   },
   MAINTENANCE_MODE: {
     code: 'APP_VERSION_003',
-    message: 'Application is under maintenance',
+    message: '{reason}',
     statusCode: 503,
   },
 } as const;

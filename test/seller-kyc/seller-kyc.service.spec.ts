@@ -17,6 +17,10 @@ import { UserRepository } from 'src/modules/auth/repository';
 import { AppConfigService } from 'src/default/config/config.service';
 import { KycStatus, KycType, SellerKycStatus } from 'src/default/common/enums/kyc.enum';
 import { createMock } from '../utils/mock.util';
+import { SellersService } from 'src/modules/sellers/sellers.service';
+import { SellerOnboardingStatus } from 'src/modules/sellers/entities';
+import { SellerReviewSection } from 'src/modules/sellers/entities';
+import { TransactionService } from 'src/default/databases/transaction';
 
 describe('SellerKycService', () => {
   let service: SellerKycService;
@@ -24,8 +28,10 @@ describe('SellerKycService', () => {
   let userAuthValidator: jest.Mocked<UserAuthValidator>;
   let kycVerificationRepository: jest.Mocked<KycVerificationRepository>;
   let panProvider: jest.Mocked<PanProvider>;
+  let gstProvider: jest.Mocked<GstProvider>;
   let nameMatchProvider: jest.Mocked<NameMatchProvider>;
   let sellerKycOverrideRepository: jest.Mocked<SellerKycOverrideRepository>;
+  let sellersService: jest.Mocked<SellersService>;
 
   const HEX_KEY = 'a'.repeat(64); // 32 bytes, valid AES-256 key
   const HEX_IV = 'b'.repeat(32); // 16 bytes, valid IV
@@ -51,6 +57,8 @@ describe('SellerKycService', () => {
         { provide: GstProvider, useValue: createMock<GstProvider>() },
         { provide: AppConfigService, useValue: createMock<AppConfigService>() },
         { provide: EventEmitter2, useValue: createMock<EventEmitter2>() },
+        { provide: SellersService, useValue: createMock<SellersService>() },
+        { provide: TransactionService, useValue: createMock<TransactionService>() },
       ],
     }).compile();
 
@@ -59,8 +67,22 @@ describe('SellerKycService', () => {
     userAuthValidator = module.get(UserAuthValidator);
     kycVerificationRepository = module.get(KycVerificationRepository);
     panProvider = module.get(PanProvider);
+    gstProvider = module.get(GstProvider);
     nameMatchProvider = module.get(NameMatchProvider);
     sellerKycOverrideRepository = module.get(SellerKycOverrideRepository);
+    sellersService = module.get(SellersService);
+    sellersService.getRequiredKycTypes.mockResolvedValue([
+      KycType.PAN,
+      KycType.GST,
+      KycType.AADHAAR,
+    ]);
+    sellersService.getOnboardingStatus.mockResolvedValue(SellerOnboardingStatus.PENDING_APPROVAL);
+    sellersService.getKycContext.mockResolvedValue({
+      requiredTypes: [KycType.PAN, KycType.GST, KycType.AADHAAR],
+      onboardingStatus: SellerOnboardingStatus.PENDING_APPROVAL,
+    });
+    const transactionService = module.get(TransactionService) as jest.Mocked<TransactionService>;
+    transactionService.execute.mockImplementation(async (callback: any) => callback({}));
 
     const appConfigService = module.get(AppConfigService);
     (appConfigService.get as jest.Mock).mockImplementation((key: string) =>
@@ -149,6 +171,37 @@ describe('SellerKycService', () => {
     });
   });
 
+  describe('verifyGst', () => {
+    it('stores the encrypted GST certificate URL in verification metadata', async () => {
+      userAuthValidator.getAllowedUserById.mockResolvedValue({
+        id: 2,
+        username: 'seller-user',
+      } as any);
+      kycVerificationRepository.findByUserIdAndType.mockResolvedValue(null);
+      kycVerificationRepository.findByDocumentNumberAndType.mockResolvedValue(null);
+      gstProvider.verifyGst.mockResolvedValue({
+        success: true,
+        requestPayload: {},
+        responseData: { data: { trade_name: 'Seller Store', gstin_status: 'Active' } },
+        statusCode: 200,
+        message: 'ok',
+      } as any);
+      gstProvider.maskGstNumber.mockReturnValue('22ABCDE****Z5');
+      kycVerificationRepository.upsertVerifiedKyc.mockResolvedValue({} as any);
+
+      await service.verifyGst(2, {
+        gstNumber: '22ABCDE1234F1Z5',
+        gstImage: 'https://cdn.example.com/kyc/gst.pdf',
+      });
+
+      expect(kycVerificationRepository.upsertVerifiedKyc).toHaveBeenCalledWith(
+        expect.objectContaining({
+          metadata: expect.objectContaining({ gstImage: expect.any(String) }),
+        })
+      );
+    });
+  });
+
   describe('getProfile', () => {
     const verifiedRow = (type: KycType) => ({
       type,
@@ -193,6 +246,10 @@ describe('SellerKycService', () => {
     });
 
     it('derives APPROVED and kycApproved=true only with an explicit APPROVED override', async () => {
+      sellersService.getKycContext.mockResolvedValue({
+        requiredTypes: [KycType.PAN, KycType.GST, KycType.AADHAAR],
+        onboardingStatus: SellerOnboardingStatus.APPROVED,
+      });
       kycVerificationRepository.findAllByUserId.mockResolvedValue([
         verifiedRow(KycType.PAN),
         verifiedRow(KycType.GST),
@@ -211,6 +268,10 @@ describe('SellerKycService', () => {
     });
 
     it('derives REJECTED from an explicit REJECTED override regardless of verified count', async () => {
+      sellersService.getKycContext.mockResolvedValue({
+        requiredTypes: [KycType.PAN, KycType.GST, KycType.AADHAAR],
+        onboardingStatus: SellerOnboardingStatus.REJECTED,
+      });
       kycVerificationRepository.findAllByUserId.mockResolvedValue([]);
       sellerKycOverrideRepository.findBySellerId.mockResolvedValue({
         status: SellerKycStatus.REJECTED,
@@ -268,7 +329,11 @@ describe('SellerKycService', () => {
       ).rejects.toMatchObject({ response: { errorCode: 'SEL_005' } });
     });
 
-    it('allows rejecting even when KYC is completely unstarted, given a reason', async () => {
+    it('creates actionable issues when a pending seller is rejected', async () => {
+      sellersService.getKycContext.mockResolvedValue({
+        requiredTypes: [KycType.PAN, KycType.GST, KycType.AADHAAR],
+        onboardingStatus: SellerOnboardingStatus.REJECTED,
+      });
       userRepository.findById.mockResolvedValue({ id: 2 } as any);
       kycVerificationRepository.findAllByUserId.mockResolvedValue([]);
       sellerKycOverrideRepository.upsert.mockResolvedValue({} as any);
@@ -282,11 +347,17 @@ describe('SellerKycService', () => {
 
       const result = await service.review(2, {
         status: SellerKycStatus.REJECTED,
-        reason: 'incomplete',
+        issues: [{ section: SellerReviewSection.PAN, remark: 'incomplete' }],
         reviewerId: 1,
       });
 
       expect(sellerKycOverrideRepository.upsert).toHaveBeenCalled();
+      expect(sellersService.createReviewIssues).toHaveBeenCalledWith(
+        2,
+        1,
+        [{ section: SellerReviewSection.PAN, remark: 'incomplete' }],
+        expect.anything()
+      );
       expect(result.status).toBe('REJECTED');
     });
   });

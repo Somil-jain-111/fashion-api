@@ -9,23 +9,32 @@ import { RevokedTokenRepository } from 'src/modules/auth/repository';
 import { UserAuthValidator } from 'src/modules/auth/validators/user-auth.validator';
 import { BearerTokenHelper } from '../helper/bearer-token.helper';
 import { TokenHashHelper } from '../helper/token-hash.helper';
+import { AppConfigService } from 'src/default/config/config.service';
+import { AuthTokenHelper } from '../helper/auth-token.helper';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
   constructor(
     private readonly userRepository: UserRepository,
     private readonly revokedTokenRepository: RevokedTokenRepository,
-    private readonly userAuthValidator: UserAuthValidator
+    private readonly userAuthValidator: UserAuthValidator,
+    configService: AppConfigService
   ) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      secretOrKey: process.env.API_SECRET || 'secret-key',
+      secretOrKey: configService.getJwtAccessSecret(),
+      algorithms: ['HS256'],
+      issuer: AuthTokenHelper.issuer,
+      audience: AuthTokenHelper.accessAudience,
       passReqToCallback: true,
     });
   }
 
   async validate(req: any, payload: any) {
+    if (payload?.tokenType !== 'access') {
+      throw new BusinessException(ERROR_CODES.AUTH.INVALID_ACCESS_TOKEN);
+    }
     const accessToken = BearerTokenHelper.extractTokenFromHeader(req);
 
     if (!accessToken) {
@@ -40,7 +49,7 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
       throw new BusinessException(ERROR_CODES.AUTH.INVALID_ACCESS_TOKEN);
     }
 
-    const user = await this.userRepository.findByIdWithRole(payload.sub);
+    const user = await this.userRepository.findAuthContextById(payload.sub);
 
     if (!user) {
       throw new BusinessException(ERROR_CODES.USER.USER_NOT_FOUND);

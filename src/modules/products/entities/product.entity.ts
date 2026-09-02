@@ -10,6 +10,7 @@ import { ProductImage } from './product-image.entity';
 @Index(['sellerId'])
 @Index(['categoryId'])
 @Index(['status'])
+@Index(['sellerId', 'sellerSku'], { unique: true })
 export class Product extends BaseEntity {
   @Column({ type: 'bigint', name: 'seller_id' })
   sellerId!: number;
@@ -28,8 +29,38 @@ export class Product extends BaseEntity {
   @Column({ type: 'varchar', length: 255 })
   name!: string;
 
+  @Column({ type: 'varchar', length: 100, name: 'seller_sku' })
+  sellerSku!: string;
+
+  @Column({ type: 'bigint', name: 'brand_option_id' })
+  brandOptionId!: number;
+
+  @Column({ type: 'bigint', name: 'product_type_option_id' })
+  productTypeOptionId!: number;
+
+  @Column({ type: 'bigint', nullable: true, name: 'gender_option_id' })
+  genderOptionId?: number | null;
+
+  @Column({ type: 'bigint', nullable: true, name: 'country_option_id' })
+  countryOptionId?: number | null;
+
+  @Column({ type: 'varchar', length: 500, nullable: true, name: 'short_description' })
+  shortDescription?: string | null;
+
   @Column({ type: 'text', nullable: true })
   description?: string | null;
+
+  @Column({ type: 'text', nullable: true })
+  highlights?: string | null;
+
+  @Column({ type: 'text', nullable: true, name: 'material_and_fabric' })
+  materialAndFabric?: string | null;
+
+  @Column({ type: 'text', nullable: true, name: 'care_instructions' })
+  careInstructions?: string | null;
+
+  @Column({ type: 'json', nullable: true, name: 'attribute_values' })
+  attributeValues?: Array<{ key: string; optionId?: number; value?: string }> | null;
 
   @Column({ type: 'decimal', precision: 10, scale: 2, name: 'base_price' })
   basePrice!: number;

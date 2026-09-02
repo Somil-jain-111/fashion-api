@@ -55,13 +55,16 @@ export class KycVerificationRepository extends BaseRepository<KycVerificationEnt
   async findByDocumentNumberAndType(
     documentNumber: string,
     type: KycType,
-    manager?: EntityManager
+    manager?: EntityManager,
+    documentHash?: string
   ): Promise<KycVerificationEntity | null> {
     return this.getKycRepository(manager).findOne({
-      where: {
-        documentNumber,
-        type,
-      },
+      where: documentHash
+        ? [
+            { documentHash, type },
+            { documentNumber, type },
+          ]
+        : { documentNumber, type },
       relations: ['user'],
     });
   }
@@ -115,11 +118,14 @@ export class KycVerificationRepository extends BaseRepository<KycVerificationEnt
         .addSelect('ov.status', 'overrideStatus')
         .addSelect('ov.reason', 'overrideReason')
         .addSelect('ov.reviewed_at', 'overrideReviewedAt')
+        .addSelect('si.business_type', 'businessType')
         .addSelect(
           `CASE
-             WHEN ov.status = 'APPROVED' THEN 'APPROVED'
-             WHEN ov.status = 'REJECTED' THEN 'REJECTED'
-             WHEN COALESCE(vc.verifiedCount, 0) = 3 THEN 'USER_PROFILE_APPROVAL'
+             WHEN si.onboarding_status = 'APPROVED' AND ov.status = 'APPROVED' THEN 'APPROVED'
+             WHEN si.onboarding_status = 'REJECTED' AND ov.status = 'REJECTED' THEN 'REJECTED'
+             WHEN si.onboarding_status = 'PENDING_APPROVAL'
+               AND COALESCE(vc.verifiedCount, 0) >= CASE WHEN si.business_type = 'INDIVIDUAL' THEN 2 ELSE 3 END
+               THEN 'USER_PROFILE_APPROVAL'
              WHEN COALESCE(vc.verifiedCount, 0) = 0 THEN 'NOT_STARTED'
              ELSE 'PENDING'
            END`,
@@ -133,6 +139,7 @@ export class KycVerificationRepository extends BaseRepository<KycVerificationEnt
           'r.id = ur.role_id AND r.name = :roleName AND r.deleted_at IS NULL',
           { roleName: UserRole.SELLER_ADMIN }
         )
+        .innerJoin('store_information', 'si', 'si.seller_id = u.id AND si.deleted_at IS NULL')
         .leftJoin(
           (sub) =>
             sub
@@ -210,6 +217,7 @@ export class KycVerificationRepository extends BaseRepository<KycVerificationEnt
       type: KycType;
       referenceId?: string;
       documentNumber?: string;
+      documentHash?: string;
       maskedDocumentNumber?: string;
       verifiedName?: string;
       provider?: string;
@@ -233,6 +241,7 @@ export class KycVerificationRepository extends BaseRepository<KycVerificationEnt
         status: KycStatus.VERIFIED,
         referenceId: data.referenceId ?? existing.referenceId,
         documentNumber: data.documentNumber ?? existing.documentNumber,
+        documentHash: data.documentHash ?? existing.documentHash,
         maskedDocumentNumber: data.maskedDocumentNumber ?? existing.maskedDocumentNumber,
         verifiedName: data.verifiedName ?? existing.verifiedName,
         provider: data.provider ?? existing.provider,
@@ -251,6 +260,7 @@ export class KycVerificationRepository extends BaseRepository<KycVerificationEnt
       status: KycStatus.VERIFIED,
       referenceId: data.referenceId,
       documentNumber: data.documentNumber,
+      documentHash: data.documentHash,
       maskedDocumentNumber: data.maskedDocumentNumber,
       verifiedName: data.verifiedName,
       provider: data.provider,

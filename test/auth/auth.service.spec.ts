@@ -15,6 +15,7 @@ import { PasswordHelper } from 'src/default/common/helper/password.helper';
 import { UserStatus, MAX_OTP_VERIFY_ATTEMPTS } from 'src/modules/auth/constants/auth.constants';
 import { OtpAttemptType } from 'src/default/common/enums/common.enum';
 import { createMock } from '../utils/mock.util';
+import { RedisService } from 'src/default/databases/redis/redis.service';
 
 describe('AuthService', () => {
   let service: AuthService;
@@ -22,6 +23,7 @@ describe('AuthService', () => {
   let rolesRepository: jest.Mocked<RolesRepository>;
   let userAuthValidator: jest.Mocked<UserAuthValidator>;
   let appConfigService: jest.Mocked<AppConfigService>;
+  let redisService: jest.Mocked<RedisService>;
 
   const baseUser = (overrides: Record<string, any> = {}) => ({
     id: 1,
@@ -36,6 +38,30 @@ describe('AuthService', () => {
     otpPurpose: null,
     roles: [{ name: 'customer', user_type: 'USER' }],
     ...overrides,
+  });
+
+  describe('getLoginOptions', () => {
+    it('offers OTP only for a first-time identifier', async () => {
+      userRepository.findLoginCapabilities.mockResolvedValue(null);
+
+      await expect(service.getLoginOptions({ email: 'new@test.com' })).resolves.toEqual({
+        passwordAvailable: false,
+        otpAvailable: true,
+        passwordSetupRequired: true,
+        nextStep: 'request_otp',
+      });
+    });
+
+    it('offers both password and OTP for an existing password account', async () => {
+      userRepository.findLoginCapabilities.mockResolvedValue({ passwordAvailable: true });
+
+      await expect(service.getLoginOptions({ mobile: '9876543210' })).resolves.toEqual({
+        passwordAvailable: true,
+        otpAvailable: true,
+        passwordSetupRequired: false,
+        nextStep: 'choose_login_method',
+      });
+    });
   });
 
   beforeEach(async () => {
@@ -54,6 +80,7 @@ describe('AuthService', () => {
         { provide: UserAuthValidator, useValue: createMock<UserAuthValidator>() },
         { provide: UserValidator, useValue: createMock<UserValidator>() },
         { provide: AppConfigService, useValue: createMock<AppConfigService>() },
+        { provide: RedisService, useValue: createMock<RedisService>() },
       ],
     }).compile();
 
@@ -62,12 +89,15 @@ describe('AuthService', () => {
     rolesRepository = module.get(RolesRepository);
     userAuthValidator = module.get(UserAuthValidator);
     appConfigService = module.get(AppConfigService);
+    redisService = module.get(RedisService);
 
-    // Non-prod by default: matches how this service actually behaves in dev
+    // Local-only by default: matches how this service actually behaves in dev
     // (see issueAndDispatchOtp) — the real OTP dispatch never fires here.
+    appConfigService.isLocalOnly.mockReturnValue(true);
     appConfigService.isProduction.mockReturnValue(false);
     appConfigService.isQa.mockReturnValue(false);
     appConfigService.getNonProdOtp.mockReturnValue(8899 as any);
+    redisService.incrementWithExpiry.mockResolvedValue(1);
   });
 
   describe('sendOtp', () => {
@@ -83,12 +113,18 @@ describe('AuthService', () => {
       expect(result.channel).toBe('mobile');
     });
 
-    it('rejects with PASSWORD_ALREADY_SET when the existing user already has a password', async () => {
+    it('sends a login OTP when the existing user already has a password', async () => {
       userRepository.findByMobile.mockResolvedValue(baseUser({ password: 'hashed' }) as any);
+      userAuthValidator.validateUserStatus.mockReturnValue(undefined as any);
+      userRepository.updateById.mockResolvedValue(true as any);
 
-      await expect(service.sendOtp({ mobile: '9876543210' } as any)).rejects.toMatchObject({
-        response: { errorCode: 'AUTH_028' },
+      await expect(service.sendOtp({ mobile: '9876543210' } as any)).resolves.toMatchObject({
+        channel: 'mobile',
       });
+      expect(userRepository.updateById).toHaveBeenCalledWith(
+        1,
+        expect.objectContaining({ otpPurpose: OtpAttemptType.LOGIN })
+      );
     });
   });
 
@@ -166,6 +202,47 @@ describe('AuthService', () => {
     });
   });
 
+  describe('sellerLogin', () => {
+    it('rejects a customer-only account even when its password is correct', async () => {
+      const hashed = await PasswordHelper.hashPassword('correct-password');
+      userRepository.findByEmail.mockResolvedValue(
+        baseUser({
+          email: 'customer@test.com',
+          password: hashed,
+          roles: [{ name: 'customer' }],
+        }) as any
+      );
+
+      await expect(
+        service.sellerLogin({ email: 'customer@test.com', password: 'correct-password' } as any, {})
+      ).rejects.toMatchObject({ response: { errorCode: 'AUTH_001' } });
+    });
+
+    it('authenticates an onboarded seller without removing the customer role', async () => {
+      const hashed = await PasswordHelper.hashPassword('correct-password');
+      userRepository.findByEmail.mockResolvedValue(
+        baseUser({
+          email: 'seller@test.com',
+          password: hashed,
+          roles: [
+            { name: 'customer', user_type: 'USER' },
+            { name: 'seller_admin', user_type: 'USER' },
+          ],
+        }) as any
+      );
+      userAuthValidator.validateUserStatus.mockReturnValue(undefined as any);
+      userRepository.updateRefreshToken.mockResolvedValue(true as any);
+
+      const result = await service.sellerLogin(
+        { email: 'seller@test.com', password: 'correct-password' } as any,
+        {}
+      );
+
+      expect(result.accessToken).toEqual(expect.any(String));
+      expect(result.refreshToken).toEqual(expect.any(String));
+    });
+  });
+
   describe('verifyOtp', () => {
     it('increments the attempt count and throws INVALID_OTP on a wrong OTP', async () => {
       const hashedOtp = await PasswordHelper.hashPassword('8899');
@@ -223,6 +300,30 @@ describe('AuthService', () => {
 
       expect(result.step).toBe('set_password');
       expect(result.setPasswordTicket).toEqual(expect.any(String));
+    });
+
+    it('returns tokens for a correct LOGIN OTP when the account already has a password', async () => {
+      const hashedOtp = await PasswordHelper.hashPassword('8899');
+      userRepository.findByMobile.mockResolvedValue(
+        baseUser({
+          password: 'password-hash',
+          otp: hashedOtp,
+          otp_expiry: new Date(Date.now() + 60_000),
+          otpPurpose: OtpAttemptType.LOGIN,
+        }) as any
+      );
+      userRepository.updateById.mockResolvedValue(true as any);
+      userRepository.updateRefreshToken.mockResolvedValue(true as any);
+      userAuthValidator.validateUserStatus.mockReturnValue(undefined as any);
+
+      const result = await service.verifyOtp({ mobile: '9876543210', otp: '8899' } as any, {});
+
+      expect(result).toMatchObject({
+        step: 'authenticated',
+        accessToken: expect.any(String),
+        refreshToken: expect.any(String),
+      });
+      expect(userRepository.updateRefreshToken).toHaveBeenCalled();
     });
   });
 });

@@ -6,3 +6,6 @@ export * from './product-variant.dto';
 export * from './product-image.dto';
 export * from './admin-list-products-query.dto';
 export * from './reject-product.dto';
+export * from './product-response.dto';
+export * from './product-attribute-value.dto';
+export * from './product-form-options-query.dto';

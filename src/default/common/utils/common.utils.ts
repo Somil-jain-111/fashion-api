@@ -4,10 +4,9 @@ import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
 import { AppConfigService } from 'src/default/config/config.service';
 import axios from 'axios';
-import { ConflictException } from '@nestjs/common';
 import { ConsoleLogger } from 'src/default/logger/console/console.service';
 import { MailerHelper } from '../helper/mailer.helper';
-import { OtpRateLimitTemplateData, OtpRateLimitUserData } from '../dto/mailer.dto';
+import { OtpRateLimitTemplateData } from '../dto/mailer.dto';
 
 export class CommonUtils {
   private static appConfigService: AppConfigService;
@@ -263,7 +262,11 @@ export class CommonUtils {
     };
   }
 
-  static async sendWhatsappOtp(data: { mobile: string; otp: string; name?: string }): Promise<any> {
+  static async sendWhatsappOtp(data: {
+    mobile: string;
+    otp: string;
+    name?: string;
+  }): Promise<unknown | null> {
     try {
       const mobileStr = String(data.mobile ?? '').trim();
       if (!mobileStr) {
@@ -333,7 +336,11 @@ export class CommonUtils {
     }
   }
 
-  static async sendEmailOtp(data: { email: string; otp: string; name?: string }): Promise<any> {
+  static async sendEmailOtp(data: {
+    email: string;
+    otp: string;
+    name?: string;
+  }): Promise<unknown | null> {
     try {
       return await MailerHelper.sendOtpVerificationEmail(data);
     } catch (err: any) {
@@ -346,7 +353,7 @@ export class CommonUtils {
     }
   }
 
-  static async sendMaliciousOTPEmail(data: OtpRateLimitTemplateData): Promise<any> {
+  static async sendMaliciousOTPEmail(data: OtpRateLimitTemplateData): Promise<unknown | null> {
     try {
       return await MailerHelper.sendOtpRateLimitEmail(data);
     } catch (err: any) {

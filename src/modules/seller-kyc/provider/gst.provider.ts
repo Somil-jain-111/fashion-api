@@ -130,11 +130,7 @@ export class GstProvider {
 
       ConsoleLogger.error('GST_PROVIDER_ERROR', error?.stack, {
         tag: 'GstProvider.verifyGst',
-        data: {
-          gst,
-          statusCode,
-          errorResponse,
-        },
+        data: { transactionId: data.transactionId, statusCode },
       });
 
       await this.apiResponseRepository.updateResponseByTransactionId(

@@ -185,7 +185,9 @@ export class User extends BaseEntity {
    * Present only once a user has onboarded as a seller (see SellersService.onboard) —
    * a customer account with no seller capability has this as undefined/null.
    */
-  @OneToOne(() => StoreInformation, (storeInformation) => storeInformation.seller, { nullable: true })
+  @OneToOne(() => StoreInformation, (storeInformation) => storeInformation.seller, {
+    nullable: true,
+  })
   storeInformation?: StoreInformation | null;
 
   @OneToMany(() => LoginHistories, (loginHistories) => loginHistories.user)

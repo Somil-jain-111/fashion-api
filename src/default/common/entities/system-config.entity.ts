@@ -1,17 +1,7 @@
-import {
-  Column,
-  Entity,
-  Index,
-  PrimaryGeneratedColumn,
-  UpdateDateColumn,
-} from 'typeorm';
+import { Column, Entity, Index, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
 
 @Entity('system_config')
-@Index(
-  'uq_system_config_key',
-  ['configKey'],
-  { unique: true },
-)
+@Index('uq_system_config_key', ['configKey'], { unique: true })
 export class SystemConfigEntity {
   @PrimaryGeneratedColumn({
     type: 'bigint',
@@ -50,4 +40,6 @@ export class SystemConfigEntity {
 export enum SystemConfigKey {
   DEFAULT_SCAN_AGE_DAYS = 'DEFAULT_SCAN_AGE_DAYS',
   POINTS_EXPIRY_DAYS = 'POINTS_EXPIRY_DAYS',
+  MAINTENANCE_MODE = 'MAINTENANCE_MODE',
+  MAINTENANCE_MESSAGE = 'MAINTENANCE_MESSAGE',
 }

@@ -17,7 +17,7 @@ import {
   OTPAttemptLogsRepository,
   UserMappingRepository,
 } from './repository';
-import { UserRepository, RolesRepository, } from './repository';
+import { UserRepository, RolesRepository } from './repository';
 
 @Module({
   imports: [
@@ -25,12 +25,11 @@ import { UserRepository, RolesRepository, } from './repository';
       imports: [ConfigModule],
       inject: [AppConfigService],
       useFactory: async (configService: AppConfigService) => ({
-        secret: configService.get('API_SECRET'),
+        secret: configService.getJwtAccessSecret(),
         signOptions: { expiresIn: '1d' },
       }),
     }),
     RedisModule,
-  
   ],
   providers: [
     AuthService,

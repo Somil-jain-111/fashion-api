@@ -15,7 +15,7 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
         err: err?.message || null,
         user: user || null,
         info: info?.message || info?.name || info || null,
-        authorization: request.headers?.authorization || null,
+        hasAuthorizationHeader: Boolean(request.headers?.authorization),
       },
     });
 

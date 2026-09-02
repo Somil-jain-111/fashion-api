@@ -24,7 +24,9 @@ export class AddCatalogSupport1787800500000 implements MigrationInterface {
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.query(`ALTER TABLE \`product_variants\` DROP INDEX \`IDX_PRODUCT_VARIANTS_SIZE_STOCK\``);
+    await queryRunner.query(
+      `ALTER TABLE \`product_variants\` DROP INDEX \`IDX_PRODUCT_VARIANTS_SIZE_STOCK\``
+    );
     await queryRunner.query(`
       ALTER TABLE \`products\`
       DROP INDEX \`IDX_PRODUCTS_STATUS_CATEGORY\`,

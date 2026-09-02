@@ -2,13 +2,9 @@
 import { DataSource } from 'typeorm';
 import { config } from 'dotenv';
 
-config({ path: `.env.development` });
-
-console.log(__dirname + '/../../modules/**/*.entity{.ts,.js}');
+config({ path: `.env.${process.env.NODE_ENV || 'development'}` });
 const dbType = (process.env.DB_TYPE || 'mysql') as 'mysql' | 'postgres';
 const dbPrefix = dbType.toUpperCase();
-
-console.log(process.env[`${dbPrefix}_USERNAME`]);
 
 export const AppDataSource = new DataSource({
   type: dbType,
@@ -23,15 +19,7 @@ export const AppDataSource = new DataSource({
   migrations: [__dirname + '/../../../migrations/*.{ts,js}'],
 
   synchronize: false,
-  logging: true,
+  logging: false,
   ...(dbType === 'mysql' ? { charset: 'utf8mb4' } : {}),
   timezone: 'Z',
 });
-
-console.log(
-  AppDataSource.entityMetadatas.map((e) => ({
-    name: e.name,
-
-    table: e.tableName,
-  }))
-);

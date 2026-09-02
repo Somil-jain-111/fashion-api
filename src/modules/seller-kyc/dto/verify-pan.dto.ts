@@ -1,5 +1,5 @@
 import { Transform } from 'class-transformer';
-import { IsString, IsNotEmpty, Length, Matches } from 'class-validator';
+import { IsString, IsNotEmpty, IsUrl, Length, Matches, MaxLength } from 'class-validator';
 
 export class VerifyPanDto {
   @IsString()
@@ -12,5 +12,8 @@ export class VerifyPanDto {
   panCard: string;
 
   @IsNotEmpty()
+  @IsString()
+  @MaxLength(2048)
+  @IsUrl({ protocols: ['http', 'https'], require_protocol: true })
   panImage: string;
 }

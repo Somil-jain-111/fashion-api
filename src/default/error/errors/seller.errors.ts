@@ -1,4 +1,9 @@
 export const SELLER_ERRORS = {
+  WRITE_ACCESS_REQUIRES_APPROVAL: {
+    code: 'SEL_000',
+    message: 'Seller profile and KYC approval are required before performing this action',
+    statusCode: 403,
+  },
   SELLER_ALREADY_REGISTERED: {
     code: 'SEL_001',
     message: 'This account is already registered as a seller',
@@ -38,5 +43,35 @@ export const SELLER_ERRORS = {
     code: 'SEL_008',
     message: 'Cannot approve seller KYC: {pending}',
     statusCode: 400,
+  },
+  PROFILE_ALREADY_COMPLETED: {
+    code: 'SEL_009',
+    message: 'Seller business profile has already been completed',
+    statusCode: 409,
+  },
+  ONBOARDING_STEP_OUT_OF_ORDER: {
+    code: 'SEL_010',
+    message: 'Complete the previous seller onboarding step first',
+    statusCode: 409,
+  },
+  AGREEMENT_NOT_ACCEPTED: {
+    code: 'SEL_011',
+    message: 'Seller agreement must be accepted',
+    statusCode: 400,
+  },
+  KYC_INCOMPLETE: {
+    code: 'SEL_012',
+    message: 'Required seller KYC verification is incomplete',
+    statusCode: 409,
+  },
+  BANK_DETAILS_INCOMPLETE: {
+    code: 'SEL_013',
+    message: 'Seller bank details are incomplete',
+    statusCode: 409,
+  },
+  INVALID_AGREEMENT_VERSION: {
+    code: 'SEL_014',
+    message: 'Seller agreement version is invalid or outdated',
+    statusCode: 409,
   },
 } as const;

@@ -13,6 +13,8 @@ import { UserRepository } from '../auth/repository';
 import { KycVerificationEntity } from '../seller-kyc/entities';
 import { SellerKycService } from '../seller-kyc/seller-kyc.service';
 import { CatalogProductsQueryDto, CatalogSortBy } from './dto/catalog-products-query.dto';
+import { BoostTargetType, ProductBoostCampaign } from '../product-boost/entities';
+import { ProductBoostRepository } from '../product-boost/product-boost.repository';
 
 const REQUIRED_KYC_TYPES = [KycType.PAN, KycType.GST, KycType.AADHAAR];
 
@@ -23,7 +25,8 @@ export class CatalogService {
     private readonly categoryRepository: CategoryRepository,
     private readonly categoriesService: CategoriesService,
     private readonly userRepository: UserRepository,
-    private readonly sellerKycService: SellerKycService
+    private readonly sellerKycService: SellerKycService,
+    private readonly productBoostRepository: ProductBoostRepository
   ) {}
 
   /**
@@ -62,9 +65,12 @@ export class CatalogService {
     query: CatalogProductsQueryDto
   ): Promise<void> {
     if (query.q) {
-      qb.andWhere('MATCH(product.name, product.description) AGAINST (:q IN NATURAL LANGUAGE MODE)', {
-        q: query.q,
-      });
+      qb.andWhere(
+        'MATCH(product.name, product.description) AGAINST (:q IN NATURAL LANGUAGE MODE)',
+        {
+          q: query.q,
+        }
+      );
     }
 
     if (query.categoryId) {
@@ -118,25 +124,25 @@ export class CatalogService {
   private applySort(qb: SelectQueryBuilder<Product>, sortBy?: CatalogSortBy): void {
     switch (sortBy) {
       case CatalogSortBy.PRICE_ASC:
-        qb.orderBy('product.basePrice', 'ASC');
+        qb.addOrderBy('product.basePrice', 'ASC');
         break;
       case CatalogSortBy.PRICE_DESC:
-        qb.orderBy('product.basePrice', 'DESC');
+        qb.addOrderBy('product.basePrice', 'DESC');
         break;
       case CatalogSortBy.RATING:
-        qb.orderBy('product.ratingAverage', 'DESC');
+        qb.addOrderBy('product.ratingAverage', 'DESC');
         break;
       case CatalogSortBy.POPULARITY:
-        qb.orderBy('product.ratingCount', 'DESC');
+        qb.addOrderBy('product.ratingCount', 'DESC');
         break;
       case CatalogSortBy.NEWEST:
       default:
-        qb.orderBy('product.createdAt', 'DESC');
+        qb.addOrderBy('product.createdAt', 'DESC');
         break;
     }
   }
 
-  private summarize(product: Product) {
+  private summarize(product: Product, sponsored = false) {
     const images = product.images ?? [];
     const primaryImage = images.find((img) => img.isPrimary) ?? images[0];
 
@@ -151,7 +157,9 @@ export class CatalogService {
       zone: product.zone,
       ratingAverage: product.ratingAverage,
       ratingCount: product.ratingCount,
-      category: product.category ? { name: product.category.name, slug: product.category.slug } : null,
+      category: product.category
+        ? { name: product.category.name, slug: product.category.slug }
+        : null,
       variants: (product.variants ?? []).map((v) => ({
         size: v.size,
         price: v.priceOverride ?? product.basePrice,
@@ -165,6 +173,7 @@ export class CatalogService {
             ratingAverage: product.seller.ratingAverage,
           }
         : null,
+      sponsored,
     };
   }
 
@@ -180,14 +189,38 @@ export class CatalogService {
 
     qb = this.applyVisibilityRules(qb);
     await this.applyFilters(qb, query);
+    qb.leftJoin(
+      (subQuery) =>
+        subQuery
+          .select('campaign.product_id', 'productId')
+          .addSelect('MIN(campaign.id)', 'campaignId')
+          .from(ProductBoostCampaign, 'campaign')
+          .where('campaign.starts_at <= UTC_TIMESTAMP()')
+          .andWhere('campaign.ends_at > UTC_TIMESTAMP()')
+          .andWhere(
+            '(campaign.target_type = :productTarget OR (:categoryBrowsing = 1 AND campaign.target_type = :categoryTarget))'
+          )
+          .groupBy('campaign.product_id'),
+      'activeBoost',
+      'activeBoost.productId = product.id'
+    )
+      .setParameter('productTarget', BoostTargetType.PRODUCT)
+      .setParameter('categoryTarget', BoostTargetType.CATEGORY)
+      .setParameter('categoryBrowsing', query.categoryId ? 1 : 0)
+      .orderBy('CASE WHEN activeBoost.campaignId IS NULL THEN 1 ELSE 0 END', 'ASC')
+      .addOrderBy("CRC32(CONCAT(product.id, ':', UTC_DATE()))", 'ASC');
     this.applySort(qb, query.sortBy);
 
     qb.skip((page - 1) * limit).take(limit);
 
     const [items, total] = await qb.getManyAndCount();
+    const sponsoredIds = await this.productBoostRepository.findActiveProductIds(
+      items.map((item) => item.id),
+      Boolean(query.categoryId)
+    );
 
     return {
-      items: items.map((p) => this.summarize(p)),
+      items: items.map((p) => this.summarize(p, sponsoredIds.has(Number(p.id)))),
       page,
       limit,
       total,

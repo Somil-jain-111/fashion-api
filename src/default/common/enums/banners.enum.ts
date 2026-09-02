@@ -1,4 +1,4 @@
 export enum BannerType {
-  'Brand',
-  'Global',
+  Brand,
+  Global,
 }

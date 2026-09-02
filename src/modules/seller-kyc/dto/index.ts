@@ -4,3 +4,5 @@ export * from './generate-aadhaar-otp.dto';
 export * from './verify-aadhaar-otp.dto';
 export * from './review-kyc.dto';
 export * from './kyc-admin-list-query.dto';
+export * from './kyc-response.dto';
+export * from './request-kyc-update.dto';

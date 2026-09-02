@@ -117,11 +117,7 @@ export class AadhaarProvider {
 
       ConsoleLogger.error('AADHAAR_OTP_PROVIDER_ERROR', error?.stack, {
         tag: 'AadhaarProvider.generateOtp',
-        data: {
-          transactionId: data.transactionId,
-          statusCode,
-          errorData,
-        },
+        data: { transactionId: data.transactionId, statusCode },
       });
 
       await this.apiResponseRepository.updateResponseByTransactionId(data.transactionId, errorData);
@@ -219,11 +215,7 @@ export class AadhaarProvider {
 
       ConsoleLogger.error('AADHAAR_OTP_VERIFY_PROVIDER_ERROR', error?.stack, {
         tag: 'AadhaarProvider.verifyOtp',
-        data: {
-          referenceId: data.referenceId,
-          statusCode,
-          errorData,
-        },
+        data: { referenceId: data.referenceId, statusCode },
       });
 
       await this.apiResponseRepository.updateResponseByTransactionId(data.referenceId, errorData);

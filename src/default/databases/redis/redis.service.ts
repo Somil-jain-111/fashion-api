@@ -57,8 +57,24 @@ export class RedisService implements OnModuleDestroy {
   }
 
   async delete(key: string): Promise<number> {
-    ConsoleLogger.log(`Deleting key ${key}`, 'RedisService');
     return this.client.del(key);
+  }
+
+  /** Atomically consumes a single-use value. */
+  async getAndDelete<T>(key: string): Promise<T | null> {
+    const value = await this.client.getdel(key);
+    return value ? JSON.parse(value) : null;
+  }
+
+  /** Atomic fixed-window counter; the first increment establishes the TTL. */
+  async incrementWithExpiry(key: string, ttlSeconds: number): Promise<number> {
+    const result = await this.client.eval(
+      "local n=redis.call('INCR',KEYS[1]); if n==1 then redis.call('EXPIRE',KEYS[1],ARGV[1]); end; return n",
+      1,
+      key,
+      ttlSeconds
+    );
+    return Number(result);
   }
 
   async quit() {

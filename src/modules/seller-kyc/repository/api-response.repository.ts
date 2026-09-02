@@ -23,9 +23,9 @@ export class ApiResponseRepository extends BaseRepository<ApiResponseEntity> {
     const entity = repo.create({
       type: data.type,
       transactionId: data.transactionId,
-      requestUrl: data.requestUrl,
-      requestPayload: data.requestPayload,
-      responsePayload: data.responsePayload,
+      requestUrl: this.withoutQueryString(data.requestUrl),
+      requestPayload: this.auditSummary(data.requestPayload),
+      responsePayload: data.responsePayload ? this.auditSummary(data.responsePayload) : undefined,
       active: true,
     });
     return repo.save(entity);
@@ -41,8 +41,45 @@ export class ApiResponseRepository extends BaseRepository<ApiResponseEntity> {
     }
 
     const repo = this.getRepository(queryRunner);
-    const result = await repo.update({ transactionId }, { responsePayload });
+    const result = await repo.update(
+      { transactionId },
+      { responsePayload: this.auditSummary(responsePayload) }
+    );
 
     return Number(result.affected) > 0;
+  }
+
+  /**
+   * Provider payloads contain identity documents, OTPs and authorization headers.
+   * The audit table records outcome metadata only; full KYC evidence is encrypted in
+   * kyc_verifications and must never be duplicated into a general-purpose log table.
+   */
+  private auditSummary(value: Record<string, any>): Record<string, any> {
+    const source = value?.data && typeof value.data === 'object' ? value.data : value;
+    const summary: Record<string, any> = {};
+    const safeKeys = [
+      'type',
+      'status',
+      'success',
+      'message',
+      'code',
+      'statusCode',
+      'statuscode',
+      'transaction_id',
+      'transactionId',
+      'reference_id',
+      'referenceId',
+    ];
+
+    for (const key of safeKeys) {
+      const candidate = value?.[key] ?? source?.[key];
+      if (['string', 'number', 'boolean'].includes(typeof candidate)) summary[key] = candidate;
+    }
+
+    return summary;
+  }
+
+  private withoutQueryString(url: string): string {
+    return String(url || '').split('?')[0];
   }
 }

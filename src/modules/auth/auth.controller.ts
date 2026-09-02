@@ -12,33 +12,39 @@ import { ResponseMessage } from 'src/default/common/decorators/response-message.
 import { JwtAuthGuard } from 'src/default/common/guards/jwt-auth.guard';
 import { NoCache } from 'src/default/cache/cache.decorator';
 import { IdempotencyInterceptor } from 'src/default/common/interceptors/idempotency-check.interceptor';
+import { AllowUnapprovedSellerWrite } from 'src/default/common/decorators/allow-unapproved-seller-write.decorator';
 
+@AllowUnapprovedSellerWrite()
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @NoCache()
+  @Post('login-options')
+  @ResponseMessage('Login options fetched successfully')
+  async loginOptions(@Body() dto: SendOtpDto) {
+    return this.authService.getLoginOptions(dto);
+  }
+
+  @NoCache()
   @Post('send-otp')
   @ResponseMessage('OTP sent successfully')
   async sendOtp(@Body() dto: SendOtpDto) {
-    const response = await this.authService.sendOtp(dto);
-    return DataSanitizer.sanitizeData(response);
+    return this.authService.sendOtp(dto);
   }
 
   @NoCache()
   @Post('verify-otp')
   @ResponseMessage('OTP verified successfully')
-  async verifyOtp(@Body() dto: VerifyOtpDto) {
-    const response = await this.authService.verifyOtp(dto);
-    return DataSanitizer.sanitizeData(response);
+  async verifyOtp(@Body() dto: VerifyOtpDto, @Req() req: any) {
+    return this.authService.verifyOtp(dto, req);
   }
 
   @NoCache()
   @Post('set-password')
   @ResponseMessage('Password set successfully')
   async setPassword(@Body() dto: SetPasswordDto, @Req() req: any) {
-    const response = await this.authService.setPassword(dto, req);
-    return DataSanitizer.sanitizeData(response);
+    return this.authService.setPassword(dto, req);
   }
 
   @NoCache()
@@ -54,6 +60,12 @@ export class AuthController {
   }
 
   @NoCache()
+  @Post('seller-login')
+  async sellerLogin(@Body() dto: LoginDto, @Req() req: any) {
+    return await this.authService.sellerLogin(dto, req);
+  }
+
+  @NoCache()
   @Post('refresh-token')
   @ResponseMessage('Token refreshed successfully')
   async refreshToken(@Body() dto: RefreshTokenDto) {
@@ -64,8 +76,7 @@ export class AuthController {
   @Post('forgot-password')
   @ResponseMessage('OTP sent successfully')
   async forgotPassword(@Body() dto: ForgotPasswordDto) {
-    const response = await this.authService.forgotPassword(dto);
-    return DataSanitizer.sanitizeData(response);
+    return this.authService.forgotPassword(dto);
   }
 
   @NoCache()

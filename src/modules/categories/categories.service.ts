@@ -7,6 +7,10 @@ import { CategoryRepository } from './repository';
 import { Category } from './entities';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
+import { CategoryStatus } from './entities';
+import { ContentAuditRepository } from 'src/default/common/repositories/content-audit.repository';
+import { ContentResourceType } from 'src/default/common/entities/content-audit.entity';
+import { TransactionService } from 'src/default/databases/transaction';
 
 type CategoryNode = Category & { children: CategoryNode[] };
 
@@ -14,7 +18,9 @@ type CategoryNode = Category & { children: CategoryNode[] };
 export class CategoriesService {
   constructor(
     private readonly categoryRepository: CategoryRepository,
-    private readonly sellerKycService: SellerKycService
+    private readonly sellerKycService: SellerKycService,
+    private readonly contentAuditRepository: ContentAuditRepository,
+    private readonly transactionService: TransactionService
   ) {}
 
   /**
@@ -22,8 +28,14 @@ export class CategoriesService {
    * them from creating top-level ones) once their KYC is approved — this is
    * part of the same pre-upload gate as product creation, not a separate rule.
    */
-  private async assertSellerCanCreateCategory(requesterId: number, requesterRole: string[]): Promise<void> {
-    const isSeller = requesterRole.includes(UserRole.SELLER_ADMIN) && !requesterRole.includes(UserRole.SUPERADMIN) && !requesterRole.includes(UserRole.ADMIN);
+  private async assertSellerCanCreateCategory(
+    requesterId: number,
+    requesterRole: string[]
+  ): Promise<void> {
+    const isSeller =
+      requesterRole.includes(UserRole.SELLER_ADMIN) &&
+      !requesterRole.includes(UserRole.SUPERADMIN) &&
+      !requesterRole.includes(UserRole.ADMIN);
 
     if (!isSeller) {
       return;
@@ -47,7 +59,7 @@ export class CategoriesService {
   private async assertParentExists(parentId: number): Promise<void> {
     const parent = await this.categoryRepository.findById(parentId);
 
-    if (!parent) {
+    if (!parent || parent.status !== CategoryStatus.APPROVED) {
       throw new BusinessException(ERROR_CODES.CATEGORY.CATEGORY_NOT_FOUND);
     }
   }
@@ -102,7 +114,7 @@ export class CategoriesService {
   async getById(id: number): Promise<Category & { children: Category[] }> {
     const category = await this.categoryRepository.findById(id);
 
-    if (!category) {
+    if (!category || category.status !== CategoryStatus.APPROVED) {
       throw new BusinessException(ERROR_CODES.CATEGORY.CATEGORY_NOT_FOUND);
     }
 
@@ -111,7 +123,11 @@ export class CategoriesService {
     return { ...category, children };
   }
 
-  async create(dto: CreateCategoryDto, requesterId: number, requesterRole: string[]): Promise<Category> {
+  async create(
+    dto: CreateCategoryDto,
+    requesterId: number,
+    requesterRole: string[]
+  ): Promise<Category> {
     this.assertCanSetParent(dto.parentId, requesterRole);
     await this.assertSellerCanCreateCategory(requesterId, requesterRole);
 
@@ -125,20 +141,53 @@ export class CategoriesService {
       throw new BusinessException(ERROR_CODES.CATEGORY.CATEGORY_ALREADY_EXISTS);
     }
 
-    return await this.categoryRepository.save({
-      name: dto.name,
-      slug: dto.slug,
-      parentId: dto.parentId ?? null,
-      imageUrl: dto.imageUrl ?? null,
-      isActive: dto.isActive ?? true,
-      sortOrder: dto.sortOrder ?? 0,
+    const isSuperAdmin = requesterRole.includes(UserRole.SUPERADMIN);
+    return this.transactionService.runInTransaction(async (queryRunner) => {
+      const category = await this.categoryRepository.save(
+        {
+          name: dto.name,
+          slug: dto.slug,
+          parentId: dto.parentId ?? null,
+          imageUrl: dto.imageUrl ?? null,
+          isActive: dto.isActive ?? true,
+          sortOrder: dto.sortOrder ?? 0,
+          createdBy: requesterId,
+          status: isSuperAdmin ? CategoryStatus.APPROVED : CategoryStatus.PENDING_APPROVAL,
+        },
+        queryRunner
+      );
+      await this.contentAuditRepository.create(
+        {
+          resourceType: ContentResourceType.CATEGORY,
+          resourceId: category.id,
+          actorId: requesterId,
+          actorRole: requesterRole.join(','),
+          action: 'CREATED',
+          changes: { status: category.status, parentId: category.parentId ?? null },
+        },
+        queryRunner
+      );
+      return category;
     });
   }
 
-  async update(id: number, dto: UpdateCategoryDto, requesterRole: string[]): Promise<Category> {
+  async update(
+    id: number,
+    dto: UpdateCategoryDto,
+    requesterId: number,
+    requesterRole: string[]
+  ): Promise<Category> {
     const category = await this.categoryRepository.findById(id);
 
     if (!category) {
+      throw new BusinessException(ERROR_CODES.CATEGORY.CATEGORY_NOT_FOUND);
+    }
+
+    const isSeller =
+      requesterRole.includes(UserRole.SELLER_ADMIN) &&
+      !requesterRole.includes(UserRole.SUPERADMIN) &&
+      !requesterRole.includes(UserRole.ADMIN);
+    if (isSeller && Number(category.createdBy) !== Number(requesterId)) {
       throw new BusinessException(ERROR_CODES.CATEGORY.CATEGORY_NOT_FOUND);
     }
 
@@ -168,15 +217,84 @@ export class CategoriesService {
       ...(dto.imageUrl !== undefined && { imageUrl: dto.imageUrl }),
       ...(dto.isActive !== undefined && { isActive: dto.isActive }),
       ...(dto.sortOrder !== undefined && { sortOrder: dto.sortOrder }),
+      ...(!requesterRole.includes(UserRole.SUPERADMIN) && {
+        status: CategoryStatus.PENDING_APPROVAL,
+        rejectionReason: null,
+      }),
     };
 
-    const updated = await this.categoryRepository.updateById(id, payload);
+    return this.transactionService.runInTransaction(async (queryRunner) => {
+      const updated = await this.categoryRepository.updateById(id, payload, queryRunner);
+      if (!updated) throw new BusinessException(ERROR_CODES.CATEGORY.CATEGORY_UPDATE_FAILED);
+      await this.contentAuditRepository.create(
+        {
+          resourceType: ContentResourceType.CATEGORY,
+          resourceId: id,
+          actorId: requesterId,
+          actorRole: requesterRole.join(','),
+          action: 'UPDATED',
+          changes: { fields: Object.keys(payload), status: payload.status ?? category.status },
+        },
+        queryRunner
+      );
+      return { ...category, ...payload } as Category;
+    });
+  }
 
-    if (!updated) {
-      throw new BusinessException(ERROR_CODES.CATEGORY.CATEGORY_UPDATE_FAILED);
+  async listForReview(options: {
+    status?: CategoryStatus;
+    createdBy?: number;
+    page: number;
+    limit: number;
+  }) {
+    const [items, total] = await this.categoryRepository.findPaginated(options);
+    return {
+      items,
+      page: options.page,
+      limit: options.limit,
+      total,
+      totalPages: Math.ceil(total / options.limit),
+    };
+  }
+
+  async adminDetail(id: number) {
+    const category = await this.categoryRepository.findById(id);
+    if (!category) throw new BusinessException(ERROR_CODES.CATEGORY.CATEGORY_NOT_FOUND);
+    const audit = await this.contentAuditRepository.list(ContentResourceType.CATEGORY, id);
+    return { ...category, audit };
+  }
+
+  async review(id: number, approved: boolean, reason: string | undefined, reviewerId: number) {
+    const category = await this.categoryRepository.findById(id);
+    if (!category || category.status !== CategoryStatus.PENDING_APPROVAL) {
+      throw new BusinessException(ERROR_CODES.CATEGORY.CATEGORY_NOT_FOUND);
     }
-
-    return { ...category, ...payload } as Category;
+    const status = approved ? CategoryStatus.APPROVED : CategoryStatus.REJECTED;
+    if (!approved && !reason?.trim()) throw new BusinessException(ERROR_CODES.COMMON.BAD_REQUEST);
+    return this.transactionService.runInTransaction(async (queryRunner) => {
+      await this.categoryRepository.updateById(
+        id,
+        {
+          status,
+          rejectionReason: approved ? null : reason,
+          reviewedBy: reviewerId,
+          reviewedAt: new Date(),
+        },
+        queryRunner
+      );
+      await this.contentAuditRepository.create(
+        {
+          resourceType: ContentResourceType.CATEGORY,
+          resourceId: id,
+          actorId: reviewerId,
+          actorRole: UserRole.SUPERADMIN,
+          action: approved ? 'APPROVED' : 'REJECTED',
+          changes: { fromStatus: category.status, toStatus: status, reason: reason ?? null },
+        },
+        queryRunner
+      );
+      return { ...category, status, rejectionReason: approved ? null : reason } as Category;
+    });
   }
 
   async remove(id: number): Promise<void> {

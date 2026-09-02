@@ -28,6 +28,7 @@ import { AuthTokenHelper } from 'src/default/common/helper/auth-token.helper';
 import {
   MAX_OTP_VERIFY_ATTEMPTS,
   OTP_EXPIRY_MINUTES,
+  RESET_TOKEN_EXPIRY_MINUTES,
   UserStatus,
 } from './constants/auth.constants';
 import { RevokedTokenRepository } from 'src/modules/auth/repository';
@@ -37,6 +38,7 @@ import { UserValidator } from 'src/default/common/validators';
 import { AppConfigService } from 'src/default/config/config.service';
 import { OtpAttemptType } from 'src/default/common/enums/common.enum';
 import { UserRole } from 'src/default/common/enums/user-type.enum';
+import { RedisService } from 'src/default/databases/redis/redis.service';
 
 @Injectable()
 export class AuthService {
@@ -50,23 +52,41 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly userAuthValidator: UserAuthValidator,
     private readonly userValidator: UserValidator,
-    private readonly appConfigService: AppConfigService
+    private readonly appConfigService: AppConfigService,
+    private readonly redisService: RedisService
   ) {}
+
+  /**
+   * Drives the login screen without changing account state. An unknown identifier is
+   * treated like a first-time account and must prove ownership with an OTP.
+   */
+  async getLoginOptions(dto: SendOtpDto) {
+    const identifier = IdentifierHelper.resolve(dto);
+    const capabilities = await this.userRepository.findLoginCapabilities(identifier);
+    const passwordAvailable = capabilities?.passwordAvailable ?? false;
+
+    return {
+      passwordAvailable,
+      otpAvailable: true,
+      passwordSetupRequired: !passwordAvailable,
+      nextStep: passwordAvailable ? ('choose_login_method' as const) : ('request_otp' as const),
+    };
+  }
 
   /**
    * Single entry point for both "brand new identifier" and "existing account that never
    * finished registration" — both look identical to the caller: verify an OTP, then set a
-   * password. An identifier with a password already set is told to use /auth/login instead
-   * rather than being silently re-OTP'd.
+   * password. Existing users may also request an OTP as an alternative to password login.
    */
   async sendOtp(dto: SendOtpDto) {
     const identifier = IdentifierHelper.resolve(dto);
+    await this.assertOtpSendAllowed(identifier.value);
     let user = await this.findByIdentifier(identifier);
 
     if (!user) {
       user = await this.createUserForIdentifier(identifier);
-    } else if (user.password) {
-      throw new BusinessException(ERROR_CODES.AUTH.PASSWORD_ALREADY_SET);
+    } else {
+      this.userAuthValidator.validateUserStatus(user.status);
     }
 
     await this.issueAndDispatchOtp(user, identifier, OtpAttemptType.LOGIN);
@@ -86,7 +106,7 @@ export class AuthService {
    * short-lived action ticket rather than logging the user in directly — the OTP itself
    * must not be replayable against the sensitive action it unlocks.
    */
-  async verifyOtp(dto: VerifyOtpDto) {
+  async verifyOtp(dto: VerifyOtpDto, req?: any) {
     const identifier = IdentifierHelper.resolve(dto);
     const user = await this.findByIdentifier(identifier);
 
@@ -127,7 +147,28 @@ export class AuthService {
         user.id,
         'RESET_PASSWORD'
       );
+      await this.registerActionTicket(resetPasswordTicket, 'RESET_PASSWORD');
       return { step: 'reset_password' as const, resetPasswordTicket };
+    }
+
+    // A LOGIN OTP for an account that already has a password is a complete login.
+    // First-time accounts still receive only a short-lived password setup ticket.
+    if (purpose === OtpAttemptType.LOGIN && user.password) {
+      this.userAuthValidator.validateUserStatus(user.status);
+
+      const tokens = await this.generateTokens(user);
+      await this.userRepository.updateRefreshToken(
+        user.id,
+        TokenHashHelper.hashToken(tokens.refreshToken),
+        DateHelper.getRefreshTokenExpiryDate()
+      );
+      await this.createLoginHistory(user, req, 1);
+
+      return {
+        step: 'authenticated' as const,
+        accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken,
+      };
     }
 
     const setPasswordTicket = await AuthTokenHelper.generateActionTicket(
@@ -135,6 +176,7 @@ export class AuthService {
       user.id,
       'SET_PASSWORD'
     );
+    await this.registerActionTicket(setPasswordTicket, 'SET_PASSWORD');
     return { step: 'set_password' as const, setPasswordTicket };
   }
 
@@ -144,11 +186,13 @@ export class AuthService {
    * in" behavior — it's just gated behind an explicit password step now).
    */
   async setPassword(dto: SetPasswordDto, req: any) {
-    const userId = await AuthTokenHelper.verifyActionTicket(
+    const ticketPayload = await AuthTokenHelper.verifyActionTicket(
       this.jwtService,
       dto.setPasswordTicket,
       'SET_PASSWORD'
     );
+    await this.consumeActionTicket(ticketPayload.jti, 'SET_PASSWORD');
+    const userId = ticketPayload.sub;
 
     if (dto.password !== dto.confirmPassword) {
       throw new BusinessException(ERROR_CODES.AUTH.PASSWORD_MISMATCH);
@@ -169,9 +213,9 @@ export class AuthService {
       user.status = UserStatus.ACTIVE;
     }
 
-    const tokens = await AuthTokenHelper.generateTokens(this.jwtService, user);
+    const tokens = await this.generateTokens(user);
 
-    user.refreshToken = tokens.refreshToken;
+    user.refreshToken = TokenHashHelper.hashToken(tokens.refreshToken);
     user.refreshTokenExpiry = DateHelper.getRefreshTokenExpiryDate();
 
     await this.userRepository.save(user);
@@ -205,10 +249,14 @@ export class AuthService {
       throw new BusinessException(ERROR_CODES.AUTH.INVALID_CREDENTIALS);
     }
 
-    const tokens = await AuthTokenHelper.generateTokens(this.jwtService, user);
+    const tokens = await this.generateTokens(user);
     const refreshTokenExpiry = await DateHelper.getRefreshTokenExpiryDate();
 
-    await this.userRepository.updateRefreshToken(user.id, tokens.refreshToken, refreshTokenExpiry);
+    await this.userRepository.updateRefreshToken(
+      user.id,
+      TokenHashHelper.hashToken(tokens.refreshToken),
+      refreshTokenExpiry
+    );
 
     await this.createLoginHistory(user, req, 1);
 
@@ -226,13 +274,23 @@ export class AuthService {
    * exists or that its password happens to be right.
    */
   async adminLogin(dto: LoginDto, req: any) {
+    return this.loginForRoles(dto, req, [UserRole.SUPERADMIN, UserRole.ADMIN]);
+  }
+
+  /**
+   * Dedicated seller portal login. Customer-only accounts are deliberately rejected
+   * even when the supplied password is correct; they must complete seller onboarding first.
+   */
+  async sellerLogin(dto: LoginDto, req: any) {
+    return this.loginForRoles(dto, req, [UserRole.SELLER_ADMIN]);
+  }
+
+  private async loginForRoles(dto: LoginDto, req: any, allowedRoles: UserRole[]) {
     const identifier = IdentifierHelper.resolve(dto);
     const user = await this.findByIdentifier(identifier);
-    const isAdmin = user?.roles?.some(
-      (role) => role.name === UserRole.SUPERADMIN || role.name === UserRole.ADMIN
-    );
+    const hasAllowedRole = user?.roles?.some((role) => allowedRoles.includes(role.name));
 
-    if (!user || !isAdmin) {
+    if (!user || !hasAllowedRole) {
       if (user) {
         await this.createLoginHistory(user, req, 0);
       }
@@ -252,10 +310,14 @@ export class AuthService {
       throw new BusinessException(ERROR_CODES.AUTH.INVALID_CREDENTIALS);
     }
 
-    const tokens = await AuthTokenHelper.generateTokens(this.jwtService, user);
+    const tokens = await this.generateTokens(user);
     const refreshTokenExpiry = await DateHelper.getRefreshTokenExpiryDate();
 
-    await this.userRepository.updateRefreshToken(user.id, tokens.refreshToken, refreshTokenExpiry);
+    await this.userRepository.updateRefreshToken(
+      user.id,
+      TokenHashHelper.hashToken(tokens.refreshToken),
+      refreshTokenExpiry
+    );
 
     await this.createLoginHistory(user, req, 1);
 
@@ -266,17 +328,37 @@ export class AuthService {
   }
 
   async refreshToken(dto: RefreshTokenDto) {
-    const user = await this.userAuthValidator.validateActiveUserByRefreshToken(dto.refreshToken);
+    let payload: { sub: number; tokenType: string };
+    try {
+      payload = await this.jwtService.verifyAsync(dto.refreshToken, {
+        secret: this.appConfigService.getJwtRefreshSecret(),
+        issuer: AuthTokenHelper.issuer,
+        audience: AuthTokenHelper.refreshAudience,
+        algorithms: ['HS256'],
+      });
+    } catch {
+      throw new BusinessException(ERROR_CODES.AUTH.INVALID_REFRESH_TOKEN);
+    }
+    if (payload.tokenType !== 'refresh') {
+      throw new BusinessException(ERROR_CODES.AUTH.INVALID_REFRESH_TOKEN);
+    }
+    const user = await this.userAuthValidator.validateActiveUserByRefreshToken(
+      TokenHashHelper.hashToken(dto.refreshToken)
+    );
 
     if (!user.refreshTokenExpiry || new Date(user.refreshTokenExpiry) < new Date()) {
       throw new BusinessException(ERROR_CODES.AUTH.REFRESH_TOKEN_EXPIRED);
     }
 
-    const tokens = await AuthTokenHelper.generateTokens(this.jwtService, user);
+    const tokens = await this.generateTokens(user);
 
     const refreshTokenExpiry = DateHelper.getRefreshTokenExpiryDate();
 
-    await this.userRepository.updateRefreshToken(user.id, tokens.refreshToken, refreshTokenExpiry);
+    await this.userRepository.updateRefreshToken(
+      user.id,
+      TokenHashHelper.hashToken(tokens.refreshToken),
+      refreshTokenExpiry
+    );
 
     return {
       accessToken: tokens.accessToken,
@@ -286,10 +368,15 @@ export class AuthService {
 
   async forgotPassword(dto: ForgotPasswordDto) {
     const identifier = IdentifierHelper.resolve(dto);
+    await this.assertOtpSendAllowed(identifier.value);
     const user = await this.findByIdentifier(identifier);
 
     if (!user) {
-      throw new BusinessException(ERROR_CODES.USER.USER_NOT_FOUND);
+      return {
+        channel: identifier.type,
+        maskedIdentifier: '',
+        otpExpiryInMinutes: OTP_EXPIRY_MINUTES,
+      };
     }
 
     this.userAuthValidator.validateUserStatus(user.status);
@@ -316,11 +403,13 @@ export class AuthService {
    * a live session.
    */
   async resetPassword(dto: ResetPasswordDto) {
-    const userId = await AuthTokenHelper.verifyActionTicket(
+    const ticketPayload = await AuthTokenHelper.verifyActionTicket(
       this.jwtService,
       dto.resetPasswordTicket,
       'RESET_PASSWORD'
     );
+    await this.consumeActionTicket(ticketPayload.jti, 'RESET_PASSWORD');
+    const userId = ticketPayload.sub;
 
     if (dto.password !== dto.confirmPassword) {
       throw new BusinessException(ERROR_CODES.AUTH.PASSWORD_MISMATCH);
@@ -383,14 +472,7 @@ export class AuthService {
   }
 
   async profile(userId: number) {
-    const user = await this.userRepository.findOne(
-      {
-        id: userId,
-      },
-      ['roles', 'storeInformation']
-    );
-
-    return user;
+    return this.userRepository.findProfileSummaryById(userId);
   }
 
   private async findByIdentifier(identifier: { type: 'mobile' | 'email'; value: string }) {
@@ -422,8 +504,12 @@ export class AuthService {
   ) {
     let otpPlain = OtpHelper.generateOtp();
 
-    const isProd = this.appConfigService.isProduction() || this.appConfigService.isQa();
-    if (!isProd) {
+    // Fixed/known OTP + skipped dispatch must never apply outside a strictly
+    // local environment — `uat`/`preprod` are remotely reachable staging
+    // environments and must get a real random OTP with real dispatch, exactly
+    // like production, even though NODE_ENV isn't literally "production".
+    const isLocalOnly = this.appConfigService.isLocalOnly();
+    if (isLocalOnly) {
       otpPlain = this.appConfigService.getNonProdOtp().toString();
     }
 
@@ -437,10 +523,10 @@ export class AuthService {
       otpPurpose: purpose,
     });
 
-    // Non-prod already uses a fixed OTP (see above) — no need to actually hit the
-    // WhatsApp/email provider, which also avoids failures from dev-only invalid
-    // provider credentials.
-    if (!isProd) {
+    // Local-only already used a fixed OTP (see above) — no need to actually hit
+    // the WhatsApp/email provider, which also avoids failures from dev-only
+    // invalid provider credentials.
+    if (isLocalOnly) {
       return;
     }
 
@@ -451,6 +537,40 @@ export class AuthService {
 
     if (!dispatchResult) {
       throw new BusinessException(ERROR_CODES.AUTH.OTP_SEND_FAILED);
+    }
+  }
+
+  private generateTokens(user: User) {
+    return AuthTokenHelper.generateTokens(
+      this.jwtService,
+      user,
+      this.appConfigService.getJwtRefreshSecret()
+    );
+  }
+
+  private async assertOtpSendAllowed(identifier: string): Promise<void> {
+    const identifierHash = TokenHashHelper.hashToken(identifier.toLowerCase());
+    const attempts = await this.redisService.incrementWithExpiry(
+      `auth:otp-send:${identifierHash}`,
+      15 * 60
+    );
+    if (attempts > 5) throw new BusinessException(ERROR_CODES.AUTH.TOO_MANY_REQUESTS);
+  }
+
+  private async registerActionTicket(ticket: string, purpose: string): Promise<void> {
+    const decoded = this.jwtService.decode(ticket) as { jti?: string } | null;
+    if (!decoded?.jti) throw new BusinessException(ERROR_CODES.AUTH.INVALID_ACCESS_TOKEN);
+    await this.redisService.set(
+      `auth:action-ticket:${decoded.jti}`,
+      purpose,
+      RESET_TOKEN_EXPIRY_MINUTES * 60
+    );
+  }
+
+  private async consumeActionTicket(jti: string, purpose: string): Promise<void> {
+    const storedPurpose = await this.redisService.getAndDelete<string>(`auth:action-ticket:${jti}`);
+    if (storedPurpose !== purpose) {
+      throw new BusinessException(ERROR_CODES.AUTH.INVALID_ACCESS_TOKEN);
     }
   }
 

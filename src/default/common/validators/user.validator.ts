@@ -1,15 +1,9 @@
 import { Injectable } from '@nestjs/common';
-import { BusinessException } from 'src/default/error/business.exception';
-import { ERROR_CODES } from 'src/default/error/error.code';
 import { RolesRepository, UserRepository } from 'src/modules/auth/repository';
 import { UserAuthValidator } from 'src/modules/auth/validators/user-auth.validator';
-import { CommonUtils } from 'src/default/common/utils/common.utils';
 import { RedisService } from 'src/default/databases/redis/redis.service';
 import { UserRole } from 'src/default/common/enums/user-type.enum';
 import { OtpAttemptType } from '../enums/common.enum';
-import { KycStatus, KycType } from 'src/default/common/enums/kyc.enum';
-import { UserPartnerType } from 'src/default/common/enums/user-type.enum';
-import { User } from 'src/modules/auth/entities';
 
 export interface ValidateOtpAttemptsOptions {
   mobile: string | number;
@@ -33,10 +27,8 @@ export class UserValidator {
     private readonly userRepository: UserRepository,
     private readonly roleRepository: RolesRepository,
     private readonly redisService: RedisService,
-    private readonly userAuthValidator: UserAuthValidator,
-
+    private readonly userAuthValidator: UserAuthValidator
   ) {}
-
 
   /**
    * Universal OTP attempts validator
@@ -121,16 +113,16 @@ export class UserValidator {
     await this.redisService.delete(redisKey);
   }
 
-//   async validateSendOtpAttempts(
-//     mobile: number | string,
-//     increment: boolean = false,
-//     userRole?: UserRole | string
-//   ) {
-//     return this.validateOtpAttempts({
-//       mobile,
-//       otpType: OtpAttemptType.LOGIN,
-//       userRole,
-//       increment,
-//     });
-//   }
+  //   async validateSendOtpAttempts(
+  //     mobile: number | string,
+  //     increment: boolean = false,
+  //     userRole?: UserRole | string
+  //   ) {
+  //     return this.validateOtpAttempts({
+  //       mobile,
+  //       otpType: OtpAttemptType.LOGIN,
+  //       userRole,
+  //       increment,
+  //     });
+  //   }
 }

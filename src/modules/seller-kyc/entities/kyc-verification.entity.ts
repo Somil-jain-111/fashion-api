@@ -30,6 +30,10 @@ export class KycVerificationEntity extends BaseEntity {
   @Column({ name: 'document_number', nullable: true })
   documentNumber?: string;
 
+  @Column({ name: 'document_hash', type: 'char', length: 64, nullable: true })
+  @Index()
+  documentHash?: string;
+
   @Column({ name: 'masked_document_number', nullable: true })
   maskedDocumentNumber?: string;
 

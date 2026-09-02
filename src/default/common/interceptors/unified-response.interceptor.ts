@@ -15,8 +15,12 @@ export class UnifiedResponseInterceptor implements NestInterceptor {
 
     return next.handle().pipe(
       map((data) => {
-        // Sanitize only the password for API responses
-        const sanitizedData = DataSanitizer.sanitizeData(data, [], ['password']);
+        // Auth endpoints intentionally return newly-issued access/refresh tokens. Every
+        // other controller gets the full defence-in-depth sensitive-field deny-list.
+        const isAuthController = context.getClass().name === 'AuthController';
+        const sanitizedData = isAuthController
+          ? DataSanitizer.sanitizeData(data, [], ['password', 'otp'])
+          : DataSanitizer.sanitizeData(data);
         return this.formatResponse(sanitizedData, context, customMessage);
       })
     );
@@ -42,6 +46,6 @@ export class UnifiedResponseInterceptor implements NestInterceptor {
 
     ConsoleLogger.log(formattedResponse, `${request.method} - ${request.url}`);
 
-    return formattedResponse;
+    return DataSanitizer.stringifyResponseScalars(formattedResponse);
   }
 }

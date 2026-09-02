@@ -7,10 +7,7 @@ import { UserStatus } from '../constants/auth.constants';
 
 @Injectable()
 export class UserAuthValidator {
-  constructor(
-    private readonly userRepository: UserRepository,
-  ) {}
-
+  constructor(private readonly userRepository: UserRepository) {}
 
   async getAllowedUserById(userId: number): Promise<User> {
     const user = await this.userRepository.findById(userId);

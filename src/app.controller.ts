@@ -8,6 +8,7 @@ import { HttpService } from '@nestjs/axios';
 import { lastValueFrom } from 'rxjs';
 import { Response } from 'express';
 import { ConsoleLogger } from './default/logger/console/console.service';
+import { DataSanitizer } from './default/common/utils/sanitize.utils';
 
 @Controller()
 export class AppController {
@@ -24,16 +25,16 @@ export class AppController {
   @NoCache()
   @Get('')
   getHello() {
-    return {
+    return DataSanitizer.sanitizeData({
       message: 'Response from base route - Hello World!',
-    };
+    });
   }
 
   @NoCache()
   @Get('/metrics')
   async checkHealth(@Res() res: Response) {
     const response = await this.checkHealthService();
-    res.status(HttpStatus.OK).json(response);
+    res.status(HttpStatus.OK).json(DataSanitizer.sanitizeData(response));
   }
 
   public async checkHealthService() {

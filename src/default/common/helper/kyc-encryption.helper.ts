@@ -1,88 +1,85 @@
+import { createCipheriv, createDecipheriv, createHash, createHmac, randomBytes } from 'crypto';
 import * as CryptoJS from 'crypto-js';
 
-type KycEncryptableValue =
-  | string
-  | number
-  | boolean
-  | null
-  | undefined
-  | Record<string, any>
-  | any[];
+type KycValue = string | number | boolean | null | undefined | Record<string, unknown> | unknown[];
 
+/** Versioned authenticated encryption for regulated seller data. */
 export class KycEncryptionHelper {
-  static encrypt(value: KycEncryptableValue, secretKey: string, fixedIv: string): any {
-    const iv = CryptoJS.enc.Hex.parse(fixedIv);
-    const key = CryptoJS.enc.Hex.parse(secretKey);
+  private static readonly VERSION = 'v2';
 
-    if (value === undefined) {
-      return undefined;
-    }
-
-    if (value === null) {
-      return null;
-    }
-
-    if (Array.isArray(value)) {
-      return value.map((item) => KycEncryptionHelper.encrypt(item, secretKey, fixedIv));
-    }
-
+  static encrypt(value: KycValue, secret: string, _legacyIv?: string): any {
+    if (value === undefined || value === null) return value;
+    if (!secret) throw new Error('KYC encryption secret is missing');
+    if (Array.isArray(value)) return value.map((item) => this.encrypt(item as KycValue, secret));
     if (typeof value === 'object') {
-      const encryptedObj: Record<string, any> = {};
-
-      Object.keys(value).forEach((keyName) => {
-        encryptedObj[keyName] = KycEncryptionHelper.encrypt(value[keyName], secretKey, fixedIv);
-      });
-
-      return encryptedObj;
+      return Object.fromEntries(
+        Object.entries(value).map(([k, v]) => [k, this.encrypt(v as KycValue, secret)])
+      );
     }
-
-    const cipher = CryptoJS.AES.encrypt(JSON.stringify(value), key, {
-      iv,
-    });
-
-    return cipher.toString();
+    const key = createHash('sha256').update(secret, 'utf8').digest();
+    const nonce = randomBytes(12);
+    const cipher = createCipheriv('aes-256-gcm', key, nonce);
+    const ciphertext = Buffer.concat([
+      cipher.update(JSON.stringify(value), 'utf8'),
+      cipher.final(),
+    ]);
+    return [
+      this.VERSION,
+      nonce.toString('base64url'),
+      cipher.getAuthTag().toString('base64url'),
+      ciphertext.toString('base64url'),
+    ].join(':');
   }
 
-  static decrypt(value: KycEncryptableValue, secretKey: string, fixedIv: string): any {
-    const iv = CryptoJS.enc.Hex.parse(fixedIv);
-    const key = CryptoJS.enc.Hex.parse(secretKey);
-
-    if (value === undefined) {
-      return undefined;
-    }
-
-    if (value === null) {
-      return null;
-    }
-
-    if (Array.isArray(value)) {
-      return value.map((item) => KycEncryptionHelper.decrypt(item, secretKey, fixedIv));
-    }
-
+  static decrypt(value: KycValue, secret: string, legacyIv?: string): any {
+    if (value === undefined || value === null) return value;
+    if (Array.isArray(value))
+      return value.map((item) => this.decrypt(item as KycValue, secret, legacyIv));
     if (typeof value === 'object') {
-      const decryptedObj: Record<string, any> = {};
-
-      Object.keys(value).forEach((keyName) => {
-        decryptedObj[keyName] = KycEncryptionHelper.decrypt(value[keyName], secretKey, fixedIv);
-      });
-
-      return decryptedObj;
+      return Object.fromEntries(
+        Object.entries(value).map(([k, v]) => [k, this.decrypt(v as KycValue, secret, legacyIv)])
+      );
     }
-
-    const bytes = CryptoJS.AES.decrypt(String(value), key, {
-      iv,
-    });
-
-    const decryptedText = bytes.toString(CryptoJS.enc.Utf8);
-
-    if (!decryptedText) {
+    const encoded = String(value);
+    if (!encoded.startsWith(`${this.VERSION}:`))
+      return this.decryptLegacy(encoded, secret, legacyIv);
+    try {
+      const [, nonce, tag, ciphertext] = encoded.split(':');
+      const key = createHash('sha256').update(secret, 'utf8').digest();
+      const decipher = createDecipheriv('aes-256-gcm', key, Buffer.from(nonce, 'base64url'));
+      decipher.setAuthTag(Buffer.from(tag, 'base64url'));
+      const plaintext = Buffer.concat([
+        decipher.update(Buffer.from(ciphertext, 'base64url')),
+        decipher.final(),
+      ]).toString('utf8');
+      return JSON.parse(plaintext);
+    } catch {
       return null;
     }
+  }
 
+  static lookupHash(value: string, secret: string): string {
+    if (!secret) throw new Error('KYC encryption secret is missing');
+    return createHmac('sha256', secret).update(value.trim().toUpperCase()).digest('hex');
+  }
+
+  static encryptLegacy(value: string, secret: string, fixedIv: string): string {
+    return CryptoJS.AES.encrypt(JSON.stringify(value), CryptoJS.enc.Hex.parse(secret), {
+      iv: CryptoJS.enc.Hex.parse(fixedIv),
+    }).toString();
+  }
+
+  private static decryptLegacy(value: string, secret: string, fixedIv?: string): unknown {
+    if (!fixedIv) return null;
+    const bytes = CryptoJS.AES.decrypt(value, CryptoJS.enc.Hex.parse(secret), {
+      iv: CryptoJS.enc.Hex.parse(fixedIv),
+    });
+    const plaintext = bytes.toString(CryptoJS.enc.Utf8);
+    if (!plaintext) return null;
     try {
-      return JSON.parse(decryptedText);
+      return JSON.parse(plaintext);
     } catch {
-      return decryptedText;
+      return plaintext;
     }
   }
 }

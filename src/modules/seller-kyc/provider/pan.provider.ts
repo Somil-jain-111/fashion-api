@@ -120,11 +120,7 @@ export class PanProvider {
 
       ConsoleLogger.error('PAN_PROVIDER_ERROR', error?.stack, {
         tag: 'PanProvider.verifyPan',
-        data: {
-          pan,
-          statusCode,
-          errorResponse,
-        },
+        data: { transactionId: data.transactionId, statusCode },
       });
 
       await this.apiResponseRepository.updateResponseByTransactionId(

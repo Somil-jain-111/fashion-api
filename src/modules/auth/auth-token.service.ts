@@ -1,34 +1,17 @@
 import { Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { JWT_ACCESS_TOKEN_EXPIRY, JWT_REFRESH_TOKEN_EXPIRY } from './constants/auth.constants';
 import { User } from './entities';
+import { AuthTokenHelper } from 'src/default/common/helper/auth-token.helper';
+import { AppConfigService } from 'src/default/config/config.service';
 
 @Injectable()
 export class AuthTokenService {
-  constructor(private readonly jwtService: JwtService) {}
+  constructor(
+    private readonly jwtService: JwtService,
+    private readonly config: AppConfigService
+  ) {}
 
   async generateTokens(user: User) {
-    const payload = {
-      sub: user.id,
-      id: user.id,
-      uuid: user.uuid,
-      mobile: user.mobile,
-      email: user.email,
-      role: user.roles?.map((r) => r.name),
-      user_type: user.roles?.map((r) => r.user_type),
-    };
-
-    const accessToken = await this.jwtService.signAsync(payload, {
-      expiresIn: JWT_ACCESS_TOKEN_EXPIRY,
-    });
-
-    const refreshToken = await this.jwtService.signAsync(payload, {
-      expiresIn: JWT_REFRESH_TOKEN_EXPIRY,
-    });
-
-    return {
-      accessToken,
-      refreshToken,
-    };
+    return AuthTokenHelper.generateTokens(this.jwtService, user, this.config.getJwtRefreshSecret());
   }
 }

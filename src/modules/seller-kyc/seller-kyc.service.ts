@@ -28,6 +28,20 @@ import { VerifyPanDto } from './dto/verify-pan.dto';
 import { VerifyGstDto } from './dto/verify-gst.dto';
 import { GenerateAadhaarOtpDto } from './dto/generate-aadhaar-otp.dto';
 import { VerifyAadhaarOtpDto } from './dto/verify-aadhaar-otp.dto';
+import {
+  AdminKycDetailResponseDto,
+  AdminKycListResponseDto,
+  GenerateAadhaarOtpResponseDto,
+  SellerKycProfileResponseDto,
+  SellerKycDashboardResponseDto,
+  SellerKycUpdateRequestResponseDto,
+  VerifyAadhaarOtpResponseDto,
+  VerifyGstResponseDto,
+  VerifyPanResponseDto,
+} from './dto/kyc-response.dto';
+import { SellersService } from '../sellers/sellers.service';
+import { SellerOnboardingStatus, SellerReviewSection } from '../sellers/entities';
+import { TransactionService } from 'src/default/databases/transaction';
 
 const PROVIDER = 'REWARDS_API';
 const NAME_MATCH_THRESHOLD = 85;
@@ -44,6 +58,8 @@ export class SellerKycService {
     private panProvider: PanProvider,
     private aadhaarProvider: AadhaarProvider,
     private gstProvider: GstProvider,
+    private sellersService: SellersService,
+    private transactionService: TransactionService,
     private readonly appConfigService: AppConfigService,
     private readonly eventEmitter: EventEmitter2
   ) {}
@@ -60,6 +76,29 @@ export class SellerKycService {
     const fixedIv = this.appConfigService.get('KYC_ENCRYPTION_FIXED_IV');
 
     return KycEncryptionHelper.decrypt(value, secretKey, fixedIv);
+  }
+
+  private documentHash(value: string): string {
+    return KycEncryptionHelper.lookupHash(
+      value,
+      this.appConfigService.get('KYC_ENCRYPTION_SECRET_KEY')
+    );
+  }
+
+  private legacyEncryptedDocument(value: string): string {
+    return KycEncryptionHelper.encryptLegacy(
+      value,
+      this.appConfigService.get('KYC_ENCRYPTION_SECRET_KEY'),
+      this.appConfigService.get('KYC_ENCRYPTION_FIXED_IV')
+    );
+  }
+
+  private providerAuditSummary(result: any): Record<string, unknown> {
+    return {
+      success: Boolean(result?.success),
+      statusCode: Number(result?.statusCode || 0),
+      message: String(result?.message || '').slice(0, 300),
+    };
   }
 
   private getPanFailureMessage(statusCode: number, responseData: any): string {
@@ -112,9 +151,16 @@ export class SellerKycService {
    * Aadhaar verification
    */
 
-  async generateAadhaarOtp(sellerId: number, body: GenerateAadhaarOtpDto): Promise<any> {
+  async generateAadhaarOtp(
+    sellerId: number,
+    body: GenerateAadhaarOtpDto
+  ): Promise<GenerateAadhaarOtpResponseDto> {
     const tag = 'SellerKycService.generateAadhaarOtp';
     const { aadharNumber, aadharFrontImage, aadharBackImage } = body;
+    const isCorrection = await this.sellersService.assertKycOrCorrectionStep(
+      sellerId,
+      KycType.AADHAAR
+    );
 
     const user = await this.userAuthValidator.getAllowedUserById(sellerId);
 
@@ -128,8 +174,10 @@ export class SellerKycService {
 
     const existingVerifiedAadhaar =
       await this.kycVerificationRepository.findByDocumentNumberAndType(
-        encryptedAadhaarNumber,
-        KycType.AADHAAR
+        this.legacyEncryptedDocument(aadharNumber),
+        KycType.AADHAAR,
+        undefined,
+        this.documentHash(aadharNumber)
       );
 
     if (existingVerifiedAadhaar && Number(existingVerifiedAadhaar.user.id) !== Number(sellerId)) {
@@ -141,7 +189,7 @@ export class SellerKycService {
       KycType.AADHAAR
     );
 
-    if (userVerifiedAadhaar) {
+    if (userVerifiedAadhaar && !isCorrection) {
       throw new BusinessException(ERROR_CODES.KYC.AADHAAR_ALREADY_VERIFIED);
     }
 
@@ -168,7 +216,7 @@ export class SellerKycService {
         ...providerResult.requestPayload,
         id_number: maskedAadhaar,
       },
-      responsePayload: providerResult.responseData,
+      responsePayload: this.providerAuditSummary(providerResult),
       failureReason: providerResult.success ? null : providerResult.message,
       journeyId: LocalStorageContextUtil.get(ContextType.JOURNEY_ID),
     });
@@ -201,7 +249,10 @@ export class SellerKycService {
     };
   }
 
-  async verifyAadhaarOtp(sellerId: number, body: VerifyAadhaarOtpDto): Promise<any> {
+  async verifyAadhaarOtp(
+    sellerId: number,
+    body: VerifyAadhaarOtpDto
+  ): Promise<VerifyAadhaarOtpResponseDto> {
     const tag = 'SellerKycService.verifyAadhaarOtp';
     const { referenceId, referenceIdOtp, otp } = body;
 
@@ -236,7 +287,7 @@ export class SellerKycService {
       documentNumber: otpLog.documentNumber,
       provider: PROVIDER,
       requestPayload: { ...providerResult.requestPayload, otp: '******' },
-      responsePayload: providerResult.responseData,
+      responsePayload: this.providerAuditSummary(providerResult),
       failureReason: providerResult.success ? null : providerResult.message,
       journeyId: LocalStorageContextUtil.get(ContextType.JOURNEY_ID),
     });
@@ -262,6 +313,7 @@ export class SellerKycService {
       type: KycType.AADHAAR,
       referenceId,
       documentNumber: otpLog.documentNumber,
+      documentHash: this.documentHash(String(this.decryptKycData(otpLog.documentNumber))),
       maskedDocumentNumber: aadhaarData.masked_aadhaar || aadhaarData.maskedAadhaar || null,
       verifiedName: encryptedVerifiedName,
       provider: PROVIDER,
@@ -273,6 +325,9 @@ export class SellerKycService {
         address: aadhaarData.address ? this.encryptKycData(aadhaarData.address) : null,
       },
     });
+
+    await this.sellersService.markKycCompleteIfEligible(sellerId);
+    await this.sellersService.completeKycCorrection(sellerId, KycType.AADHAAR);
 
     await this.kycVerificationLogRepository.expireAllPendingOtpLogs(sellerId, KycType.AADHAAR);
 
@@ -288,9 +343,10 @@ export class SellerKycService {
    * PAN verification
    */
 
-  async verifyPan(sellerId: number, body: VerifyPanDto): Promise<any> {
+  async verifyPan(sellerId: number, body: VerifyPanDto): Promise<VerifyPanResponseDto> {
     const tag = 'SellerKycService.verifyPan';
     const { panCard, panImage } = body;
+    const isCorrection = await this.sellersService.assertKycOrCorrectionStep(sellerId, KycType.PAN);
     const pan = panCard.toUpperCase();
 
     const user = await this.userAuthValidator.getAllowedUserById(sellerId);
@@ -306,13 +362,15 @@ export class SellerKycService {
       KycType.PAN
     );
 
-    if (existingUserPan?.status === KycStatus.VERIFIED) {
+    if (existingUserPan?.status === KycStatus.VERIFIED && !isCorrection) {
       throw new BusinessException(ERROR_CODES.KYC.PAN_ALREADY_SUBMITTED);
     }
 
     const existingPan = await this.kycVerificationRepository.findByDocumentNumberAndType(
-      encryptedPan,
-      KycType.PAN
+      this.legacyEncryptedDocument(pan),
+      KycType.PAN,
+      undefined,
+      this.documentHash(pan)
     );
 
     if (existingPan && Number(existingPan.user.id) !== Number(sellerId)) {
@@ -330,8 +388,8 @@ export class SellerKycService {
       referenceId: transactionId,
       documentNumber: encryptedPan,
       provider: PROVIDER,
-      requestPayload: panProviderResult.requestPayload,
-      responsePayload: panProviderResult.responseData,
+      requestPayload: { transactionId },
+      responsePayload: this.providerAuditSummary(panProviderResult),
       failureReason: panProviderResult.success ? null : panProviderResult.message,
     });
 
@@ -365,8 +423,8 @@ export class SellerKycService {
       status: nameMatchResult.success ? KycLogStatus.VERIFIED : KycLogStatus.FAILED,
       referenceId: nameMatchResult.requestPayload?.transaction_id,
       provider: PROVIDER,
-      requestPayload: nameMatchResult.requestPayload,
-      responsePayload: nameMatchResult.responseData,
+      requestPayload: { transactionId: nameMatchResult.requestPayload?.transaction_id },
+      responsePayload: this.providerAuditSummary(nameMatchResult),
       failureReason: nameMatchResult.success ? null : nameMatchResult.message,
     });
 
@@ -387,10 +445,11 @@ export class SellerKycService {
       type: KycType.PAN,
       referenceId: transactionId,
       documentNumber: encryptedPan,
+      documentHash: this.documentHash(pan),
       verifiedName: encryptedUserName,
       provider: PROVIDER,
       maskedDocumentNumber: this.panProvider.maskPanNumber(pan),
-      providerRequest: panProviderResult.requestPayload,
+      providerRequest: { transactionId },
       providerResponse: encryptedApiData,
       metadata: {
         matchScore,
@@ -398,6 +457,9 @@ export class SellerKycService {
         aadhaarLinked: panApiData?.aadhaar_linked,
       },
     });
+
+    await this.sellersService.markKycCompleteIfEligible(sellerId);
+    await this.sellersService.completeKycCorrection(sellerId, KycType.PAN);
 
     ConsoleLogger.log('SELLER_PAN_VERIFY_SUCCESS', { tag, data: { sellerId, matchScore } });
 
@@ -408,9 +470,10 @@ export class SellerKycService {
    * GST verification
    */
 
-  async verifyGst(sellerId: number, body: VerifyGstDto): Promise<any> {
+  async verifyGst(sellerId: number, body: VerifyGstDto): Promise<VerifyGstResponseDto> {
     const tag = 'SellerKycService.verifyGst';
-    const { gstNumber } = body;
+    const { gstNumber, gstImage } = body;
+    const isCorrection = await this.sellersService.assertKycOrCorrectionStep(sellerId, KycType.GST);
     const gst = gstNumber.toUpperCase();
 
     const user = await this.userAuthValidator.getAllowedUserById(sellerId);
@@ -422,15 +485,17 @@ export class SellerKycService {
       KycType.GST
     );
 
-    if (existingUserGst?.status === KycStatus.VERIFIED) {
+    if (existingUserGst?.status === KycStatus.VERIFIED && !isCorrection) {
       throw new BusinessException(ERROR_CODES.KYC.GST_VERIFICATION_FAILED, {
         reason: 'GST is already verified',
       });
     }
 
     const existingGst = await this.kycVerificationRepository.findByDocumentNumberAndType(
-      encryptedGst,
-      KycType.GST
+      this.legacyEncryptedDocument(gst),
+      KycType.GST,
+      undefined,
+      this.documentHash(gst)
     );
 
     if (existingGst && Number(existingGst.user.id) !== Number(sellerId)) {
@@ -450,8 +515,8 @@ export class SellerKycService {
       referenceId: transactionId,
       documentNumber: encryptedGst,
       provider: PROVIDER,
-      requestPayload: gstProviderResult.requestPayload,
-      responsePayload: gstProviderResult.responseData,
+      requestPayload: { transactionId },
+      responsePayload: this.providerAuditSummary(gstProviderResult),
       failureReason: gstProviderResult.success ? null : gstProviderResult.message,
     });
 
@@ -462,7 +527,10 @@ export class SellerKycService {
     }
 
     const gstApiData = gstProviderResult.responseData?.data || {};
-    const encryptedApiData = await this.encryptKycData(gstProviderResult.responseData);
+    const [encryptedApiData, encryptedGstImage] = await Promise.all([
+      this.encryptKycData(gstProviderResult.responseData),
+      this.encryptKycData(gstImage),
+    ]);
 
     const metadata = {
       tradeName: gstApiData.business_name,
@@ -477,15 +545,19 @@ export class SellerKycService {
       type: KycType.GST,
       referenceId: transactionId,
       documentNumber: encryptedGst,
+      documentHash: this.documentHash(gst),
       maskedDocumentNumber: this.gstProvider.maskGstNumber(gst),
       verifiedName: this.encryptKycData(
         gstApiData.trade_name || gstApiData.legal_name || user.username
       ),
       provider: PROVIDER,
-      providerRequest: gstProviderResult.requestPayload,
+      providerRequest: { transactionId },
       providerResponse: encryptedApiData,
-      metadata,
+      metadata: { ...metadata, gstImage: encryptedGstImage },
     });
+
+    await this.sellersService.markKycCompleteIfEligible(sellerId);
+    await this.sellersService.completeKycCorrection(sellerId, KycType.GST);
 
     if (gstApiData.trade_name || gstApiData.legal_name) {
       const firmName = gstApiData.trade_name || gstApiData.legal_name;
@@ -501,10 +573,11 @@ export class SellerKycService {
    * "Which KYC is pending" — aggregates PAN/GST/Aadhaar status for the seller,
    * plus a Super Admin manual override if one exists.
    */
-  async getProfile(sellerId: number): Promise<any> {
-    const [rows, override] = await Promise.all([
+  async getProfile(sellerId: number): Promise<SellerKycProfileResponseDto> {
+    const [rows, override, correctionRequests] = await Promise.all([
       this.kycVerificationRepository.findAllByUserId(sellerId),
       this.sellerKycOverrideRepository.findBySellerId(sellerId),
+      this.sellersService.listOpenReviewIssues(sellerId),
     ]);
 
     const byType = (type: KycType) => {
@@ -519,16 +592,22 @@ export class SellerKycService {
     const pan = byType(KycType.PAN);
     const gst = byType(KycType.GST);
     const aadhaar = byType(KycType.AADHAAR);
-    const allVerified = pan.verified && gst.verified && aadhaar.verified;
+    const { requiredTypes, onboardingStatus } = await this.sellersService.getKycContext(sellerId);
+    const allVerified = requiredTypes.every((type) => byType(type).verified);
     const anyVerified = pan.verified || gst.verified || aadhaar.verified;
 
     let status: SellerKycOverallStatus;
-    if (override) {
-      status =
-        override.status === SellerKycStatus.APPROVED
-          ? SellerKycOverallStatus.APPROVED
-          : SellerKycOverallStatus.REJECTED;
-    } else if (allVerified) {
+    if (
+      override?.status === SellerKycStatus.APPROVED &&
+      onboardingStatus === SellerOnboardingStatus.APPROVED
+    ) {
+      status = SellerKycOverallStatus.APPROVED;
+    } else if (
+      override?.status === SellerKycStatus.REJECTED &&
+      onboardingStatus === SellerOnboardingStatus.REJECTED
+    ) {
+      status = SellerKycOverallStatus.REJECTED;
+    } else if (allVerified && onboardingStatus === SellerOnboardingStatus.PENDING_APPROVAL) {
       status = SellerKycOverallStatus.USER_PROFILE_APPROVAL;
     } else if (anyVerified) {
       status = SellerKycOverallStatus.PENDING;
@@ -544,7 +623,9 @@ export class SellerKycService {
       // Finishing all three KYC types alone only queues the seller for Super
       // Admin review (status becomes USER_PROFILE_APPROVAL) — it does not
       // approve them. Only an explicit APPROVED override does that.
-      kycApproved: override?.status === SellerKycStatus.APPROVED,
+      kycApproved:
+        override?.status === SellerKycStatus.APPROVED &&
+        onboardingStatus === SellerOnboardingStatus.APPROVED,
       override: override
         ? {
             status: override.status,
@@ -552,6 +633,90 @@ export class SellerKycService {
             reviewedAt: override.reviewedAt,
           }
         : null,
+      correctionRequests: (correctionRequests || []).map((issue) => ({
+        section: issue.section,
+        remark: issue.remark,
+        reviewCycle: issue.reviewCycle,
+        requestedAt: issue.createdAt,
+      })),
+    };
+  }
+
+  async getDashboard(sellerId: number): Promise<SellerKycDashboardResponseDto> {
+    const [profile, rows, override, dashboardData] = await Promise.all([
+      this.getProfile(sellerId),
+      this.kycVerificationRepository.findAllByUserId(sellerId),
+      this.sellerKycOverrideRepository.findBySellerId(sellerId),
+      this.sellersService.getVerificationDashboardData(sellerId),
+    ]);
+    const { requiredTypes } = await this.sellersService.getKycContext(sellerId);
+    const labels: Partial<Record<KycType, string>> = {
+      [KycType.PAN]: 'PAN Card',
+      [KycType.GST]: 'GST Certificate',
+      [KycType.AADHAAR]: 'Aadhaar Card',
+    };
+    const value = dashboardData.profile;
+
+    const documents = requiredTypes.map((type) => {
+      const row = rows.find((item) => item.type === type && item.status === KycStatus.VERIFIED);
+      return {
+        type: String(type),
+        label: String(labels[type] ?? type),
+        maskedNumber: String(row?.maskedDocumentNumber ?? ''),
+        status: String(row?.status ?? KycStatus.PENDING),
+        verifiedAt: row?.updatedAt?.toISOString() ?? '',
+      };
+    });
+
+    const address = [value.streetAddress, value.city, value.state, value.pincode]
+      .filter(Boolean)
+      .join(', ');
+    const pending = dashboardData.pendingUpdateRequest;
+
+    return {
+      status: String(profile.status),
+      kycApproved: String(profile.kycApproved),
+      approvedAt: override?.reviewedAt?.toISOString() ?? '',
+      documents,
+      bankDetails: {
+        bankName: String(value.bankName ?? ''),
+        maskedAccountNumber: dashboardData.maskedAccountNumber,
+        status: String(value.bankAccountNumber ? KycStatus.VERIFIED : KycStatus.PENDING),
+      },
+      agreement: {
+        version: String(value.agreementVersion ?? ''),
+        signedAt: value.signedAt?.toISOString() ?? value.agreementAcceptedAt?.toISOString() ?? '',
+        status: String(value.agreementAcceptedAt ? KycStatus.VERIFIED : KycStatus.PENDING),
+      },
+      businessInformation: {
+        businessName: String(value.storeName ?? ''),
+        businessType: String(value.businessType ?? ''),
+        businessAddress: address,
+        gstState: String(value.state ?? ''),
+      },
+      pendingUpdateRequest: pending
+        ? {
+            id: String(pending.id),
+            section: String(pending.section),
+            reason: String(pending.reason),
+            status: String(pending.status),
+            requestedAt: pending.createdAt?.toISOString() ?? '',
+          }
+        : null,
+    };
+  }
+
+  async requestUpdate(
+    sellerId: number,
+    section: SellerReviewSection,
+    reason: string
+  ): Promise<SellerKycUpdateRequestResponseDto> {
+    const request = await this.sellersService.requestKycUpdate(sellerId, section, reason);
+    return {
+      requestId: String(request.id),
+      section: String(request.section),
+      status: String(request.status),
+      requestedAt: request.createdAt?.toISOString() ?? '',
     };
   }
 
@@ -569,31 +734,44 @@ export class SellerKycService {
   /**
    * Super Admin manual override — approves or rejects a seller's overall KYC
    * regardless of the automatic per-type result (e.g. an offline exception
-   * process). Rejecting is ungated (an admin may reject at any point), but
-   * approving still requires all three of PAN/GST/Aadhaar to be individually
+   * process). Both decisions require a pending review. Approving also requires
+   * all applicable PAN/GST/Aadhaar checks to be individually
    * VERIFIED first — the override exists to formalize that result, not to
    * bypass it.
    */
   async review(
     sellerId: number,
-    options: { status: SellerKycStatus; reason?: string; reviewerId: number }
-  ): Promise<any> {
+    options: {
+      status: SellerKycStatus;
+      issues?: Array<{ section: SellerReviewSection; remark: string }>;
+      reviewerId: number;
+    }
+  ): Promise<SellerKycProfileResponseDto> {
     const seller = await this.userRepository.findById(sellerId);
 
     if (!seller) {
       throw new BusinessException(ERROR_CODES.SELLER.SELLER_NOT_FOUND);
     }
 
-    if (options.status === SellerKycStatus.REJECTED && !options.reason) {
+    await this.sellersService.assertPendingApproval(sellerId);
+
+    if (options.status === SellerKycStatus.REJECTED && !options.issues?.length) {
       throw new BusinessException(ERROR_CODES.SELLER.KYC_REJECTION_REASON_REQUIRED);
+    }
+    if (
+      options.issues &&
+      new Set(options.issues.map((issue) => issue.section)).size !== options.issues.length
+    ) {
+      throw new BusinessException(ERROR_CODES.COMMON.BAD_REQUEST);
     }
 
     if (options.status === SellerKycStatus.APPROVED) {
       const profile = await this.getProfile(sellerId);
+      const requiredTypes = await this.sellersService.getRequiredKycTypes(sellerId);
       const pending = [
-        !profile.pan.verified && 'PAN card pending',
-        !profile.gst.verified && 'GST pending',
-        !profile.aadhaar.verified && 'Aadhaar pending',
+        requiredTypes.includes(KycType.PAN) && !profile.pan.verified && 'PAN card pending',
+        requiredTypes.includes(KycType.GST) && !profile.gst.verified && 'GST pending',
+        requiredTypes.includes(KycType.AADHAAR) && !profile.aadhaar.verified && 'Aadhaar pending',
       ].filter((entry): entry is string => Boolean(entry));
 
       if (pending.length > 0) {
@@ -603,17 +781,46 @@ export class SellerKycService {
       }
     }
 
-    await this.sellerKycOverrideRepository.upsert({
-      sellerId,
-      status: options.status,
-      reason: options.reason,
-      reviewerId: options.reviewerId,
+    await this.transactionService.execute(async (manager) => {
+      // Lock the seller workflow row before touching the decision record so two
+      // administrators cannot race conflicting approval/rejection writes.
+      await this.sellersService.assertPendingApproval(sellerId, manager);
+
+      await this.sellerKycOverrideRepository.upsert(
+        {
+          sellerId,
+          status: options.status,
+          reason: options.issues?.map((issue) => `${issue.section}: ${issue.remark}`).join('\n'),
+          reviewerId: options.reviewerId,
+        },
+        manager
+      );
+
+      await this.sellersService.markApprovalDecision(
+        sellerId,
+        options.status === SellerKycStatus.APPROVED,
+        manager,
+        true
+      );
+
+      if (options.status === SellerKycStatus.REJECTED) {
+        await this.sellersService.createReviewIssues(
+          sellerId,
+          options.reviewerId,
+          options.issues!,
+          manager
+        );
+      } else {
+        await this.sellersService.createApprovalAudit(sellerId, options.reviewerId, manager);
+      }
     });
 
     this.eventEmitter.emit('seller.kyc.reviewed', {
       sellerId,
       status: options.status,
-      reason: options.reason ?? null,
+      reason:
+        options.issues?.map((issue) => `${issue.section}: ${issue.remark}`).join('\n') ?? null,
+      issues: options.issues ?? [],
       reviewerId: options.reviewerId,
     });
 
@@ -630,7 +837,7 @@ export class SellerKycService {
     status?: SellerKycOverallStatus;
     page: number;
     limit: number;
-  }): Promise<any> {
+  }): Promise<AdminKycListResponseDto> {
     const { page, limit } = options;
     const status = options.status;
 
@@ -648,16 +855,18 @@ export class SellerKycService {
    * returns masked document numbers, not the raw ones — the encryption exists
    * specifically to protect this PII, and nothing in the review flow needs it.
    */
-  async getAdminDetail(sellerId: number): Promise<any> {
+  async getAdminDetail(sellerId: number): Promise<AdminKycDetailResponseDto> {
     const seller = await this.userRepository.findById(sellerId);
 
     if (!seller) {
       throw new BusinessException(ERROR_CODES.SELLER.SELLER_NOT_FOUND);
     }
 
-    const [rows, override] = await Promise.all([
+    const [rows, override, correctionRequests, audit] = await Promise.all([
       this.kycVerificationRepository.findAllByUserId(sellerId),
       this.sellerKycOverrideRepository.findBySellerId(sellerId),
+      this.sellersService.listOpenReviewIssues(sellerId),
+      this.sellersService.listAudit(sellerId),
     ]);
 
     return {
@@ -681,6 +890,8 @@ export class SellerKycService {
             reviewedAt: override.reviewedAt,
           }
         : null,
+      correctionRequests,
+      audit,
     };
   }
 }

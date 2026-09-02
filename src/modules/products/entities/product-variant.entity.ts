@@ -13,6 +13,12 @@ export class ProductVariant extends BaseEntity {
   @JoinColumn({ name: 'product_id' })
   product!: Product;
 
+  @Column({ type: 'bigint', nullable: true, name: 'color_option_id' })
+  colorOptionId?: number | null;
+
+  @Column({ type: 'bigint', nullable: true, name: 'size_option_id' })
+  sizeOptionId?: number | null;
+
   @Column({ type: 'varchar', length: 50 })
   size!: string;
 

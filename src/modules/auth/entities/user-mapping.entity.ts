@@ -28,5 +28,4 @@ export class UserMapping extends BaseEntity {
     default: MappingStatus.ACTIVE,
   })
   status!: MappingStatus;
-
 }

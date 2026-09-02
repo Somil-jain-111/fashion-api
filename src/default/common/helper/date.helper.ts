@@ -23,7 +23,7 @@ export class DateHelper {
     return expiryDate;
   }
 
-  static isOtpExpired(expiryDate?: Date): Boolean {
+  static isOtpExpired(expiryDate?: Date): boolean {
     if (!expiryDate) {
       return true;
     }

@@ -7,6 +7,7 @@ import { UserRepository } from 'src/modules/auth/repository';
 import { SellerKycService } from 'src/modules/seller-kyc/seller-kyc.service';
 import { UserStatus } from 'src/modules/auth/constants/auth.constants';
 import { createMock, createChainableQueryBuilderMock } from '../utils/mock.util';
+import { ProductBoostRepository } from 'src/modules/product-boost/product-boost.repository';
 
 describe('CatalogService', () => {
   let service: CatalogService;
@@ -14,6 +15,7 @@ describe('CatalogService', () => {
   let categoryRepository: jest.Mocked<CategoryRepository>;
   let userRepository: jest.Mocked<UserRepository>;
   let sellerKycService: jest.Mocked<SellerKycService>;
+  let productBoostRepository: jest.Mocked<ProductBoostRepository>;
 
   beforeEach(async () => {
     const module = await Test.createTestingModule({
@@ -24,6 +26,7 @@ describe('CatalogService', () => {
         { provide: CategoriesService, useValue: createMock<CategoriesService>() },
         { provide: UserRepository, useValue: createMock<UserRepository>() },
         { provide: SellerKycService, useValue: createMock<SellerKycService>() },
+        { provide: ProductBoostRepository, useValue: createMock<ProductBoostRepository>() },
       ],
     }).compile();
 
@@ -32,6 +35,8 @@ describe('CatalogService', () => {
     categoryRepository = module.get(CategoryRepository);
     userRepository = module.get(UserRepository);
     sellerKycService = module.get(SellerKycService);
+    productBoostRepository = module.get(ProductBoostRepository);
+    productBoostRepository.findActiveProductIds.mockResolvedValue(new Set());
   });
 
   describe('getProductDetail', () => {

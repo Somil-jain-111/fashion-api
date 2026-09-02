@@ -21,5 +21,4 @@ export class Roles extends BaseEntity {
     enum: UserType,
   })
   user_type!: UserType;
-
 }

@@ -29,3 +29,4 @@ export * from './support.errors';
 export * from './customer-return.errors';
 export * from './permission.errors';
 export * from './seller.errors';
+export * from './boost.errors';

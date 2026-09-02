@@ -5,21 +5,27 @@ import {
   RESET_TOKEN_EXPIRY_MINUTES,
 } from 'src/modules/auth/constants/auth.constants';
 import { User } from 'src/modules/auth/entities';
-import { UserRole } from '../enums/user-type.enum';
 import { BusinessException } from 'src/default/error/business.exception';
 import { ERROR_CODES } from 'src/default/error/error.code';
+import { randomUUID } from 'crypto';
 
 export type ActionTicketPurpose = 'SET_PASSWORD' | 'RESET_PASSWORD';
 
 interface ActionTicketPayload {
   sub: number;
   purpose: ActionTicketPurpose;
-  type: 'action_ticket';
+  tokenType: 'action';
+  jti: string;
 }
 
+const TOKEN_ISSUER = 'fashion-api';
+const ACCESS_AUDIENCE = 'fashion-api-access';
+const REFRESH_AUDIENCE = 'fashion-api-refresh';
+const ACTION_AUDIENCE = 'fashion-api-action';
+
 export class AuthTokenHelper {
-  static async generateTokens(jwtService: JwtService, user: User) {
-    const payload = {
+  static async generateTokens(jwtService: JwtService, user: User, refreshSecret?: string) {
+    const commonPayload = {
       sub: user.id,
       id: user.id,
       uuid: user.uuid,
@@ -29,24 +35,25 @@ export class AuthTokenHelper {
       user_type: user.roles?.map((r) => r.user_type),
     };
 
-    const isSuperAdmin = user.roles.some((r) => r.name === UserRole.SUPERADMIN);
-
     const accessToken = await jwtService.signAsync(
-      payload,
-      isSuperAdmin
-        ? {}
-        : {
-            expiresIn: JWT_ACCESS_TOKEN_EXPIRY,
-          }
+      { ...commonPayload, tokenType: 'access' },
+      {
+        expiresIn: JWT_ACCESS_TOKEN_EXPIRY,
+        issuer: TOKEN_ISSUER,
+        audience: ACCESS_AUDIENCE,
+        algorithm: 'HS256',
+      }
     );
 
     const refreshToken = await jwtService.signAsync(
-      payload,
-      isSuperAdmin
-        ? {}
-        : {
-            expiresIn: JWT_REFRESH_TOKEN_EXPIRY,
-          }
+      { ...commonPayload, tokenType: 'refresh' },
+      {
+        ...(refreshSecret ? { secret: refreshSecret } : {}),
+        expiresIn: JWT_REFRESH_TOKEN_EXPIRY,
+        issuer: TOKEN_ISSUER,
+        audience: REFRESH_AUDIENCE,
+        algorithm: 'HS256',
+      }
     );
 
     return {
@@ -71,10 +78,18 @@ export class AuthTokenHelper {
     userId: number,
     purpose: ActionTicketPurpose
   ): Promise<string> {
-    const payload: ActionTicketPayload = { sub: userId, purpose, type: 'action_ticket' };
+    const payload: ActionTicketPayload = {
+      sub: userId,
+      purpose,
+      tokenType: 'action',
+      jti: randomUUID(),
+    };
 
     return jwtService.signAsync(payload, {
       expiresIn: `${RESET_TOKEN_EXPIRY_MINUTES}m`,
+      issuer: TOKEN_ISSUER,
+      audience: ACTION_AUDIENCE,
+      algorithm: 'HS256',
     });
   }
 
@@ -82,19 +97,35 @@ export class AuthTokenHelper {
     jwtService: JwtService,
     ticket: string,
     expectedPurpose: ActionTicketPurpose
-  ): Promise<number> {
+  ): Promise<ActionTicketPayload> {
     let payload: ActionTicketPayload;
 
     try {
-      payload = await jwtService.verifyAsync<ActionTicketPayload>(ticket);
+      payload = await jwtService.verifyAsync<ActionTicketPayload>(ticket, {
+        issuer: TOKEN_ISSUER,
+        audience: ACTION_AUDIENCE,
+        algorithms: ['HS256'],
+      });
     } catch {
       throw new BusinessException(ERROR_CODES.AUTH.INVALID_ACCESS_TOKEN);
     }
 
-    if (payload.type !== 'action_ticket' || payload.purpose !== expectedPurpose) {
+    if (payload.tokenType !== 'action' || payload.purpose !== expectedPurpose || !payload.jti) {
       throw new BusinessException(ERROR_CODES.AUTH.INVALID_ACCESS_TOKEN);
     }
 
-    return payload.sub;
+    return payload;
+  }
+
+  static get refreshAudience(): string {
+    return REFRESH_AUDIENCE;
+  }
+
+  static get accessAudience(): string {
+    return ACCESS_AUDIENCE;
+  }
+
+  static get issuer(): string {
+    return TOKEN_ISSUER;
   }
 }

@@ -5,7 +5,6 @@ import { ConsoleLogger } from '../logger/console/console.service';
 @Injectable()
 export class ErrorHandlingService {
   handleError(error: any, request: any): any {
-    console.log('ssssss');
     const defaultError = ERROR_CODES.COMMON.SOMETHING_WENT_WRONG;
     const response = error?.response;
 
@@ -19,7 +18,6 @@ export class ErrorHandlingService {
 
     // Get error location from stack trace
     let errorLocation = 'Unknown';
-    console.log('errorerror', error);
     if (error?.stack) {
       const stackLines = error.stack.split('\n');
 
@@ -31,14 +29,6 @@ export class ErrorHandlingService {
         errorLocation = appLine.trim();
       }
     }
-
-    // Debug logs
-    console.log('========== ERROR ==========');
-    console.log('Type:', error?.constructor?.name);
-    console.log('Message:', customMessage);
-    console.log('Location:', errorLocation);
-    console.log('Stack:', error?.stack);
-    console.log('===========================');
 
     ConsoleLogger.error(
       `Handled Error - Code: ${customCode}, ErrorCode: ${errorCode}, Message: ${customMessage}, Location: ${errorLocation}, JourneyId: ${journeyId}`,
